@@ -1,0 +1,22 @@
+{
+  "name": "ajban-bot-platform",
+  "version": "1.0.0",
+  "description": "منصة كاملة لبوت الأجبان: رد ذكي + استخراج الطلبات + لوحة تحكم + تصدير Excel",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "create-admin": "node scripts/create-admin.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.1",
+    "cookie-parser": "^1.4.7",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
