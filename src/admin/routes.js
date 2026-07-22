@@ -158,12 +158,31 @@ adminRouter.get("/api/conversation", requireAuth, async (req, res) => {
   }
 });
 
+// قائمة المحادثات ضمن مدى تاريخي (للاستخراج المباشر خطوة بخطوة)
+adminRouter.get("/api/conversations-range", requireAuth, async (req, res) => {
+  try {
+    const { page_id, from, to } = req.query;
+    if (!PAGES[page_id]) return res.status(400).json({ error: "اختر صفحة صحيحة" });
+    const fromTs = from ? new Date(from).getTime() : 0;
+    const toTs = to ? (new Date(to).getTime() + 86400000 - 1) : Date.now();
+    const conversations = await collectConversationsInRange(page_id, fromTs, toTs);
+    res.json({ conversations });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
 // حفظ طلب يدوياً (من صندوق الوارد بعد مراجعة الأدمن)
 adminRouter.post("/api/orders/manual", requireAuth, (req, res) => {
-  const { page_id, order_string, total, area, phone, customer_id } = req.body || {};
+  const { page_id, order_string, total, area, phone, customer_id, dedup } = req.body || {};
   const page = PAGES[page_id];
   if (!page) return res.status(400).json({ error: "صفحة غير صحيحة" });
   if (!order_string || !order_string.trim()) return res.status(400).json({ error: "اكتب تفاصيل الطلب" });
+
+  // منع التكرار أثناء الاستخراج المباشر
+  if (dedup && orderExists(page_id, customer_id || "", order_string.trim())) {
+    return res.json({ ok: true, skipped: true });
+  }
 
   const id = saveOrder({
     page_id,

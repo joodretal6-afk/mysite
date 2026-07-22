@@ -55,18 +55,39 @@
 
   <div id="topmsg"></div>
 
-  <!-- 🚀 الاستخراج الجماعي بالتاريخ -->
+  <!-- 🚀 الاستخراج المباشر بالتاريخ -->
   <div style="max-width:1400px;margin:16px auto 0;padding:0 18px">
     <div class="card" style="padding:16px">
-      <div style="font-weight:700;color:var(--green2);margin-bottom:12px">🚀 استخراج جماعي بالتاريخ — يمسح كل الدردشات ويستخرج الطلبات وينزّلها تلقائياً</div>
+      <div style="font-weight:700;color:var(--green2);margin-bottom:6px">🚀 استخراج مباشر بالتاريخ — يفتح كل دردشة قدامك ويستخرج الطلب منها</div>
+      <div style="color:var(--mut);font-size:13px;margin-bottom:12px">اختر <b>صفحة محددة</b> وفترة تاريخية، وشاهد النظام يفتح المحادثات وحدة وحدة ويستخرج الطلبات أمامك.</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
-        <div class="fld" style="margin:0"><label>الصفحة</label>
-          <select id="bulkPage" style="border:1.5px solid var(--line)"><option value="all">كل الصفحات</option></select>
+        <div class="fld" style="margin:0"><label>الصفحة (إلزامي)</label>
+          <select id="bulkPage" style="border:1.5px solid var(--line)"><option value="">اختر صفحة...</option></select>
         </div>
         <div class="fld" style="margin:0"><label>من تاريخ</label><input id="bulkFrom" type="date"></div>
         <div class="fld" style="margin:0"><label>إلى تاريخ</label><input id="bulkTo" type="date"></div>
-        <button class="save" id="bulkBtn" style="width:auto;margin:0;padding:11px 22px" onclick="runBulk()">⚡ استخرج وأنزّل الكل</button>
+        <button class="save" id="bulkBtn" style="width:auto;margin:0;padding:11px 22px" onclick="runBulkLive()">▶️ ابدأ الاستخراج المباشر</button>
+        <button class="save" id="stopBtn" style="width:auto;margin:0;padding:11px 20px;background:#c62828;display:none" onclick="stopBulk()">⏹ إيقاف</button>
       </div>
+
+      <!-- شريط التقدّم + العدّادات -->
+      <div id="bulkProgress" style="display:none;margin-top:14px">
+        <div style="background:#eceff1;border-radius:20px;height:14px;overflow:hidden"><div id="bar" style="height:100%;width:0;background:var(--green);transition:.2s"></div></div>
+        <div id="counters" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:13px;font-weight:600"></div>
+      </div>
+
+      <!-- عرض المحادثة الحالية مباشرة -->
+      <div id="liveView" style="display:none;margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="card" style="box-shadow:none;border:1px solid var(--line)">
+          <div class="list-head" id="liveName">💬 ...</div>
+          <div class="thread" id="liveThread" style="max-height:300px"></div>
+        </div>
+        <div class="card" style="box-shadow:none;border:1px solid var(--line);padding:16px">
+          <div style="font-weight:700;color:var(--green2);margin-bottom:10px">🧾 الطلب المستخرَج</div>
+          <div id="liveExtract" style="font-size:14px;line-height:2"></div>
+        </div>
+      </div>
+
       <div id="bulkResult" style="margin-top:14px"></div>
     </div>
   </div>
@@ -106,42 +127,118 @@
       });
     }
 
-    async function runBulk(){
-      const btn = document.getElementById('bulkBtn');
+    let bulkStop = false;
+    const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+    function stopBulk(){ bulkStop = true; }
+
+    async function runBulkLive(){
+      const pageId = document.getElementById('bulkPage').value;
+      const from = document.getElementById('bulkFrom').value;
+      const to = document.getElementById('bulkTo').value;
       const box = document.getElementById('bulkResult');
-      const body = {
-        page_id: document.getElementById('bulkPage').value,
-        from: document.getElementById('bulkFrom').value,
-        to: document.getElementById('bulkTo').value
-      };
-      btn.disabled = true; btn.textContent = '⏳ جاري المسح... (قد يأخذ دقيقة)';
-      box.innerHTML = '<div class="loading">⏳ يفتح الدردشات ويستخرج الطلبات، انتظر لحظة...</div>';
+
+      if(!pageId){ topMsg('اختر صفحة محددة أولاً (الاستخراج يلتزم بصفحة واحدة فقط)', 'err'); return; }
+
+      const btn = document.getElementById('bulkBtn'), stopBtn = document.getElementById('stopBtn');
+      bulkStop = false;
+      btn.disabled = true; btn.textContent = '⏳ يجهّز القائمة...';
+      stopBtn.style.display = 'inline-block';
+      box.innerHTML = '';
+      document.getElementById('bulkProgress').style.display = 'block';
+      document.getElementById('liveView').style.display = 'grid';
+      document.getElementById('bar').style.width = '0';
+
+      // 1) جيب قائمة المحادثات بالفترة (لهالصفحة فقط)
+      let convs = [];
       try {
-        const r = await fetch('/admin/api/bulk-extract', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const r = await fetch(`/admin/api/conversations-range?page_id=${encodeURIComponent(pageId)}&from=${from}&to=${to}`);
         const d = await r.json();
         if(!r.ok) throw new Error(d.error||'خطأ');
-        let html = `<div class="msgbar ok" style="margin:0 0 10px">
-          ✅ تم المسح! فُحص <b>${d.scanned}</b> محادثة —
-          حُفظ <b>${d.saved}</b> طلب •
-          يحتاج مراجعة يدوية <b>${d.needsReview}</b> (بدون رقم) •
-          مكرّر تم تجاهله <b>${d.skippedDup}</b> •
-          بدون طلب <b>${d.noOrder}</b></div>`;
-        if(d.orders && d.orders.length){
-          html += '<div style="max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:9px">';
-          html += '<table style="width:100%;border-collapse:collapse;font-size:13px">';
-          html += '<tr style="background:#f0f4f1;font-weight:700"><td style="padding:7px">الصفحة</td><td style="padding:7px">الزبون</td><td style="padding:7px">الطلب</td><td style="padding:7px">الحساب</td><td style="padding:7px">التلفون</td></tr>';
-          d.orders.forEach(o=>{ html += `<tr style="border-top:1px solid var(--line)"><td style="padding:7px">${esc(o.page)}</td><td style="padding:7px">${esc(o.customer)}</td><td style="padding:7px">${esc(o.order)}</td><td style="padding:7px">${o.total}د</td><td style="padding:7px">${esc(o.phone)}</td></tr>`; });
-          html += '</table></div>';
-          html += '<div style="margin-top:10px"><a href="/admin" style="color:var(--green);font-weight:600">→ شوف كل الطلبات باللوحة</a></div>';
-        }
-        if(d.errors && d.errors.length){
-          html += '<div class="msgbar err" style="margin:10px 0 0">أخطاء ببعض الصفحات: '+d.errors.map(esc).join(' | ')+'</div>';
-        }
-        box.innerHTML = html;
+        convs = d.conversations || [];
       } catch(e){
-        box.innerHTML = '<div class="msgbar err" style="margin:0">فشل الاستخراج: '+esc(e.message)+'</div>';
+        topMsg('تعذّر جلب المحادثات: '+esc(e.message), 'err');
+        resetBulkBtns(); return;
       }
-      btn.disabled = false; btn.textContent = '⚡ استخرج وأنزّل الكل';
+
+      if(!convs.length){ box.innerHTML = '<div class="msgbar err">لا توجد محادثات في هذه الفترة</div>'; resetBulkBtns(); return; }
+
+      // 2) افتح كل محادثة قدام المستخدم واستخرج واحفظ
+      let saved=0, review=0, dup=0, none=0, done=0;
+      const savedRows = [];
+
+      for(const c of convs){
+        if(bulkStop) break;
+        done++;
+        setCounters(done, convs.length, saved, review, dup, none);
+        document.getElementById('bar').style.width = Math.round(done/convs.length*100)+'%';
+        document.getElementById('liveName').textContent = `💬 ${c.customerName} (${done}/${convs.length})`;
+        document.getElementById('liveThread').innerHTML = '<div class="loading">⏳ يفتح المحادثة...</div>';
+        document.getElementById('liveExtract').innerHTML = '';
+
+        let data;
+        try {
+          const r = await fetch(`/admin/api/conversation?page_id=${encodeURIComponent(pageId)}&id=${encodeURIComponent(c.id)}`);
+          data = await r.json();
+          if(!r.ok) throw new Error(data.error||'خطأ');
+        } catch(e){ none++; continue; }
+
+        // اعرض رسائل المحادثة مباشرة
+        document.getElementById('liveThread').innerHTML = (data.messages||[]).map(m=>
+          `<div class="msg ${m.isPage?'page':'cust'}">${esc(m.text)||'📎'}<span class="t">${fmt(m.time)}</span></div>`).join('') || '<div class="hint">لا رسائل</div>';
+
+        const ex = data.extracted || {};
+        const hasItems = ex.orderString && ex.orderString.trim();
+
+        // اعرض الطلب المستخرَج مباشرة
+        let exHtml = `<div>🧀 الطلب: <b>${esc(ex.orderString)||'—'}</b></div>
+          <div>💰 الحساب: <b>${hasItems?ex.total+'د':'—'}</b></div>
+          <div>📍 العنوان: <b>${esc(ex.area)||'—'}</b></div>
+          <div>📞 التلفون: <b>${esc(ex.phone)||'—'}</b></div>`;
+
+        if(!hasItems){ none++; exHtml += `<div style="color:var(--mut);margin-top:8px">⚪ لا يوجد طلب واضح</div>`; }
+        else if(!ex.phone){ review++; exHtml += `<div style="color:#e65100;margin-top:8px">🟠 يحتاج مراجعة (بدون رقم) — افتحه يدوياً لاحقاً</div>`; }
+        else {
+          // احفظه (مع منع التكرار)
+          try {
+            const sr = await fetch('/admin/api/orders/manual',{method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({page_id:pageId, customer_id:data.customerId||c.customerId, order_string:ex.orderString, total:ex.total, phone:ex.phone, area:ex.area, dedup:true})});
+            const sd = await sr.json();
+            if(sd.skipped){ dup++; exHtml += `<div style="color:var(--mut);margin-top:8px">🔁 مكرّر — موجود مسبقاً</div>`; }
+            else { saved++; savedRows.push({customer:c.customerName, order:ex.orderString, total:ex.total, phone:ex.phone});
+              exHtml += `<div style="color:var(--green);margin-top:8px;font-weight:700">✅ تم الحفظ وإنزاله بالجدول</div>`; }
+          } catch(e){ exHtml += `<div style="color:#c62828;margin-top:8px">فشل الحفظ</div>`; }
+        }
+        document.getElementById('liveExtract').innerHTML = exHtml;
+        setCounters(done, convs.length, saved, review, dup, none);
+
+        await sleep(700);   // مهلة بسيطة حتى تشوف كل محادثة قدامك
+      }
+
+      // 3) الملخّص النهائي
+      let html = `<div class="msgbar ok" style="margin:0">✅ ${bulkStop?'تم الإيقاف':'خلص الاستخراج'}! فُحص <b>${done}</b> محادثة — حُفظ <b>${saved}</b> • مراجعة <b>${review}</b> • مكرّر <b>${dup}</b> • بدون طلب <b>${none}</b></div>`;
+      if(savedRows.length){
+        html += '<div style="max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:9px;margin-top:10px"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="background:#f0f4f1;font-weight:700"><td style="padding:7px">الزبون</td><td style="padding:7px">الطلب</td><td style="padding:7px">الحساب</td><td style="padding:7px">التلفون</td></tr>';
+        savedRows.forEach(o=>{ html += `<tr style="border-top:1px solid var(--line)"><td style="padding:7px">${esc(o.customer)}</td><td style="padding:7px">${esc(o.order)}</td><td style="padding:7px">${o.total}د</td><td style="padding:7px">${esc(o.phone)}</td></tr>`; });
+        html += '</table></div><div style="margin-top:10px"><a href="/admin?page_id='+encodeURIComponent(pageId)+'" style="color:var(--green);font-weight:700">→ شوف أوردرات هذه الصفحة</a></div>';
+      }
+      box.innerHTML = html;
+      resetBulkBtns();
+    }
+
+    function setCounters(done,total,saved,review,dup,none){
+      document.getElementById('counters').innerHTML =
+        `<span style="color:#455a64">📂 ${done}/${total}</span>
+         <span style="color:var(--green)">✅ حُفظ ${saved}</span>
+         <span style="color:#e65100">🟠 مراجعة ${review}</span>
+         <span style="color:var(--mut)">🔁 مكرّر ${dup}</span>
+         <span style="color:var(--mut)">⚪ بدون ${none}</span>`;
+    }
+
+    function resetBulkBtns(){
+      const btn = document.getElementById('bulkBtn'), stopBtn = document.getElementById('stopBtn');
+      btn.disabled = false; btn.textContent = '▶️ ابدأ الاستخراج المباشر';
+      stopBtn.style.display = 'none';
     }
 
     async function loadConversations(){
