@@ -1,0 +1,27 @@
+# إعداد النشر على Fly.io
+# ملاحظة: غيّر اسم التطبيق (app) لاسم فريد لو طلب منك ذلك أثناء fly launch.
+app = "ajban-bot"
+primary_region = "cdg"   # باريس (قريبة للأردن). بدائل: fra (فرانكفورت)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  DB_PATH = "/data/platform.db"
+  PORT = "3000"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false     # خليه شغّال دايماً حتى يستقبل رسائل فيسبوك
+  auto_start_machines = true
+  min_machines_running = 1
+
+# قرص دائم لحفظ الأوردرات (ما بتنمسح مع التحديث)
+[mounts]
+  source = "ajban_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
