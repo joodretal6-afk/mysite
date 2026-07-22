@@ -7,6 +7,13 @@
 export const CONFIG = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || "AIzaSyA1hzKsNzQHEZatQ4OQqYyPquT0fBJUghc",
   MODEL_NAME: process.env.MODEL_NAME || "gemini-flash-latest",
+
+  // ── اختيار مزوّد الذكاء: "gemini" أو "openai" ──
+  // لو تركته فاضي: يستخدم OpenAI تلقائياً إذا وُجد مفتاحه، وإلا Gemini.
+  AI_PROVIDER: process.env.AI_PROVIDER || "",
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+  OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o-mini",
+  OPENAI_TRANSCRIBE_MODEL: process.env.OPENAI_TRANSCRIBE_MODEL || "whisper-1",
   VERIFY_TOKEN: process.env.VERIFY_TOKEN || "talebbot",
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || "YOUR_TELEGRAM_BOT_TOKEN",
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || "YOUR_TELEGRAM_CHAT_ID",

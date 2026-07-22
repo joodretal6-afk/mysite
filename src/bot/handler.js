@@ -6,7 +6,7 @@ import { PAGES } from "./brain.js";
 import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } from "./messenger.js";
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
-import { askGemini } from "./gemini.js";
+import { askAI } from "./ai.js";
 import { saveOrder, getKnowledge, logMessage } from "../db/database.js";
 
 export async function handleEvent(event, env, ctx) {
@@ -125,7 +125,7 @@ export async function handleEvent(event, env, ctx) {
 
   } else {
     const extraKnowledge = getKnowledge(recipientId);
-    reply = await askGemini(memory.history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
+    reply = await askAI(memory.history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
     memory.invalidPhoneProvided = false;   // بعد ما ننبّه الزبون منصفّر الفلاغ
   }
 
