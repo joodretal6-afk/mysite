@@ -59,8 +59,7 @@ export async function askGemini(history, userMsg, audioPart, pageConfig, memory,
           contents: contents,
           generationConfig: {
             temperature: 0.2,
-            maxOutputTokens: 300,
-            thinkingConfig: { thinkingBudget: 0 }   // رد أسرع
+            maxOutputTokens: 800   // رفعناها لأن الموديلات الجديدة تستهلك جزء بالتفكير
           }
         }),
         signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
