@@ -25,14 +25,19 @@ export function buildNextTask(memory) {
   return "";
 }
 
-export async function askGemini(history, userMsg, audioPart, pageConfig, memory, crmData) {
+export async function askGemini(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge = "") {
   let crmContext = "";
   if (crmData && crmData.lastOrder) {
     crmContext = `\nملاحظة هامة: هذا زبون قديم. آخر طلب له كان (${crmData.lastOrder}) وعنوانه (${crmData.lastArea}). رحب به كزبون دائم واعرض عليه تكرار طلبه.`;
   }
 
+  // 🧠 معلومات إضافية يغذّيها الأدمن لهذه الصفحة (لها أولوية عالية)
+  const adminKnowledge = extraKnowledge && extraKnowledge.trim()
+    ? `\n\n[معلومات إضافية موثوقة من إدارة الصفحة — اعتمدها بأولوية عالية]\n${extraKnowledge.trim()}`
+    : "";
+
   const nextTask = buildNextTask(memory);
-  const systemInst = `${COMMON_KNOWLEDGE}\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${crmContext}\n${nextTask}`;
+  const systemInst = `${COMMON_KNOWLEDGE}\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
 
   const contents = (history || []).map(h => ({
     role: h.role === "assistant" ? "model" : "user",

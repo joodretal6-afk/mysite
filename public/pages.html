@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>صفحات الأوردرات — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1200px; margin:0 auto; padding:22px; }
+    .intro { color:var(--mut); margin-bottom:18px; font-size:15px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
+    .pcard { background:var(--card); border-radius:16px; padding:20px; box-shadow:0 2px 10px rgba(0,0,0,.06); text-decoration:none; color:inherit; transition:.15s; border:2px solid transparent; display:block; }
+    .pcard:hover { transform:translateY(-3px); border-color:var(--green); box-shadow:0 8px 20px rgba(46,125,50,.15); }
+    .pcard .nm { font-size:17px; font-weight:700; color:var(--green2); display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+    .pcard .stats { display:flex; justify-content:space-between; gap:8px; }
+    .pcard .st { text-align:center; flex:1; }
+    .pcard .st .v { font-size:22px; font-weight:800; color:var(--green2); }
+    .pcard .st .l { font-size:11px; color:var(--mut); margin-top:2px; }
+    .pcard .badge { background:#e53935; color:#fff; font-size:11px; padding:2px 9px; border-radius:20px; font-weight:700; }
+    .pcard .foot { margin-top:14px; font-size:12px; color:var(--mut); display:flex; justify-content:space-between; align-items:center; }
+    .go { color:var(--green); font-weight:700; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📄 صفحات الأوردرات — كل صفحة لحالها</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="intro">اضغط على أي صفحة لتشوف أوردراتها لحالها بشكل منفصل.</div>
+    <div class="grid" id="grid"><div style="color:var(--mut)">⏳ جاري التحميل...</div></div>
+  </div>
+
+  <script>
+    function fmtDate(ts){ return ts ? new Date(ts).toLocaleDateString('ar-EG') : '—'; }
+    async function load(){
+      const r = await fetch('/admin/api/page-stats');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const pages = await r.json();
+      document.getElementById('grid').innerHTML = pages.map(p=>`
+        <a class="pcard" href="/admin?page_id=${encodeURIComponent(p.page_id)}">
+          <div class="nm">🧀 ${p.page_name} ${p.new_count>0?`<span class="badge">${p.new_count} جديد</span>`:''}</div>
+          <div class="stats">
+            <div class="st"><div class="v">${p.count}</div><div class="l">عدد الأوردرات</div></div>
+            <div class="st"><div class="v">${(+p.sum).toFixed(0)}د</div><div class="l">إجمالي المبيعات</div></div>
+          </div>
+          <div class="foot"><span>آخر طلب: ${fmtDate(p.last_at)}</span><span class="go">عرض الأوردرات →</span></div>
+        </a>`).join('');
+    }
+    load();
+    setInterval(load, 30000);
+  </script>
+</body>
+</html>

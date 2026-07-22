@@ -8,7 +8,8 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import {
   getUser, listOrders, updateOrderStatus, deleteOrder,
-  distinctPages, ordersStats, saveOrder, orderExists
+  distinctPages, ordersStats, saveOrder, orderExists,
+  getKnowledge, setKnowledge, listChatThreads, getChatMessages, perPageStats
 } from "../db/database.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
 import { PAGES } from "../bot/brain.js";
@@ -49,6 +50,56 @@ adminRouter.get("/", requireAuth, (req, res) => {
 // ── صندوق الوارد (محمي) ──
 adminRouter.get("/inbox", requireAuth, (req, res) => {
   res.sendFile(path.join(publicDir, "inbox.html"));
+});
+
+// ── صفحات محمية إضافية ──
+adminRouter.get("/pages", requireAuth, (req, res) => {
+  res.sendFile(path.join(publicDir, "pages.html"));
+});
+adminRouter.get("/knowledge", requireAuth, (req, res) => {
+  res.sendFile(path.join(publicDir, "knowledge.html"));
+});
+adminRouter.get("/chats", requireAuth, (req, res) => {
+  res.sendFile(path.join(publicDir, "chats.html"));
+});
+
+// ── API: إحصائيات كل صفحة (صفحة الأوردرات المنفصلة) ──
+adminRouter.get("/api/page-stats", requireAuth, (req, res) => {
+  const stats = perPageStats();
+  const byId = Object.fromEntries(stats.map(s => [s.page_id, s]));
+  // ندمج كل الصفحات المعرّفة حتى اللي ما إلها طلبات بعد
+  const all = Object.entries(PAGES).map(([id, p]) => ({
+    page_id: id, page_name: p.name,
+    count: byId[id]?.count || 0,
+    sum: byId[id]?.sum || 0,
+    new_count: byId[id]?.new_count || 0,
+    last_at: byId[id]?.last_at || null
+  }));
+  res.json(all);
+});
+
+// ── API: تغذية معلومات البوت لكل صفحة ──
+adminRouter.get("/api/knowledge", requireAuth, (req, res) => {
+  const { page_id } = req.query;
+  if (!PAGES[page_id]) return res.status(400).json({ error: "صفحة غير صحيحة" });
+  res.json({ page_id, page_name: PAGES[page_id].name, extra: getKnowledge(page_id) });
+});
+adminRouter.post("/api/knowledge", requireAuth, (req, res) => {
+  const { page_id, extra } = req.body || {};
+  if (!PAGES[page_id]) return res.status(400).json({ error: "صفحة غير صحيحة" });
+  setKnowledge(page_id, extra || "");
+  res.json({ ok: true });
+});
+
+// ── API: أرشيف الدردشات المحفوظة محلياً ──
+adminRouter.get("/api/chats", requireAuth, (req, res) => {
+  const { page_id } = req.query;
+  if (!PAGES[page_id]) return res.status(400).json({ error: "صفحة غير صحيحة" });
+  res.json({ threads: listChatThreads(page_id) });
+});
+adminRouter.get("/api/chat", requireAuth, (req, res) => {
+  const { page_id, sender_id } = req.query;
+  res.json({ messages: getChatMessages(page_id, sender_id) });
 });
 
 // جلب فلاتر البيانات (الصفحات + الإحصائيات)

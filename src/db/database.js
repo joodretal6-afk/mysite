@@ -44,8 +44,25 @@ db.exec(`
     created_at    INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS page_knowledge (
+    page_id    TEXT PRIMARY KEY,
+    extra      TEXT,
+    updated_at INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS messages (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    page_id    TEXT,
+    page_name  TEXT,
+    sender_id  TEXT,
+    direction  TEXT,            -- 'in' من الزبون / 'out' من البوت
+    body       TEXT,
+    created_at INTEGER
+  );
+
   CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
   CREATE INDEX IF NOT EXISTS idx_orders_page    ON orders(page_id);
+  CREATE INDEX IF NOT EXISTS idx_msg_conv       ON messages(page_id, sender_id, created_at);
 `);
 
 // ── تنظيف دوري للمفاتيح المنتهية ──
@@ -164,6 +181,18 @@ export function distinctPages() {
   ).all();
 }
 
+// إحصائيات لكل صفحة على حدة (لصفحة الأوردرات المنفصلة)
+export function perPageStats() {
+  return db.prepare(`
+    SELECT page_id, page_name,
+           COUNT(*) AS count,
+           COALESCE(SUM(total),0) AS sum,
+           SUM(CASE WHEN status='جديد' THEN 1 ELSE 0 END) AS new_count,
+           MAX(created_at) AS last_at
+    FROM orders GROUP BY page_id ORDER BY count DESC
+  `).all();
+}
+
 export function ordersStats() {
   const today0 = new Date(); today0.setHours(0, 0, 0, 0);
   return {
@@ -171,6 +200,61 @@ export function ordersStats() {
     today:      db.prepare("SELECT COUNT(*) c, COALESCE(SUM(total),0) s FROM orders WHERE created_at >= ?").get(today0.getTime()),
     newCount:   db.prepare("SELECT COUNT(*) c FROM orders WHERE status = 'جديد'").get().c
   };
+}
+
+// ═══════════════════════════════════════════════════════════
+// دوال تغذية البوت بمعلومات إضافية (لكل صفحة)
+// ═══════════════════════════════════════════════════════════
+export function getKnowledge(pageId) {
+  const row = db.prepare("SELECT extra FROM page_knowledge WHERE page_id = ?").get(pageId);
+  return row ? row.extra : "";
+}
+
+export function setKnowledge(pageId, extra) {
+  db.prepare(`
+    INSERT INTO page_knowledge (page_id, extra, updated_at) VALUES (?, ?, ?)
+    ON CONFLICT(page_id) DO UPDATE SET extra = excluded.extra, updated_at = excluded.updated_at
+  `).run(pageId, String(extra || ""), Date.now());
+}
+
+// ═══════════════════════════════════════════════════════════
+// أرشيف الرسائل (حفظ كل الدردشات)
+// ═══════════════════════════════════════════════════════════
+const insertMessage = db.prepare(`
+  INSERT INTO messages (page_id, page_name, sender_id, direction, body, created_at)
+  VALUES (@page_id, @page_name, @sender_id, @direction, @body, @created_at)
+`);
+
+export function logMessage(m) {
+  try {
+    insertMessage.run({
+      page_id: m.page_id || "",
+      page_name: m.page_name || "",
+      sender_id: m.sender_id || "",
+      direction: m.direction || "in",
+      body: m.body || "",
+      created_at: m.created_at || Date.now()
+    });
+  } catch (e) {
+    console.error("logMessage failed:", e && e.message);
+  }
+}
+
+export function listChatThreads(pageId) {
+  // آخر رسالة لكل زبون في صفحة
+  return db.prepare(`
+    SELECT sender_id, page_name,
+           MAX(created_at) AS last_at,
+           COUNT(*) AS msg_count
+    FROM messages WHERE page_id = ?
+    GROUP BY sender_id ORDER BY last_at DESC LIMIT 200
+  `).all(pageId);
+}
+
+export function getChatMessages(pageId, senderId) {
+  return db.prepare(
+    "SELECT direction, body, created_at FROM messages WHERE page_id = ? AND sender_id = ? ORDER BY created_at ASC LIMIT 300"
+  ).all(pageId, senderId);
 }
 
 // ═══════════════════════════════════════════════════════════

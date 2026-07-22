@@ -7,7 +7,7 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } f
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askGemini } from "./gemini.js";
-import { saveOrder } from "../db/database.js";
+import { saveOrder, getKnowledge, logMessage } from "../db/database.js";
 
 export async function handleEvent(event, env, ctx) {
   if (!event || event.optin) return;                       // كبسة الإشعارات OTN
@@ -57,6 +57,12 @@ export async function handleEvent(event, env, ctx) {
   }
 
   if (!userMsg && !audioPart) return;
+
+  // 💬 حفظ رسالة الزبون في أرشيف الدردشات
+  logMessage({
+    page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
+    direction: "in", body: userMsg, created_at: Date.now()
+  });
 
   // أمر التصفير
   if (/^(مسح|امسح|reset)$/i.test(userMsg)) {
@@ -118,7 +124,8 @@ export async function handleEvent(event, env, ctx) {
     }), { expirationTtl: CONFIG.CRM_TTL }));
 
   } else {
-    reply = await askGemini(memory.history, userMsg, audioPart, pageConfig, memory, crmData);
+    const extraKnowledge = getKnowledge(recipientId);
+    reply = await askGemini(memory.history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
     memory.invalidPhoneProvided = false;   // بعد ما ننبّه الزبون منصفّر الفلاغ
   }
 
@@ -146,6 +153,13 @@ export async function handleEvent(event, env, ctx) {
   }
 
   memory.lastReply = chunks.join(" ");
+
+  // 💬 حفظ رد البوت في أرشيف الدردشات
+  logMessage({
+    page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
+    direction: "out", body: memory.lastReply, created_at: Date.now()
+  });
+
   memory.history.push(
     { role: "user", content: userMsg },
     { role: "assistant", content: memory.lastReply }
