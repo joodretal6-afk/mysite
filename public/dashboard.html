@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>لوحة التحكم — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --txt:#263238; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:var(--txt); }
+    header {
+      background:var(--green); color:#fff; padding:16px 24px; display:flex;
+      align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+    }
+    header h1 { font-size:20px; display:flex; align-items:center; gap:8px; }
+    header .right { display:flex; align-items:center; gap:14px; font-size:14px; }
+    header button {
+      background:rgba(255,255,255,.2); color:#fff; border:none; padding:8px 14px;
+      border-radius:8px; cursor:pointer; font-family:inherit; font-size:13px;
+    }
+    header button:hover { background:rgba(255,255,255,.32); }
+    .wrap { padding:22px; max-width:1400px; margin:0 auto; }
+
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:20px; }
+    .stat { background:var(--card); border-radius:14px; padding:18px 20px; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .stat .n { font-size:28px; font-weight:bold; color:var(--green2); }
+    .stat .l { font-size:13px; color:var(--mut); margin-top:4px; }
+
+    .toolbar {
+      background:var(--card); border-radius:14px; padding:16px; margin-bottom:18px;
+      display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; box-shadow:0 2px 8px rgba(0,0,0,.05);
+    }
+    .fld { display:flex; flex-direction:column; gap:5px; }
+    .fld label { font-size:12px; color:var(--mut); }
+    .fld input, .fld select {
+      padding:9px 11px; border:1.5px solid var(--line); border-radius:9px; font-size:14px;
+      font-family:inherit; background:#fff; min-width:140px;
+    }
+    .fld input:focus, .fld select:focus { outline:none; border-color:var(--green); }
+    .btn { padding:10px 16px; border:none; border-radius:9px; cursor:pointer; font-size:14px; font-family:inherit; font-weight:600; }
+    .btn.primary { background:var(--green); color:#fff; }
+    .btn.primary:hover { background:var(--green2); }
+    .btn.ghost { background:#eceff1; color:var(--txt); }
+    .btn.xls { background:#1d6f42; color:#fff; }
+    .btn.csv { background:#455a64; color:#fff; }
+
+    .tbl-card { background:var(--card); border-radius:14px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { padding:12px 14px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; position:sticky; top:0; }
+    td.order { white-space:normal; min-width:200px; }
+    tr:hover { background:#fafcfa; }
+    .badge { padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; }
+    .b-جديد { background:#e3f2fd; color:#1565c0; }
+    .b-تم { background:#e8f5e9; color:#2e7d32; }
+    .b-ملغي { background:#ffebee; color:#c62828; }
+    select.status { padding:6px 8px; border-radius:8px; border:1.5px solid var(--line); font-family:inherit; font-size:13px; cursor:pointer; }
+    a.msg { color:var(--green); text-decoration:none; font-size:13px; }
+    .del { color:#c62828; cursor:pointer; background:none; border:none; font-size:16px; }
+    .empty { text-align:center; padding:50px; color:var(--mut); }
+    td.total { font-weight:700; color:var(--green2); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧀 منصة الأجبان — لوحة التحكم</h1>
+    <div class="right">
+      <span id="who"></span>
+      <button onclick="logout()">تسجيل خروج</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="stats" id="stats"></div>
+
+    <div class="toolbar">
+      <div class="fld">
+        <label>بحث (طلب / عنوان / تلفون)</label>
+        <input id="search" placeholder="اكتب للبحث...">
+      </div>
+      <div class="fld">
+        <label>الصفحة</label>
+        <select id="page_id"><option value="">كل الصفحات</option></select>
+      </div>
+      <div class="fld">
+        <label>الحالة</label>
+        <select id="status">
+          <option value="">الكل</option>
+          <option>جديد</option><option>تم التواصل</option>
+          <option>تم الشحن</option><option>تم التسليم</option><option>ملغي</option>
+        </select>
+      </div>
+      <div class="fld"><label>من تاريخ</label><input id="from" type="date"></div>
+      <div class="fld"><label>إلى تاريخ</label><input id="to" type="date"></div>
+      <button class="btn primary" onclick="load()">تطبيق</button>
+      <button class="btn ghost" onclick="reset()">مسح</button>
+      <button class="btn xls" onclick="exp('xlsx')">⬇ تصدير Excel</button>
+      <button class="btn csv" onclick="exp('csv')">⬇ CSV</button>
+    </div>
+
+    <div class="tbl-card">
+      <div class="tbl-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>الصفحة</th><th>الطلب</th><th>الحساب</th>
+              <th>العنوان</th><th>التلفون</th><th>الحالة</th><th>ماسنجر</th><th>التاريخ</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty" style="display:none">لا توجد أوردرات مطابقة</div>
+    </div>
+  </div>
+
+  <script>
+    const STATUSES = ["جديد","تم التواصل","تم الشحن","تم التسليم","ملغي"];
+
+    function badgeClass(s){ if(s==='ملغي')return 'b-ملغي'; if(s==='جديد')return 'b-جديد'; return 'b-تم'; }
+    function fmtDate(ts){ return new Date(ts).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}); }
+    function qs(){
+      const p = new URLSearchParams();
+      ['search','page_id','status','from','to'].forEach(id=>{ const v=document.getElementById(id).value; if(v)p.set(id,v); });
+      return p.toString();
+    }
+
+    async function meta(){
+      const r = await fetch('/admin/api/meta');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const d = await r.json();
+      document.getElementById('who').textContent = '👤 ' + d.user;
+      const sel = document.getElementById('page_id');
+      d.pages.forEach(p=>{ const o=document.createElement('option'); o.value=p.page_id; o.textContent=p.page_name; sel.appendChild(o); });
+      renderStats(d.stats);
+    }
+
+    function renderStats(s){
+      document.getElementById('stats').innerHTML = `
+        <div class="stat"><div class="n">${s.total.c}</div><div class="l">إجمالي الأوردرات</div></div>
+        <div class="stat"><div class="n">${(+s.total.s).toFixed(2)}د</div><div class="l">إجمالي المبيعات</div></div>
+        <div class="stat"><div class="n">${s.today.c}</div><div class="l">أوردرات اليوم</div></div>
+        <div class="stat"><div class="n">${(+s.today.s).toFixed(2)}د</div><div class="l">مبيعات اليوم</div></div>
+        <div class="stat"><div class="n">${s.newCount}</div><div class="l">أوردرات جديدة</div></div>`;
+    }
+
+    async function load(){
+      const r = await fetch('/admin/api/orders?'+qs());
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const d = await r.json();
+      const tb = document.getElementById('rows');
+      const empty = document.getElementById('empty');
+      tb.innerHTML='';
+      if(!d.rows.length){ empty.style.display='block'; return; }
+      empty.style.display='none';
+      d.rows.forEach(o=>{
+        const tr=document.createElement('tr');
+        const opts = STATUSES.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('');
+        tr.innerHTML = `
+          <td>${o.id}</td>
+          <td>${o.page_name||''}</td>
+          <td class="order">${o.order_string||''}</td>
+          <td class="total">${(+o.total).toFixed(2)}د</td>
+          <td>${o.area||''}</td>
+          <td>${o.phone||''}</td>
+          <td><select class="status" onchange="setStatus(${o.id},this.value)">${opts}</select></td>
+          <td>${o.messenger_url?`<a class="msg" href="${o.messenger_url}" target="_blank">فتح 💬</a>`:''}</td>
+          <td>${fmtDate(o.created_at)}</td>
+          <td><button class="del" title="حذف" onclick="del(${o.id})">🗑</button></td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    async function setStatus(id,status){
+      await fetch('/admin/api/orders/'+id+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+      meta();
+    }
+    async function del(id){
+      if(!confirm('متأكد من حذف الأوردر؟'))return;
+      await fetch('/admin/api/orders/'+id,{method:'DELETE'});
+      load(); meta();
+    }
+    function exp(type){ window.open('/admin/export.'+type+'?'+qs(),'_blank'); }
+    function reset(){ ['search','page_id','status','from','to'].forEach(id=>document.getElementById(id).value=''); load(); }
+    async function logout(){ await fetch('/admin/logout',{method:'POST'}); location.href='/admin/login'; }
+
+    document.getElementById('search').addEventListener('input', ()=>{ clearTimeout(window._t); window._t=setTimeout(load,350); });
+    ['page_id','status','from','to'].forEach(id=>document.getElementById(id).addEventListener('change',load));
+
+    meta(); load();
+    setInterval(()=>{ meta(); load(); }, 30000); // تحديث تلقائي كل 30 ثانية
+  </script>
+</body>
+</html>

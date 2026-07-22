@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>دخول — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:'Segoe UI',Tahoma,Arial,sans-serif;
+      background:linear-gradient(135deg,#e8f5e9,#c8e6c9);
+      min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+    }
+    .card {
+      background:#fff; padding:40px 32px; border-radius:20px;
+      box-shadow:0 20px 60px rgba(0,0,0,.12); width:100%; max-width:400px; text-align:center;
+    }
+    .logo { font-size:52px; margin-bottom:8px; }
+    h1 { color:var(--green2); font-size:22px; margin-bottom:4px; }
+    p.sub { color:#777; font-size:14px; margin-bottom:26px; }
+    label { display:block; text-align:right; font-size:13px; color:#555; margin:14px 0 6px; }
+    input {
+      width:100%; padding:13px 14px; border:2px solid #e0e0e0; border-radius:12px;
+      font-size:15px; transition:.2s; font-family:inherit;
+    }
+    input:focus { outline:none; border-color:var(--green); }
+    button {
+      width:100%; margin-top:24px; padding:14px; background:var(--green); color:#fff;
+      border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; transition:.2s;
+    }
+    button:hover { background:var(--green2); }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .err { color:#c62828; font-size:14px; margin-top:16px; min-height:20px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🧀</div>
+    <h1>منصة الأجبان</h1>
+    <p class="sub">لوحة تحكم الطلبات</p>
+    <form id="f">
+      <label>اسم المستخدم</label>
+      <input id="u" type="text" autocomplete="username" required>
+      <label>كلمة السر</label>
+      <input id="p" type="password" autocomplete="current-password" required>
+      <button id="btn" type="submit">تسجيل الدخول</button>
+      <div class="err" id="err"></div>
+    </form>
+  </div>
+  <script>
+    const f = document.getElementById('f'), btn = document.getElementById('btn'), err = document.getElementById('err');
+    f.addEventListener('submit', async e => {
+      e.preventDefault();
+      err.textContent = ''; btn.disabled = true; btn.textContent = 'جاري الدخول...';
+      try {
+        const res = await fetch('/admin/login', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ username: document.getElementById('u').value, password: document.getElementById('p').value })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) { location.href = '/admin'; }
+        else { err.textContent = data.error || 'فشل الدخول'; }
+      } catch { err.textContent = 'خطأ في الاتصال'; }
+      btn.disabled = false; btn.textContent = 'تسجيل الدخول';
+    });
+  </script>
+</body>
+</html>
