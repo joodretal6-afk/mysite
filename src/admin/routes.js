@@ -8,11 +8,11 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import {
   getUser, listOrders, updateOrderStatus, deleteOrder,
-  distinctPages, ordersStats, saveOrder
+  distinctPages, ordersStats, saveOrder, orderExists
 } from "../db/database.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
 import { PAGES } from "../bot/brain.js";
-import { fetchConversations, fetchMessages } from "../bot/inbox.js";
+import { fetchConversations, fetchMessages, collectConversationsInRange } from "../bot/inbox.js";
 import { parseMessage } from "../bot/parser.js";
 import { computeOrder } from "../bot/order.js";
 
@@ -127,6 +127,81 @@ adminRouter.post("/api/orders/manual", requireAuth, (req, res) => {
     created_at: Date.now()
   });
   res.json({ ok: true, id });
+});
+
+// ═══════════════════════════════════════════════════════════
+// 🚀 الاستخراج الجماعي: امسح كل محادثات فترة تاريخية واستخرج الطلبات وأنزلها
+// ═══════════════════════════════════════════════════════════
+adminRouter.post("/api/bulk-extract", requireAuth, async (req, res) => {
+  try {
+    const { page_id, from, to } = req.body || {};
+    if (page_id !== "all" && !PAGES[page_id]) {
+      return res.status(400).json({ error: "اختر صفحة صحيحة أو (كل الصفحات)" });
+    }
+
+    const fromTs = from ? new Date(from).getTime() : 0;
+    const toTs = to ? (new Date(to).getTime() + 86400000 - 1) : Date.now();
+    const targetPages = page_id === "all" ? Object.keys(PAGES) : [page_id];
+
+    let scanned = 0, saved = 0, needsReview = 0, skippedDup = 0, noOrder = 0;
+    const errors = [];
+    const savedOrders = [];
+
+    for (const pid of targetPages) {
+      const page = PAGES[pid];
+      let convs;
+      try {
+        convs = await collectConversationsInRange(pid, fromTs, toTs);
+      } catch (e) {
+        errors.push(`${page.name}: ${e.message}`);
+        continue;
+      }
+
+      for (const c of convs) {
+        scanned++;
+        let thread;
+        try {
+          thread = await fetchMessages(pid, c.id);
+        } catch {
+          continue;   // نتجاوز أي محادثة فشل جلبها
+        }
+
+        // نجمع كلام الزبون فقط ونمرّره على الرادار
+        const custText = thread.messages.filter(m => !m.isPage).map(m => m.text).join("\n");
+        const memory = { cart: {}, area: null, phone: null, history: [], lastReply: "" };
+        parseMessage(memory, custText, page);
+
+        const hasItems = Object.keys(memory.cart).length > 0;
+        if (!hasItems) { noOrder++; continue; }
+
+        const order = computeOrder(page, memory.cart);
+
+        // طلب مؤكّد = فيه أصناف + رقم هاتف. غير هيك يحتاج مراجعة يدوية.
+        if (!memory.phone) { needsReview++; continue; }
+
+        if (orderExists(pid, c.customerId, order.orderString)) { skippedDup++; continue; }
+
+        const id = saveOrder({
+          page_id: pid,
+          page_name: page.name,
+          sender_id: c.customerId,
+          order_string: order.orderString,
+          total: order.total,
+          area: memory.area || "",
+          phone: memory.phone,
+          status: "جديد",
+          messenger_url: c.customerId ? `https://m.me/${c.customerId}` : "",
+          created_at: c.updated ? new Date(c.updated).getTime() : Date.now()
+        });
+        saved++;
+        savedOrders.push({ id, page: page.name, customer: c.customerName, order: order.orderString, total: order.total, phone: memory.phone });
+      }
+    }
+
+    res.json({ scanned, saved, needsReview, skippedDup, noOrder, errors, orders: savedOrders });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 // جلب الأوردرات

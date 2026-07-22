@@ -36,6 +36,44 @@ export async function fetchConversations(pageId, { limit = 30 } = {}) {
   });
 }
 
+// جمع كل المحادثات ضمن مدى تاريخي (مع تتبّع صفحات النتائج pagination)
+// المحادثات مرتّبة من الأحدث للأقدم، فنتوقف بمجرد ما ننزل تحت تاريخ البداية.
+export async function collectConversationsInRange(pageId, fromTs, toTs, cap = 300) {
+  const page = PAGES[pageId];
+  if (!page) throw new Error("صفحة غير معروفة");
+  const token = page.PAGE_TOKEN;
+
+  const fields = "updated_time,unread_count,participants";
+  let url = `${GRAPH}/${pageId}/conversations?platform=messenger&fields=${encodeURIComponent(fields)}&limit=50&access_token=${token}`;
+
+  const out = [];
+  let guard = 0;   // حماية من الحلقات اللانهائية
+  while (url && out.length < cap && guard < 40) {
+    guard++;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || "خطأ في جلب المحادثات");
+
+    for (const c of (data.data || [])) {
+      const t = c.updated_time ? new Date(c.updated_time).getTime() : 0;
+      if (toTs && t > toTs) continue;          // أحدث من المدى → تجاوز
+      if (fromTs && t < fromTs) return out;     // أقدم من المدى → توقّف (مرتّبة تنازلياً)
+      const parts = c.participants?.data || [];
+      const cust = parts.find(p => p.id !== pageId) || {};
+      out.push({
+        id: c.id,
+        updated: c.updated_time,
+        unread: c.unread_count || 0,
+        customerId: cust.id || "",
+        customerName: cust.name || "زبون"
+      });
+      if (out.length >= cap) break;
+    }
+    url = data.paging?.next || null;
+  }
+  return out;
+}
+
 // جلب رسائل محادثة معينة (مرتّبة من الأقدم للأحدث)
 export async function fetchMessages(pageId, conversationId, { limit = 50 } = {}) {
   const page = PAGES[pageId];

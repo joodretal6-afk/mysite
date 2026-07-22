@@ -55,6 +55,22 @@
 
   <div id="topmsg"></div>
 
+  <!-- 🚀 الاستخراج الجماعي بالتاريخ -->
+  <div style="max-width:1400px;margin:16px auto 0;padding:0 18px">
+    <div class="card" style="padding:16px">
+      <div style="font-weight:700;color:var(--green2);margin-bottom:12px">🚀 استخراج جماعي بالتاريخ — يمسح كل الدردشات ويستخرج الطلبات وينزّلها تلقائياً</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div class="fld" style="margin:0"><label>الصفحة</label>
+          <select id="bulkPage" style="border:1.5px solid var(--line)"><option value="all">كل الصفحات</option></select>
+        </div>
+        <div class="fld" style="margin:0"><label>من تاريخ</label><input id="bulkFrom" type="date"></div>
+        <div class="fld" style="margin:0"><label>إلى تاريخ</label><input id="bulkTo" type="date"></div>
+        <button class="save" id="bulkBtn" style="width:auto;margin:0;padding:11px 22px" onclick="runBulk()">⚡ استخرج وأنزّل الكل</button>
+      </div>
+      <div id="bulkResult" style="margin-top:14px"></div>
+    </div>
+  </div>
+
   <div class="wrap">
     <!-- قائمة المحادثات -->
     <div class="card">
@@ -83,7 +99,49 @@
       if(r.status===401){ location.href='/admin/login'; return; }
       const pages = await r.json();
       const sel = document.getElementById('pageSel');
-      pages.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; sel.appendChild(o); });
+      const bsel = document.getElementById('bulkPage');
+      pages.forEach(p=>{
+        const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; sel.appendChild(o);
+        const o2=document.createElement('option'); o2.value=p.id; o2.textContent=p.name; bsel.appendChild(o2);
+      });
+    }
+
+    async function runBulk(){
+      const btn = document.getElementById('bulkBtn');
+      const box = document.getElementById('bulkResult');
+      const body = {
+        page_id: document.getElementById('bulkPage').value,
+        from: document.getElementById('bulkFrom').value,
+        to: document.getElementById('bulkTo').value
+      };
+      btn.disabled = true; btn.textContent = '⏳ جاري المسح... (قد يأخذ دقيقة)';
+      box.innerHTML = '<div class="loading">⏳ يفتح الدردشات ويستخرج الطلبات، انتظر لحظة...</div>';
+      try {
+        const r = await fetch('/admin/api/bulk-extract', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const d = await r.json();
+        if(!r.ok) throw new Error(d.error||'خطأ');
+        let html = `<div class="msgbar ok" style="margin:0 0 10px">
+          ✅ تم المسح! فُحص <b>${d.scanned}</b> محادثة —
+          حُفظ <b>${d.saved}</b> طلب •
+          يحتاج مراجعة يدوية <b>${d.needsReview}</b> (بدون رقم) •
+          مكرّر تم تجاهله <b>${d.skippedDup}</b> •
+          بدون طلب <b>${d.noOrder}</b></div>`;
+        if(d.orders && d.orders.length){
+          html += '<div style="max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:9px">';
+          html += '<table style="width:100%;border-collapse:collapse;font-size:13px">';
+          html += '<tr style="background:#f0f4f1;font-weight:700"><td style="padding:7px">الصفحة</td><td style="padding:7px">الزبون</td><td style="padding:7px">الطلب</td><td style="padding:7px">الحساب</td><td style="padding:7px">التلفون</td></tr>';
+          d.orders.forEach(o=>{ html += `<tr style="border-top:1px solid var(--line)"><td style="padding:7px">${esc(o.page)}</td><td style="padding:7px">${esc(o.customer)}</td><td style="padding:7px">${esc(o.order)}</td><td style="padding:7px">${o.total}د</td><td style="padding:7px">${esc(o.phone)}</td></tr>`; });
+          html += '</table></div>';
+          html += '<div style="margin-top:10px"><a href="/admin" style="color:var(--green);font-weight:600">→ شوف كل الطلبات باللوحة</a></div>';
+        }
+        if(d.errors && d.errors.length){
+          html += '<div class="msgbar err" style="margin:10px 0 0">أخطاء ببعض الصفحات: '+d.errors.map(esc).join(' | ')+'</div>';
+        }
+        box.innerHTML = html;
+      } catch(e){
+        box.innerHTML = '<div class="msgbar err" style="margin:0">فشل الاستخراج: '+esc(e.message)+'</div>';
+      }
+      btn.disabled = false; btn.textContent = '⚡ استخرج وأنزّل الكل';
     }
 
     async function loadConversations(){

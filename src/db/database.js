@@ -142,6 +142,14 @@ export function listOrders({ page_id, search, from, to, status, limit = 500, off
   return { rows, count: totalCount.c, sum: totalCount.sum };
 }
 
+// فحص وجود طلب مطابق (لمنع التكرار أثناء الاستخراج الجماعي)
+export function orderExists(page_id, sender_id, order_string) {
+  const row = db.prepare(
+    "SELECT id FROM orders WHERE page_id = ? AND sender_id = ? AND order_string = ?"
+  ).get(page_id, sender_id, order_string);
+  return !!row;
+}
+
 export function updateOrderStatus(id, status) {
   return db.prepare("UPDATE orders SET status = ? WHERE id = ?").run(status, id);
 }
