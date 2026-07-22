@@ -3,10 +3,25 @@
 // ═══════════════════════════════════════════════════════════
 import express from "express";
 import cookieParser from "cookie-parser";
+import bcrypt from "bcryptjs";
 import { CONFIG, WEB } from "./config.js";
-import { SESSIONS_KV } from "./db/database.js";
+import { SESSIONS_KV, countUsers, getUser, createUser } from "./db/database.js";
 import { handleEvent } from "./bot/handler.js";
 import { adminRouter } from "./admin/routes.js";
+
+// 🟢 إنشاء أدمن تلقائياً من متغيّرات البيئة (لتسهيل النشر على Railway بدون أوامر يدوية)
+// حط ADMIN_USER و ADMIN_PASS في متغيّرات البيئة، وبيتعمل المستخدم أول تشغيل.
+(function bootstrapAdmin() {
+  const u = process.env.ADMIN_USER;
+  const p = process.env.ADMIN_PASS;
+  if (u && p && !getUser(u)) {
+    createUser(u, bcrypt.hashSync(p, 10));
+    console.log(`👤 تم إنشاء مستخدم الأدمن "${u}" من متغيّرات البيئة.`);
+  }
+  if (countUsers() === 0) {
+    console.warn("⚠️  لا يوجد أي مستخدم أدمن! أضف ADMIN_USER و ADMIN_PASS في متغيّرات البيئة، أو شغّل: npm run create-admin -- <user> <pass>");
+  }
+})();
 
 const app = express();
 app.use(cookieParser());
