@@ -8,9 +8,13 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import {
   getUser, listOrders, updateOrderStatus, deleteOrder,
-  distinctPages, ordersStats
+  distinctPages, ordersStats, saveOrder
 } from "../db/database.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
+import { PAGES } from "../bot/brain.js";
+import { fetchConversations, fetchMessages } from "../bot/inbox.js";
+import { parseMessage } from "../bot/parser.js";
+import { computeOrder } from "../bot/order.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "..", "..", "public");
@@ -42,9 +46,87 @@ adminRouter.get("/", requireAuth, (req, res) => {
   res.sendFile(path.join(publicDir, "dashboard.html"));
 });
 
+// ── صندوق الوارد (محمي) ──
+adminRouter.get("/inbox", requireAuth, (req, res) => {
+  res.sendFile(path.join(publicDir, "inbox.html"));
+});
+
 // جلب فلاتر البيانات (الصفحات + الإحصائيات)
 adminRouter.get("/api/meta", requireAuth, (req, res) => {
   res.json({ user: req.user, pages: distinctPages(), stats: ordersStats() });
+});
+
+// ═══════════════════════════════════════════════════════════
+// 📥 صندوق الوارد (Inbox): قراءة محادثات فيسبوك واستخراج الطلبات
+// ═══════════════════════════════════════════════════════════
+
+// قائمة كل الصفحات المتاحة (للاختيار في صندوق الوارد)
+adminRouter.get("/api/pages-all", requireAuth, (req, res) => {
+  res.json(Object.entries(PAGES).map(([id, p]) => ({ id, name: p.name })));
+});
+
+// جلب محادثات صفحة معينة
+adminRouter.get("/api/conversations", requireAuth, async (req, res) => {
+  try {
+    const { page_id } = req.query;
+    if (!PAGES[page_id]) return res.status(400).json({ error: "اختر صفحة صحيحة" });
+    const conversations = await fetchConversations(page_id);
+    res.json({ conversations });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// جلب رسائل محادثة + استخراج الطلب تلقائياً منها
+adminRouter.get("/api/conversation", requireAuth, async (req, res) => {
+  try {
+    const { page_id, id } = req.query;
+    const page = PAGES[page_id];
+    if (!page) return res.status(400).json({ error: "اختر صفحة صحيحة" });
+
+    const { customerId, customerName, messages } = await fetchMessages(page_id, id);
+
+    // نجمع نص رسائل الزبون فقط (مش ردود الصفحة) ونمرّرها على الرادار
+    const customerText = messages.filter(m => !m.isPage).map(m => m.text).join("\n");
+    const memory = { cart: {}, area: null, phone: null, history: [], lastReply: "" };
+    parseMessage(memory, customerText, page);
+    const order = computeOrder(page, memory.cart);
+
+    res.json({
+      customerId, customerName, messages,
+      extracted: {
+        cart: memory.cart,
+        area: memory.area || "",
+        phone: memory.phone || "",
+        orderString: order.orderString,
+        total: order.total
+      }
+    });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// حفظ طلب يدوياً (من صندوق الوارد بعد مراجعة الأدمن)
+adminRouter.post("/api/orders/manual", requireAuth, (req, res) => {
+  const { page_id, order_string, total, area, phone, customer_id } = req.body || {};
+  const page = PAGES[page_id];
+  if (!page) return res.status(400).json({ error: "صفحة غير صحيحة" });
+  if (!order_string || !order_string.trim()) return res.status(400).json({ error: "اكتب تفاصيل الطلب" });
+
+  const id = saveOrder({
+    page_id,
+    page_name: page.name,
+    sender_id: customer_id || "",
+    order_string: order_string.trim(),
+    total: parseFloat(total) || 0,
+    area: area || "",
+    phone: phone || "",
+    status: "جديد",
+    messenger_url: customer_id ? `https://m.me/${customer_id}` : "",
+    created_at: Date.now()
+  });
+  res.json({ ok: true, id });
 });
 
 // جلب الأوردرات
