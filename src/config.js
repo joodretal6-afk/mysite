@@ -6,7 +6,7 @@
 
 export const CONFIG = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || "AIzaSyA1hzKsNzQHEZatQ4OQqYyPquT0fBJUghc",
-  MODEL_NAME: process.env.MODEL_NAME || "gemini-2.5-flash",
+  MODEL_NAME: process.env.MODEL_NAME || "gemini-2.0-flash",
   VERIFY_TOKEN: process.env.VERIFY_TOKEN || "talebbot",
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || "YOUR_TELEGRAM_BOT_TOKEN",
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || "YOUR_TELEGRAM_CHAT_ID",
