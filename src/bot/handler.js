@@ -6,7 +6,7 @@ import { PAGES } from "./brain.js";
 import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } from "./messenger.js";
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
-import { askAI } from "./ai.js";
+import { askAI, extractOrderWithAI } from "./ai.js";
 import { saveOrder, getKnowledge, logMessage } from "../db/database.js";
 
 export async function handleEvent(event, env, ctx) {
@@ -79,6 +79,25 @@ export async function handleEvent(event, env, ctx) {
 
   if (!memory.sent && userMsg !== "[رسالة صوتية]") {
     parseMessage(memory, userMsg, pageConfig);
+  }
+
+  // 🧠 استخراج ذكي من كامل المحادثة (يفهم أي صياغة طبيعية ويكمّل النواقص)
+  if (!memory.sent) {
+    try {
+      const convText = [
+        ...(memory.history || []).filter(h => h.role === "user").map(h => h.content),
+        userMsg
+      ].filter(Boolean).join("\n");
+      const ai = await extractOrderWithAI(convText, pageConfig);
+      if (ai.items.length) {
+        memory.cart = {};
+        ai.items.forEach(it => { memory.cart[it.product] = it.qty; });
+      }
+      if (ai.area && !memory.area) memory.area = ai.area;
+      if (ai.phone) { memory.phone = ai.phone; memory.invalidPhoneProvided = false; }
+    } catch (e) {
+      console.error("live AI extract failed:", e && e.message);
+    }
   }
 
   const cartItemsCount = memory.cart ? Object.keys(memory.cart).length : 0;

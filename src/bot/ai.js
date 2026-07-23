@@ -22,6 +22,99 @@ export async function askAI(history, userMsg, audioPart, pageConfig, memory, crm
   return askGemini(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
 }
 
+// ═══════════════════════════════════════════════════════════
+// 🧠 استخراج الطلب بالذكاء الاصطناعي (يفهم أي صياغة طبيعية)
+// يرجّع: { is_order, items:[{product, qty}], area, phone }
+// ═══════════════════════════════════════════════════════════
+const PHONE_STRICT = /^(?:07[789]\d{7})$/;
+
+function normalizePhone(raw) {
+  if (!raw) return "";
+  let p = String(raw).replace(/[\s\-\.]/g, "");
+  if (p.startsWith("00962")) p = "0" + p.slice(5);
+  else if (p.startsWith("+962")) p = "0" + p.slice(4);
+  else if (p.startsWith("962")) p = "0" + p.slice(3);
+  return PHONE_STRICT.test(p) ? p : "";
+}
+
+export async function extractOrderWithAI(conversationText, pageConfig) {
+  const allowed = Object.keys(pageConfig.PRICES || {});
+  if (!conversationText || !conversationText.trim() || !allowed.length) {
+    return { is_order: false, items: [], area: "", phone: "" };
+  }
+
+  const prompt =
+`أنت محلّل طلبات دقيق لبائع أجبان أردني. استخرج الطلب من محادثة الزبون التالية.
+الأصناف المتاحة في هذه الصفحة فقط (لا تخترع غيرها): ${allowed.join(" ، ")}.
+
+أعد JSON فقط بهذا الشكل بالضبط:
+{"is_order": true أو false, "items": [{"product": "<اسم صنف من القائمة أعلاه حرفياً>", "qty": <عدد صحيح>}], "area": "<العنوان/المنطقة كاملة أو فراغ>", "phone": "<رقم أردني بصيغة 07xxxxxxxx أو فراغ>"}
+
+قواعد مهمة:
+- الكمية بالعدد: نصية/وحدة/عبوة=1، نصيتين/عبوتين=2، ثلاث=3. "4 كيلو"=1 نصية.
+- لو ما في نية طلب واضحة (مجرد سؤال/سلام) اجعل is_order=false و items فارغة.
+- استخرج أي عنوان أردني حتى لو غير مكتمل. استخرج أي رقم هاتف أردني.
+- طابق اسم الصنف مع القائمة المتاحة (مثلاً "بلدية"→"غنم" إن لم يوجد "بلدية").
+
+المحادثة:
+${conversationText.slice(0, 4000)}`;
+
+  let raw = "";
+  try {
+    if (chosenProvider() === "openai") {
+      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${CONFIG.OPENAI_API_KEY}` },
+        body: JSON.stringify({
+          model: CONFIG.OPENAI_MODEL,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0,
+          response_format: { type: "json_object" }
+        }),
+        signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
+      });
+      if (!resp.ok) { console.error("AI extract (openai) error:", resp.status, await resp.text()); return { is_order: false, items: [], area: "", phone: "" }; }
+      const d = await resp.json();
+      raw = d?.choices?.[0]?.message?.content || "";
+    } else {
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.MODEL_NAME}:generateContent?key=${CONFIG.GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0, responseMimeType: "application/json", maxOutputTokens: 500 }
+          }),
+          signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
+        }
+      );
+      if (!resp.ok) { console.error("AI extract (gemini) error:", resp.status, await resp.text()); return { is_order: false, items: [], area: "", phone: "" }; }
+      const d = await resp.json();
+      raw = (d?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("");
+    }
+
+    // تنظيف وتحليل JSON
+    const m = raw.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(m ? m[0] : raw);
+
+    // تحقّق وتصفية الأصناف ضمن المتاح فقط
+    const items = (Array.isArray(parsed.items) ? parsed.items : [])
+      .map(it => ({ product: String(it.product || "").trim(), qty: parseInt(it.qty, 10) || 1 }))
+      .filter(it => allowed.includes(it.product) && it.qty > 0);
+
+    return {
+      is_order: !!parsed.is_order && items.length > 0,
+      items,
+      area: String(parsed.area || "").slice(0, 200).trim(),
+      phone: normalizePhone(parsed.phone)
+    };
+  } catch (e) {
+    console.error("AI extract failed:", e && e.message);
+    return { is_order: false, items: [], area: "", phone: "" };
+  }
+}
+
 // ── تحويل رسالة صوتية لنص عبر Whisper ──
 async function transcribeOpenAI(audioPart) {
   try {

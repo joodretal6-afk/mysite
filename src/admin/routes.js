@@ -16,6 +16,7 @@ import { PAGES } from "../bot/brain.js";
 import { fetchConversations, fetchMessages, collectConversationsInRange } from "../bot/inbox.js";
 import { parseMessage } from "../bot/parser.js";
 import { computeOrder } from "../bot/order.js";
+import { extractOrderWithAI } from "../bot/ai.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "..", "..", "public");
@@ -137,21 +138,28 @@ adminRouter.get("/api/conversation", requireAuth, async (req, res) => {
 
     const { customerId, customerName, messages } = await fetchMessages(page_id, id);
 
-    // نجمع نص رسائل الزبون فقط (مش ردود الصفحة) ونمرّرها على الرادار
+    // نجمع نص رسائل الزبون فقط (مش ردود الصفحة)
     const customerText = messages.filter(m => !m.isPage).map(m => m.text).join("\n");
-    const memory = { cart: {}, area: null, phone: null, history: [], lastReply: "" };
-    parseMessage(memory, customerText, page);
-    const order = computeOrder(page, memory.cart);
+
+    // 🧠 الاستخراج الذكي أولاً (يفهم أي صياغة)، ثم الرادار احتياطاً
+    const ai = await extractOrderWithAI(customerText, page);
+    let cart = {};
+    let area = "", phone = "";
+
+    if (ai.items.length) {
+      ai.items.forEach(it => { cart[it.product] = it.qty; });
+      area = ai.area; phone = ai.phone;
+    } else {
+      const memory = { cart: {}, area: null, phone: null, history: [], lastReply: "" };
+      parseMessage(memory, customerText, page);
+      cart = memory.cart; area = memory.area || ""; phone = memory.phone || "";
+    }
+
+    const order = computeOrder(page, cart);
 
     res.json({
       customerId, customerName, messages,
-      extracted: {
-        cart: memory.cart,
-        area: memory.area || "",
-        phone: memory.phone || "",
-        orderString: order.orderString,
-        total: order.total
-      }
+      extracted: { cart, area, phone, orderString: order.orderString, total: order.total }
     });
   } catch (e) {
     res.status(400).json({ error: e.message });
@@ -236,18 +244,26 @@ adminRouter.post("/api/bulk-extract", requireAuth, async (req, res) => {
           continue;   // نتجاوز أي محادثة فشل جلبها
         }
 
-        // نجمع كلام الزبون فقط ونمرّره على الرادار
+        // نجمع كلام الزبون فقط ونستخرج بالذكاء الاصطناعي (مع الرادار احتياطاً)
         const custText = thread.messages.filter(m => !m.isPage).map(m => m.text).join("\n");
-        const memory = { cart: {}, area: null, phone: null, history: [], lastReply: "" };
-        parseMessage(memory, custText, page);
+        const ai = await extractOrderWithAI(custText, page);
+        let cart = {}, area = "", phone = "";
+        if (ai.items.length) {
+          ai.items.forEach(it => { cart[it.product] = it.qty; });
+          area = ai.area; phone = ai.phone;
+        } else {
+          const memory = { cart: {}, area: null, phone: null, history: [], lastReply: "" };
+          parseMessage(memory, custText, page);
+          cart = memory.cart; area = memory.area || ""; phone = memory.phone || "";
+        }
 
-        const hasItems = Object.keys(memory.cart).length > 0;
+        const hasItems = Object.keys(cart).length > 0;
         if (!hasItems) { noOrder++; continue; }
 
-        const order = computeOrder(page, memory.cart);
+        const order = computeOrder(page, cart);
 
         // طلب مؤكّد = فيه أصناف + رقم هاتف. غير هيك يحتاج مراجعة يدوية.
-        if (!memory.phone) { needsReview++; continue; }
+        if (!phone) { needsReview++; continue; }
 
         if (orderExists(pid, c.customerId, order.orderString)) { skippedDup++; continue; }
 
@@ -257,14 +273,14 @@ adminRouter.post("/api/bulk-extract", requireAuth, async (req, res) => {
           sender_id: c.customerId,
           order_string: order.orderString,
           total: order.total,
-          area: memory.area || "",
-          phone: memory.phone,
+          area: area,
+          phone: phone,
           status: "جديد",
           messenger_url: c.customerId ? `https://m.me/${c.customerId}` : "",
           created_at: c.updated ? new Date(c.updated).getTime() : Date.now()
         });
         saved++;
-        savedOrders.push({ id, page: page.name, customer: c.customerName, order: order.orderString, total: order.total, phone: memory.phone });
+        savedOrders.push({ id, page: page.name, customer: c.customerName, order: order.orderString, total: order.total, phone: phone });
       }
     }
 
