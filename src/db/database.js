@@ -127,24 +127,25 @@ export const SESSIONS_KV = {
 // ═══════════════════════════════════════════════════════════
 // دوال الأوردرات
 // ═══════════════════════════════════════════════════════════
+// نستخدم بارامترات ترتيبية (?) — الأضمن مع Turso/libsql
 const insertOrder = db.prepare(`
   INSERT INTO orders (page_id, page_name, sender_id, order_string, total, area, phone, status, messenger_url, created_at)
-  VALUES (@page_id, @page_name, @sender_id, @order_string, @total, @area, @phone, @status, @messenger_url, @created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 export function saveOrder(o) {
-  const info = insertOrder.run({
-    page_id: o.page_id || "",
-    page_name: o.page_name || "",
-    sender_id: o.sender_id || "",
-    order_string: o.order_string || "",
-    total: o.total || 0,
-    area: o.area || "",
-    phone: o.phone || "",
-    status: o.status || "جديد",
-    messenger_url: o.messenger_url || "",
-    created_at: o.created_at || Date.now()
-  });
+  const info = insertOrder.run(
+    String(o.page_id || ""),
+    String(o.page_name || ""),
+    String(o.sender_id || ""),
+    String(o.order_string || ""),
+    Number(o.total) || 0,
+    String(o.area || ""),
+    String(o.phone || ""),
+    String(o.status || "جديد"),
+    String(o.messenger_url || ""),
+    Number(o.created_at) || Date.now()
+  );
   return info.lastInsertRowid;
 }
 
@@ -240,19 +241,19 @@ export function setKnowledge(pageId, extra) {
 // ═══════════════════════════════════════════════════════════
 const insertMessage = db.prepare(`
   INSERT INTO messages (page_id, page_name, sender_id, direction, body, created_at)
-  VALUES (@page_id, @page_name, @sender_id, @direction, @body, @created_at)
+  VALUES (?, ?, ?, ?, ?, ?)
 `);
 
 export function logMessage(m) {
   try {
-    insertMessage.run({
-      page_id: m.page_id || "",
-      page_name: m.page_name || "",
-      sender_id: m.sender_id || "",
-      direction: m.direction || "in",
-      body: m.body || "",
-      created_at: m.created_at || Date.now()
-    });
+    insertMessage.run(
+      String(m.page_id || ""),
+      String(m.page_name || ""),
+      String(m.sender_id || ""),
+      String(m.direction || "in"),
+      String(m.body || ""),
+      Number(m.created_at) || Date.now()
+    );
   } catch (e) {
     console.error("logMessage failed:", e && e.message);
   }
