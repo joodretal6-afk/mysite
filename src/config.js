@@ -20,6 +20,9 @@ export const CONFIG = {
 
   // إعدادات إضافية
   GRAPH_VERSION: "v21.0",
+  // زر الإشعارات OTN يحتاج صلاحية Advanced Messaging من فيسبوك.
+  // مطفأ افتراضياً حتى لا يسبب خطأ. فعّله بـ ENABLE_OTN=true بعد الحصول على الصلاحية.
+  ENABLE_OTN: process.env.ENABLE_OTN === "true",
   DEFAULT_PRICE: 14,          // سعر احتياطي لو الصنف مش موجود
   SESSION_TTL: 60 * 60 * 24 * 30,   // عمر الجلسة شهر (يتذكر الزبون أطول)
   CRM_TTL: 60 * 60 * 24 * 365,      // عمر بيانات الزبون سنة

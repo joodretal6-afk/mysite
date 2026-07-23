@@ -156,8 +156,8 @@ export async function handleEvent(event, env, ctx) {
     await sendText(token, senderId, chunk);
   }
 
-  // 🔴 زر الإشعارات (OTN) مباشرة بعد الفاتورة
-  if (justSentInvoice) {
+  // 🔴 زر الإشعارات (OTN) مباشرة بعد الفاتورة (فقط لو مفعّل وعندك الصلاحية)
+  if (justSentInvoice && CONFIG.ENABLE_OTN) {
     ctx.waitUntil(graphSend(token, {
       recipient: { id: senderId },
       message: {
