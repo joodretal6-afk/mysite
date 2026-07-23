@@ -120,7 +120,7 @@
   </div>
 
   <script>
-    const STATUSES = ["جديد","تم التواصل","تم الشحن","تم التسليم","ملغي"];
+    const STATUSES = ["ناقص","جديد","تم التواصل","تم الشحن","تم التسليم","ملغي"];
 
     function badgeClass(s){ if(s==='ملغي')return 'b-ملغي'; if(s==='جديد')return 'b-جديد'; return 'b-تم'; }
     function fmtDate(ts){ return new Date(ts).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}); }

@@ -7,7 +7,7 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } f
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
-import { saveOrder, getKnowledge, logMessage } from "../db/database.js";
+import { saveOrder, updateOrder, getKnowledge, logMessage } from "../db/database.js";
 
 export async function handleEvent(event, env, ctx) {
   if (!event || event.optin) return;                       // كبسة الإشعارات OTN
@@ -102,43 +102,49 @@ export async function handleEvent(event, env, ctx) {
   }
 
   const cartItemsCount = memory.cart ? Object.keys(memory.cart).length : 0;
-  const readyForInvoice =
-    cartItemsCount > 0 && memory.area && memory.phone && !memory.invalidPhoneProvided && !memory.sent;
+  const complete = cartItemsCount > 0 && memory.area && memory.phone && !memory.invalidPhoneProvided;
+  const readyForInvoice = complete && !memory.sent;
+
+  const messengerUrl = `https://m.me/${senderId}`;
+
+  // 🟢 وصول فوري للسستم: أي أوردر فيه أصناف + (عنوان أو رقم) ينزل باللوحة مباشرة
+  //    ويتحدّث لحظياً لين يكتمل. الحالة "ناقص" حتى يكتمل ثم "جديد".
+  const hasIntent = cartItemsCount > 0 && (memory.area || memory.phone);
+  if (hasIntent) {
+    try {
+      const { total, orderString } = computeOrder(pageConfig, memory.cart);
+      const status = complete ? "جديد" : "ناقص";
+      if (memory.orderId) {
+        updateOrder(memory.orderId, {
+          order_string: orderString, total,
+          area: memory.area || "", phone: memory.phone || "", status
+        });
+      } else {
+        memory.orderId = saveOrder({
+          page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
+          order_string: orderString, total,
+          area: memory.area || "", phone: memory.phone || "", status,
+          messenger_url: messengerUrl, created_at: Date.now()
+        });
+      }
+    } catch (e) {
+      console.error("🔴 live upsert FAILED:", e && e.message, e && e.stack);
+    }
+  }
 
   let reply = "";
   let justSentInvoice = false;
 
-  // 🔴 شرط إصدار الفاتورة الحقيقية
+  // 🔴 إصدار الفاتورة للزبون عند اكتمال الطلب (مرة واحدة)
   if (readyForInvoice) {
     const { total, orderString, detailedString, priceString } = computeOrder(pageConfig, memory.cart);
-    // الفاتورة تعرض التفصيل بالأسعار؛ التخزين يبقى بالصيغة المختصرة
     reply = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, memory.area, memory.phone);
     memory.sent = true;
     justSentInvoice = true;
 
-    const messengerUrl = `https://m.me/${senderId}`;
-
     ctx.waitUntil(notifyTelegram(
       `🔔 طلب جديد من (${pageConfig.name})!\n\n🧀 الطلب: ${orderString}\n💰 الحساب: ${total}د\n📍 العنوان: ${memory.area}\n📞 التلفون: ${memory.phone}\n🔗 رابط الماسنجر: ${messengerUrl}`
     ));
-
-    // 🟢 جديد: حفظ الأوردر في قاعدة البيانات ليظهر في لوحة التحكم والإكسل
-    try {
-      saveOrder({
-        page_id: recipientId,
-        page_name: pageConfig.name,
-        sender_id: senderId,
-        order_string: orderString,
-        total,
-        area: memory.area,
-        phone: memory.phone,
-        status: "جديد",
-        messenger_url: messengerUrl,
-        created_at: Date.now()
-      });
-    } catch (e) {
-      console.error("🔴 saveOrder FAILED:", e && e.message, e && e.stack);
-    }
 
     ctx.waitUntil(env.SESSIONS_KV.put(crmKey, JSON.stringify({
       lastOrder: orderString, lastArea: memory.area, phone: memory.phone, page: pageConfig.name

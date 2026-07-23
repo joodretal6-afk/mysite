@@ -307,7 +307,7 @@ adminRouter.get("/api/orders", requireAuth, (req, res) => {
 // تحديث حالة أوردر
 adminRouter.post("/api/orders/:id/status", requireAuth, (req, res) => {
   const { status } = req.body || {};
-  const allowed = ["جديد", "تم التواصل", "تم الشحن", "تم التسليم", "ملغي"];
+  const allowed = ["ناقص", "جديد", "تم التواصل", "تم الشحن", "تم التسليم", "ملغي"];
   if (!allowed.includes(status)) return res.status(400).json({ error: "حالة غير صالحة" });
   updateOrderStatus(req.params.id, status);
   res.json({ ok: true });

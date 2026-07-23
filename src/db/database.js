@@ -188,6 +188,20 @@ export function orderExists(page_id, sender_id, order_string) {
   return !!row;
 }
 
+// تحديث أوردر موجود (للتحديث اللحظي أثناء المحادثة)
+export function updateOrder(id, f) {
+  db.prepare(
+    "UPDATE orders SET order_string = ?, total = ?, area = ?, phone = ?, status = ? WHERE id = ?"
+  ).run(
+    String(f.order_string || ""),
+    Number(f.total) || 0,
+    String(f.area || ""),
+    String(f.phone || ""),
+    String(f.status || "جديد"),
+    Number(id)
+  );
+}
+
 export function updateOrderStatus(id, status) {
   return db.prepare("UPDATE orders SET status = ? WHERE id = ?").run(status, id);
 }
