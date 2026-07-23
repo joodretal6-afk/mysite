@@ -162,18 +162,19 @@ export function listOrders({ page_id, search, from, to, status, limit = 500, off
   }
 
   const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
-  params.limit = limit;
-  params.offset = offset;
+  // LIMIT/OFFSET كأعداد صحيحة مضمّنة (Turso صارم: لا يقبلها كبارامترات عشرية)
+  const lim = Math.max(1, parseInt(limit, 10) || 500);
+  const off = Math.max(0, parseInt(offset, 10) || 0);
 
   const rows = db.prepare(
-    `SELECT * FROM orders ${clause} ORDER BY created_at DESC LIMIT @limit OFFSET @offset`
+    `SELECT * FROM orders ${clause} ORDER BY created_at DESC LIMIT ${lim} OFFSET ${off}`
   ).all(params);
 
   const totalCount = db.prepare(
     `SELECT COUNT(*) AS c, COALESCE(SUM(total),0) AS sum FROM orders ${clause}`
   ).get(params);
 
-  return { rows, count: totalCount.c, sum: totalCount.sum };
+  return { rows, count: Number(totalCount.c), sum: Number(totalCount.sum) };
 }
 
 // فحص وجود طلب مطابق (لمنع التكرار أثناء الاستخراج الجماعي)
