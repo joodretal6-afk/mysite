@@ -15,24 +15,23 @@ if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
 // ═══════════════════════════════════════════════════════════
 // التخزين الدائم:
-// - لو TURSO_DATABASE_URL موجود → نسخة محلية تتزامن مع Turso السحابي
-//   (الأوردرات تنحفظ بالسحابة فوراً وما تنمسح أبداً حتى لو أعاد الموقع التشغيل)
+// - لو TURSO_DATABASE_URL موجود → اتصال مباشر بـ Turso السحابي
+//   (كل كتابة وقراءة على نفس القاعدة السحابية → الأوردرات تظهر فوراً وما تنمسح أبداً)
 // - غير هيك → ملف محلي عادي (للتجربة)
 // ═══════════════════════════════════════════════════════════
 const TURSO_URL = process.env.TURSO_DATABASE_URL || "";
 const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN || "";
 
 export const db = TURSO_URL
-  ? new Database(WEB.DB_PATH, { syncUrl: TURSO_URL, authToken: TURSO_TOKEN, syncInterval: 30 })
+  ? new Database(TURSO_URL, { authToken: TURSO_TOKEN })   // اتصال مباشر (تناسق فوري)
   : new Database(WEB.DB_PATH);
 
-// مزامنة أولية عند الإقلاع (سحب أحدث نسخة من السحابة)
-if (TURSO_URL && typeof db.sync === "function") {
-  try { db.sync(); console.log("☁️  تمت المزامنة مع Turso السحابي"); }
-  catch (e) { console.error("Turso sync failed:", e && e.message); }
+if (TURSO_URL) {
+  console.log("☁️  متصل مباشرة بـ Turso السحابي (تخزين دائم)");
+} else {
+  // WAL مفيد فقط للملف المحلي
+  try { db.pragma("journal_mode = WAL"); } catch { /* تجاهل */ }
 }
-
-try { db.pragma("journal_mode = WAL"); } catch { /* بعض أوضاع libsql لا تحتاجها */ }
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS kv (
