@@ -202,6 +202,19 @@ export function updateOrder(id, f) {
   );
 }
 
+// تعديل حقول الأوردر من اللوحة (بدون المساس بالحالة)
+export function editOrder(id, f) {
+  db.prepare(
+    "UPDATE orders SET order_string = ?, total = ?, area = ?, phone = ? WHERE id = ?"
+  ).run(
+    String(f.order_string || ""),
+    Number(f.total) || 0,
+    String(f.area || ""),
+    String(f.phone || ""),
+    Number(id)
+  );
+}
+
 export function updateOrderStatus(id, status) {
   return db.prepare("UPDATE orders SET status = ? WHERE id = ?").run(status, id);
 }

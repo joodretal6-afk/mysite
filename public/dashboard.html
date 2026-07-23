@@ -58,6 +58,14 @@
     select.status { padding:6px 8px; border-radius:8px; border:1.5px solid var(--line); font-family:inherit; font-size:13px; cursor:pointer; }
     a.msg { color:var(--green); text-decoration:none; font-size:13px; }
     .del { color:#c62828; cursor:pointer; background:none; border:none; font-size:16px; }
+    .edit { cursor:pointer; background:none; border:none; font-size:15px; margin-left:4px; }
+    .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50; align-items:center; justify-content:center; padding:20px; }
+    .modal { background:#fff; border-radius:16px; padding:26px; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+    .modal h3 { color:var(--green2); margin-bottom:16px; }
+    .modal label { display:block; font-size:13px; color:#555; margin:12px 0 5px; font-weight:600; }
+    .modal input { width:100%; padding:11px 13px; border:1.5px solid var(--line); border-radius:10px; font-size:15px; font-family:inherit; }
+    .modal input:focus { outline:none; border-color:var(--green); }
+    .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:22px; }
     .empty { text-align:center; padding:50px; color:var(--mut); }
     td.total { font-weight:700; color:var(--green2); }
   </style>
@@ -119,8 +127,30 @@
     </div>
   </div>
 
+  <!-- نافذة تعديل الأوردر -->
+  <div id="editModal" class="modal-bg">
+    <div class="modal">
+      <h3>✏️ تعديل الأوردر</h3>
+      <input type="hidden" id="ed-id">
+      <label>الطلب</label>
+      <input id="ed-order" placeholder="مثال: غنم (2 نصية)">
+      <label>الحساب (دينار)</label>
+      <input id="ed-total" type="number" step="0.01">
+      <label>العنوان</label>
+      <input id="ed-area" placeholder="المحافظة والمنطقة والمعلم">
+      <label>التلفون</label>
+      <input id="ed-phone" placeholder="07...">
+      <div class="modal-actions">
+        <button class="btn ghost" onclick="closeEdit()">إلغاء</button>
+        <button class="btn primary" id="ed-save" onclick="saveEdit()">💾 حفظ التعديلات</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const STATUSES = ["ناقص","جديد","تم التواصل","تم الشحن","تم التسليم","ملغي"];
+    let ordersById = {};
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
     function badgeClass(s){ if(s==='ملغي')return 'b-ملغي'; if(s==='جديد')return 'b-جديد'; return 'b-تم'; }
     function fmtDate(ts){ return new Date(ts).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}); }
@@ -161,22 +191,57 @@
       tb.innerHTML='';
       if(!d.rows.length){ empty.style.display='block'; return; }
       empty.style.display='none';
+      ordersById = {};
       d.rows.forEach(o=>{
+        ordersById[o.id] = o;
         const tr=document.createElement('tr');
         const opts = STATUSES.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('');
         tr.innerHTML = `
           <td>${o.id}</td>
-          <td>${o.page_name||''}</td>
-          <td class="order">${o.order_string||''}</td>
+          <td>${esc(o.page_name)}</td>
+          <td class="order">${esc(o.order_string)}</td>
           <td class="total">${(+o.total).toFixed(2)}د</td>
-          <td>${o.area||''}</td>
-          <td>${o.phone||''}</td>
+          <td>${esc(o.area)}</td>
+          <td>${esc(o.phone)}</td>
           <td><select class="status" onchange="setStatus(${o.id},this.value)">${opts}</select></td>
           <td>${o.messenger_url?`<a class="msg" href="${o.messenger_url}" target="_blank">فتح 💬</a>`:''}</td>
           <td>${fmtDate(o.created_at)}</td>
-          <td><button class="del" title="حذف" onclick="del(${o.id})">🗑</button></td>`;
+          <td style="white-space:nowrap">
+            <button class="edit" title="تعديل" onclick="editRow(${o.id})">✏️</button>
+            <button class="del" title="حذف" onclick="del(${o.id})">🗑</button>
+          </td>`;
         tb.appendChild(tr);
       });
+    }
+
+    // ── تعديل أوردر عبر نافذة منبثقة ──
+    function editRow(id){
+      const o = ordersById[id];
+      if(!o) return;
+      document.getElementById('ed-id').value = id;
+      document.getElementById('ed-order').value = o.order_string || '';
+      document.getElementById('ed-total').value = o.total || 0;
+      document.getElementById('ed-area').value = o.area || '';
+      document.getElementById('ed-phone').value = o.phone || '';
+      document.getElementById('editModal').style.display = 'flex';
+    }
+    function closeEdit(){ document.getElementById('editModal').style.display = 'none'; }
+    async function saveEdit(){
+      const id = document.getElementById('ed-id').value;
+      const body = {
+        order_string: document.getElementById('ed-order').value,
+        total: document.getElementById('ed-total').value,
+        area: document.getElementById('ed-area').value,
+        phone: document.getElementById('ed-phone').value
+      };
+      const btn = document.getElementById('ed-save');
+      btn.disabled = true; btn.textContent = 'جاري الحفظ...';
+      try{
+        const r = await fetch('/admin/api/orders/'+id+'/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        if(!r.ok) throw new Error('فشل');
+        closeEdit(); load(); meta();
+      }catch(e){ alert('فشل الحفظ'); }
+      btn.disabled = false; btn.textContent = '💾 حفظ التعديلات';
     }
 
     async function setStatus(id,status){

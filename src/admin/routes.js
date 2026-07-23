@@ -9,7 +9,7 @@ import path from "node:path";
 import {
   getUser, listOrders, updateOrderStatus, deleteOrder,
   distinctPages, ordersStats, saveOrder, orderExists,
-  getKnowledge, setKnowledge, listChatThreads, getChatMessages, perPageStats
+  getKnowledge, setKnowledge, listChatThreads, getChatMessages, perPageStats, editOrder
 } from "../db/database.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
 import { PAGES } from "../bot/brain.js";
@@ -310,6 +310,13 @@ adminRouter.post("/api/orders/:id/status", requireAuth, (req, res) => {
   const allowed = ["ناقص", "جديد", "تم التواصل", "تم الشحن", "تم التسليم", "ملغي"];
   if (!allowed.includes(status)) return res.status(400).json({ error: "حالة غير صالحة" });
   updateOrderStatus(req.params.id, status);
+  res.json({ ok: true });
+});
+
+// تعديل حقول أوردر (الطلب/الحساب/العنوان/التلفون)
+adminRouter.post("/api/orders/:id/edit", requireAuth, (req, res) => {
+  const { order_string, total, area, phone } = req.body || {};
+  editOrder(req.params.id, { order_string, total, area, phone });
   res.json({ ok: true });
 });
 
