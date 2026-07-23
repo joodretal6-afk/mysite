@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 import { CONFIG } from "../config.js";
 import { COMMON_KNOWLEDGE } from "./brain.js";
+import { ADDRESS_EXPERT } from "./addressExpert.js";
 import { buildNextTask, askGemini } from "./gemini.js";
 
 function chosenProvider() {
@@ -47,17 +48,19 @@ export async function extractOrderWithAI(conversationText, pageConfig) {
 `أنت محلّل طلبات دقيق لبائع أجبان أردني. استخرج الطلب من محادثة الزبون التالية.
 الأصناف المتاحة في هذه الصفحة فقط (لا تخترع غيرها): ${allowed.join(" ، ")}.
 
+${ADDRESS_EXPERT}
+
 أعد JSON فقط بهذا الشكل بالضبط:
-{"is_order": true أو false, "items": [{"product": "<اسم صنف من القائمة أعلاه حرفياً>", "qty": <عدد صحيح>}], "area": "<العنوان/المنطقة كاملة أو فراغ>", "phone": "<رقم أردني بصيغة 07xxxxxxxx أو فراغ>"}
+{"is_order": true أو false, "items": [{"product": "<اسم صنف من القائمة أعلاه حرفياً>", "qty": <عدد صحيح>}], "area": "<العنوان الكامل مجمّعاً بسطر واحد: المحافظة ثم المنطقة/الحي ثم الشارع ثم أقرب معلم ثم أي ملاحظة للسائق>", "phone": "<رقم أردني بصيغة 07xxxxxxxx أو فراغ>"}
 
 قواعد مهمة:
 - الكمية بالعدد: نصية/وحدة/عبوة=1، نصيتين/عبوتين=2، ثلاث=3. "4 كيلو"=1 نصية.
 - لو ما في نية طلب واضحة (مجرد سؤال/سلام) اجعل is_order=false و items فارغة.
-- استخرج أي عنوان أردني حتى لو غير مكتمل. استخرج أي رقم هاتف أردني.
-- طابق اسم الصنف مع القائمة المتاحة (مثلاً "بلدية"→"غنم" إن لم يوجد "بلدية").
+- اجمع كل أجزاء العنوان المتناثرة في المحادثة كلها في حقل area واحد واضح ومرتّب (استنتج المحافظة إن أمكن).
+- استخرج أي رقم هاتف أردني. طابق اسم الصنف مع القائمة المتاحة (مثلاً "بلدية"→"غنم" إن لم يوجد "بلدية").
 
 المحادثة:
-${conversationText.slice(0, 4000)}`;
+${conversationText.slice(0, 6000)}`;
 
   let raw = "";
   try {
@@ -148,7 +151,7 @@ async function askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmDat
     : "";
 
   const nextTask = buildNextTask(memory);
-  const systemInst = `${COMMON_KNOWLEDGE}\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
+  const systemInst = `${COMMON_KNOWLEDGE}\n\n${ADDRESS_EXPERT}\n\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
 
   const messages = [{ role: "system", content: systemInst }];
   (history || []).forEach(h => {

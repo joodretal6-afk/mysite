@@ -21,9 +21,9 @@ export const CONFIG = {
   // إعدادات إضافية
   GRAPH_VERSION: "v21.0",
   DEFAULT_PRICE: 14,          // سعر احتياطي لو الصنف مش موجود
-  SESSION_TTL: 60 * 60 * 24 * 7,    // عمر الجلسة أسبوع
+  SESSION_TTL: 60 * 60 * 24 * 30,   // عمر الجلسة شهر (يتذكر الزبون أطول)
   CRM_TTL: 60 * 60 * 24 * 365,      // عمر بيانات الزبون سنة
-  MAX_HISTORY: 8,
+  MAX_HISTORY: 30,                  // يتذكر آخر 30 رسالة (كان 8 → كان بينسى)
   GEMINI_TIMEOUT_MS: 20000
 };
 

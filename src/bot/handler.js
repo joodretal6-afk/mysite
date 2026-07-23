@@ -93,7 +93,8 @@ export async function handleEvent(event, env, ctx) {
         memory.cart = {};
         ai.items.forEach(it => { memory.cart[it.product] = it.qty; });
       }
-      if (ai.area && !memory.area) memory.area = ai.area;
+      // العنوان يتصحّح تلقائياً من كامل المحادثة (ويُحفظ أكيد)
+      if (ai.area) memory.area = ai.area;
       if (ai.phone) { memory.phone = ai.phone; memory.invalidPhoneProvided = false; }
     } catch (e) {
       console.error("live AI extract failed:", e && e.message);

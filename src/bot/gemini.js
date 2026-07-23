@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import { CONFIG } from "../config.js";
 import { COMMON_KNOWLEDGE } from "./brain.js";
+import { ADDRESS_EXPERT } from "./addressExpert.js";
 
 export function buildNextTask(memory) {
   const cartItemsCount = memory.cart ? Object.keys(memory.cart).length : 0;
@@ -37,7 +38,7 @@ export async function askGemini(history, userMsg, audioPart, pageConfig, memory,
     : "";
 
   const nextTask = buildNextTask(memory);
-  const systemInst = `${COMMON_KNOWLEDGE}\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
+  const systemInst = `${COMMON_KNOWLEDGE}\n\n${ADDRESS_EXPERT}\n\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
 
   const contents = (history || []).map(h => ({
     role: h.role === "assistant" ? "model" : "user",
