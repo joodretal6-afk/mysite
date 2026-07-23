@@ -41,7 +41,7 @@ function normalizePhone(raw) {
 export async function extractOrderWithAI(conversationText, pageConfig) {
   const allowed = Object.keys(pageConfig.PRICES || {});
   if (!conversationText || !conversationText.trim() || !allowed.length) {
-    return { is_order: false, items: [], area: "", phone: "" };
+    return { ok: false, is_order: false, items: [], area: "", phone: "" };
   }
 
   const prompt =
@@ -76,7 +76,7 @@ ${conversationText.slice(0, 6000)}`;
         }),
         signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
       });
-      if (!resp.ok) { console.error("AI extract (openai) error:", resp.status, await resp.text()); return { is_order: false, items: [], area: "", phone: "" }; }
+      if (!resp.ok) { console.error("AI extract (openai) error:", resp.status, await resp.text()); return { ok: false, is_order: false, items: [], area: "", phone: "" }; }
       const d = await resp.json();
       raw = d?.choices?.[0]?.message?.content || "";
     } else {
@@ -92,7 +92,7 @@ ${conversationText.slice(0, 6000)}`;
           signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
         }
       );
-      if (!resp.ok) { console.error("AI extract (gemini) error:", resp.status, await resp.text()); return { is_order: false, items: [], area: "", phone: "" }; }
+      if (!resp.ok) { console.error("AI extract (gemini) error:", resp.status, await resp.text()); return { ok: false, is_order: false, items: [], area: "", phone: "" }; }
       const d = await resp.json();
       raw = (d?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("");
     }
@@ -107,6 +107,7 @@ ${conversationText.slice(0, 6000)}`;
       .filter(it => allowed.includes(it.product) && it.qty > 0);
 
     return {
+      ok: true,
       is_order: !!parsed.is_order && items.length > 0,
       items,
       area: String(parsed.area || "").slice(0, 200).trim(),
@@ -114,7 +115,7 @@ ${conversationText.slice(0, 6000)}`;
     };
   } catch (e) {
     console.error("AI extract failed:", e && e.message);
-    return { is_order: false, items: [], area: "", phone: "" };
+    return { ok: false, is_order: false, items: [], area: "", phone: "" };
   }
 }
 

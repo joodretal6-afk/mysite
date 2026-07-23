@@ -89,13 +89,14 @@ export async function handleEvent(event, env, ctx) {
         userMsg
       ].filter(Boolean).join("\n");
       const ai = await extractOrderWithAI(convText, pageConfig);
-      if (ai.items.length) {
+      if (ai.ok) {
+        // الذكاء الاصطناعي مرجع نهائي (يرى المحادثة كاملة) — يصحّح أخطاء الرادار
         memory.cart = {};
         ai.items.forEach(it => { memory.cart[it.product] = it.qty; });
+        memory.area = ai.area || "";                 // يمسح أي عنوان خاطئ التقطه الرادار
+        if (ai.phone) { memory.phone = ai.phone; memory.invalidPhoneProvided = false; }
       }
-      // العنوان يتصحّح تلقائياً من كامل المحادثة (ويُحفظ أكيد)
-      if (ai.area) memory.area = ai.area;
-      if (ai.phone) { memory.phone = ai.phone; memory.invalidPhoneProvided = false; }
+      // لو فشل الذكاء (ai.ok=false) نُبقي نتائج الرادار كما هي
     } catch (e) {
       console.error("live AI extract failed:", e && e.message);
     }

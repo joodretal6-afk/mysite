@@ -60,7 +60,10 @@ const JORDAN_TERMS = [
   "المنطقة","المنطقه","منطقة","بلدة","بلده","قرية","قريه","ضيعة","ريف","العنوان","عنواني","سكني","سكن","منطقتي","بلدنا"
 ];
 
-export const JORDAN_PLACES = new RegExp("(" + JORDAN_TERMS.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "i");
+// مطابقة كلمات كاملة فقط (حدود قبل وبعد) حتى لا تطابق "نص" داخل "نصيتين"
+const _terms = JORDAN_TERMS.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+const _bound = "[\\s،.,:/\\-]";
+export const JORDAN_PLACES = new RegExp(`(?:^|${_bound})(?:${_terms})(?=$|${_bound})`, "i");
 
 export function extractPhone(memory, text) {
   const compact = text.replace(/[\s\-\.]/g, "");
