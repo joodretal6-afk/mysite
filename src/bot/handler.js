@@ -110,8 +110,9 @@ export async function handleEvent(event, env, ctx) {
 
   // 🔴 شرط إصدار الفاتورة الحقيقية
   if (readyForInvoice) {
-    const { total, orderString, priceString } = computeOrder(pageConfig, memory.cart);
-    reply = pageConfig.INVOICE_TEMPLATE(orderString, priceString, memory.area, memory.phone);
+    const { total, orderString, detailedString, priceString } = computeOrder(pageConfig, memory.cart);
+    // الفاتورة تعرض التفصيل بالأسعار؛ التخزين يبقى بالصيغة المختصرة
+    reply = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, memory.area, memory.phone);
     memory.sent = true;
     justSentInvoice = true;
 

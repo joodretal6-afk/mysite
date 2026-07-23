@@ -11,15 +11,18 @@ export function computeOrder(pageConfig, cart) {
   const defaultUnit = pageConfig.DEFAULT_UNIT || "نصية";
 
   let total = 0;
-  const lines = [];
+  const lines = [];        // مختصر (للجدول والتخزين)
+  const detailed = [];     // مفصّل بالأسعار (للفاتورة)
 
   for (const [product, qty] of Object.entries(cart)) {
     if (!qty || qty <= 0) continue;
     const base = prices[product] != null ? prices[product] : CONFIG.DEFAULT_PRICE;
     const offerPrice = offers[product] && offers[product][qty];
-    const lineTotal = offerPrice != null ? offerPrice : base * qty;
+    const lineTotal = round2(offerPrice != null ? offerPrice : base * qty);
     total += lineTotal;
-    lines.push(`${product} (${qty} ${units[product] || defaultUnit})`);
+    const unit = units[product] || defaultUnit;
+    lines.push(`${product} (${qty} ${unit})`);
+    detailed.push(`• ${product} × ${qty} ${unit} = ${lineTotal}د`);
   }
 
   const delivery = pageConfig.DELIVERY || 0;
@@ -28,6 +31,7 @@ export function computeOrder(pageConfig, cart) {
   return {
     total,
     orderString: lines.join(" + "),
+    detailedString: detailed.join("\n"),
     priceString: delivery > 0
       ? `${total}د (شامل التوصيل ${delivery}د)`
       : `${total}د (شامل التوصيل)`
