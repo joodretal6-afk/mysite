@@ -4,7 +4,7 @@
 // - جدول الأوردرات (orders) للوحة التحكم والتصدير Excel
 // - جدول المستخدمين (users) لتسجيل الدخول
 // ═══════════════════════════════════════════════════════════
-import Database from "better-sqlite3";
+import Database from "libsql";
 import fs from "node:fs";
 import path from "node:path";
 import { WEB } from "../config.js";
@@ -13,8 +13,26 @@ import { WEB } from "../config.js";
 const dbDir = path.dirname(WEB.DB_PATH);
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
-export const db = new Database(WEB.DB_PATH);
-db.pragma("journal_mode = WAL");
+// ═══════════════════════════════════════════════════════════
+// التخزين الدائم:
+// - لو TURSO_DATABASE_URL موجود → نسخة محلية تتزامن مع Turso السحابي
+//   (الأوردرات تنحفظ بالسحابة فوراً وما تنمسح أبداً حتى لو أعاد الموقع التشغيل)
+// - غير هيك → ملف محلي عادي (للتجربة)
+// ═══════════════════════════════════════════════════════════
+const TURSO_URL = process.env.TURSO_DATABASE_URL || "";
+const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN || "";
+
+export const db = TURSO_URL
+  ? new Database(WEB.DB_PATH, { syncUrl: TURSO_URL, authToken: TURSO_TOKEN, syncInterval: 30 })
+  : new Database(WEB.DB_PATH);
+
+// مزامنة أولية عند الإقلاع (سحب أحدث نسخة من السحابة)
+if (TURSO_URL && typeof db.sync === "function") {
+  try { db.sync(); console.log("☁️  تمت المزامنة مع Turso السحابي"); }
+  catch (e) { console.error("Turso sync failed:", e && e.message); }
+}
+
+try { db.pragma("journal_mode = WAL"); } catch { /* بعض أوضاع libsql لا تحتاجها */ }
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS kv (
