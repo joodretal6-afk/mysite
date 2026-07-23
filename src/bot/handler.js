@@ -137,7 +137,7 @@ export async function handleEvent(event, env, ctx) {
         created_at: Date.now()
       });
     } catch (e) {
-      console.error("saveOrder failed:", e && e.message);
+      console.error("🔴 saveOrder FAILED:", e && e.message, e && e.stack);
     }
 
     ctx.waitUntil(env.SESSIONS_KV.put(crmKey, JSON.stringify({

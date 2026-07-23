@@ -5,7 +5,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import { CONFIG, WEB } from "./config.js";
-import { SESSIONS_KV, countUsers, getUser, createUser } from "./db/database.js";
+import { SESSIONS_KV, countUsers, getUser, createUser, ordersStats } from "./db/database.js";
 import { handleEvent } from "./bot/handler.js";
 import { adminRouter } from "./admin/routes.js";
 
@@ -80,8 +80,13 @@ app.use("/admin", adminRouter);
 // الصفحة الرئيسية → لوحة التحكم
 app.get("/", (req, res) => res.redirect("/admin"));
 
-// فحص صحة الخادم
-app.get("/health", (req, res) => res.json({ ok: true, ts: Date.now() }));
+// فحص صحة الخادم (مع عدد الأوردرات للتشخيص)
+app.get("/health", (req, res) => {
+  let orders = null, err = null;
+  try { orders = Number(ordersStats().total.c); }
+  catch (e) { err = e && e.message; }
+  res.json({ ok: true, ts: Date.now(), orders, dbError: err });
+});
 
 app.listen(WEB.PORT, () => {
   console.log(`🧀 منصة الأجبان تعمل على المنفذ ${WEB.PORT}`);

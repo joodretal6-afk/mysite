@@ -146,7 +146,9 @@ export function saveOrder(o) {
     String(o.messenger_url || ""),
     Number(o.created_at) || Date.now()
   );
-  return info.lastInsertRowid;
+  const id = Number(info.lastInsertRowid);   // تفادي BigInt عند إرجاعه كـ JSON
+  console.log(`💾 order saved #${id}: ${o.page_name} | ${o.order_string} | ${o.total}د | ${o.area} | ${o.phone}`);
+  return id;
 }
 
 export function listOrders({ page_id, search, from, to, status, limit = 500, offset = 0 } = {}) {
