@@ -1,0 +1,12 @@
+{
+  "name": "anticheat-lab",
+  "version": "1.0.0",
+  "description": "Behavioural anti-cheat detectability lab: measures where server-side detection fails as cheat behaviour approaches human play",
+  "main": "src/run.js",
+  "scripts": {
+    "start": "node src/run.js",
+    "study": "node src/run.js"
+  },
+  "license": "MIT",
+  "private": true
+}
