@@ -20,6 +20,8 @@ export const CONFIG = {
 
   // إعدادات إضافية
   GRAPH_VERSION: "v21.0",
+  // صفحات موقوفة عن العمل (البوت ما يرد عليها). أرقام صفحات مفصولة بفاصلة.
+  DISABLED_PAGES: (process.env.DISABLED_PAGES || "").split(",").map(s => s.trim()).filter(Boolean),
   // زر الإشعارات OTN يحتاج صلاحية Advanced Messaging من فيسبوك.
   // مطفأ افتراضياً حتى لا يسبب خطأ. فعّله بـ ENABLE_OTN=true بعد الحصول على الصلاحية.
   ENABLE_OTN: process.env.ENABLE_OTN === "true",

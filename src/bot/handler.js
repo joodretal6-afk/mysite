@@ -20,6 +20,9 @@ export async function handleEvent(event, env, ctx) {
   const pageConfig = PAGES[recipientId];
   if (!pageConfig || !env.SESSIONS_KV) return;
 
+  // 🛑 صفحة موقوفة عن العمل: تجاهل الرسالة تماماً (لا رد ولا حفظ)
+  if (CONFIG.DISABLED_PAGES.includes(recipientId)) return;
+
   const token = pageConfig.PAGE_TOKEN;
   if (!token) { console.error("No page token for", recipientId); return; }
 
