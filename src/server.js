@@ -9,17 +9,21 @@ import { SESSIONS_KV, countUsers, getUser, createUser, ordersStats } from "./db/
 import { handleEvent } from "./bot/handler.js";
 import { adminRouter } from "./admin/routes.js";
 
-// 🟢 إنشاء أدمن تلقائياً من متغيّرات البيئة (لتسهيل النشر على Railway بدون أوامر يدوية)
-// حط ADMIN_USER و ADMIN_PASS في متغيّرات البيئة، وبيتعمل المستخدم أول تشغيل.
+// 🛡️ حماية من توقّف السيرفر بسبب تقطّع شبكة Turso اللحظي (نسجّل الخطأ ونكمّل)
+process.on("uncaughtException", e => console.error("⚠️ uncaughtException:", e && e.message));
+process.on("unhandledRejection", e => console.error("⚠️ unhandledRejection:", e && (e.message || e)));
+
+// 🟢 إنشاء أدمن تلقائياً من متغيّرات البيئة (مغلّف بحماية حتى لا يوقف الإقلاع)
 (function bootstrapAdmin() {
-  const u = process.env.ADMIN_USER;
-  const p = process.env.ADMIN_PASS;
-  if (u && p && !getUser(u)) {
-    createUser(u, bcrypt.hashSync(p, 10));
-    console.log(`👤 تم إنشاء مستخدم الأدمن "${u}" من متغيّرات البيئة.`);
-  }
-  if (countUsers() === 0) {
-    console.warn("⚠️  لا يوجد أي مستخدم أدمن! أضف ADMIN_USER و ADMIN_PASS في متغيّرات البيئة، أو شغّل: npm run create-admin -- <user> <pass>");
+  try {
+    const u = process.env.ADMIN_USER;
+    const p = process.env.ADMIN_PASS;
+    if (u && p && !getUser(u)) {
+      createUser(u, bcrypt.hashSync(p, 10));
+      console.log(`👤 تم إنشاء مستخدم الأدمن "${u}" من متغيّرات البيئة.`);
+    }
+  } catch (e) {
+    console.error("⚠️ bootstrapAdmin skipped (Turso hiccup):", e && e.message);
   }
 })();
 

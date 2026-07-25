@@ -89,6 +89,20 @@ function cleanupExpired() {
 setInterval(cleanupExpired, 60 * 1000).unref?.();
 cleanupExpired();
 
+// 🔁 إعادة المحاولة على تقطّع شبكة Turso اللحظي (EOF / cursor error / reset)
+export function retryDb(fn, tries = 4) {
+  let last;
+  for (let i = 0; i < tries; i++) {
+    try { return fn(); }
+    catch (e) {
+      last = e;
+      const msg = String((e && e.message) || "");
+      if (!/EOF|Hrana|cursor error|connection|reset|timeout|stream|broken pipe/i.test(msg)) throw e;
+    }
+  }
+  throw last;
+}
+
 // ═══════════════════════════════════════════════════════════
 // محوّل KV متوافق مع Cloudflare Workers KV
 // يدعم: get(key, "json") / put(key, value, {expirationTtl}) / delete(key)
@@ -102,10 +116,10 @@ const kvDel = db.prepare("DELETE FROM kv WHERE key = ?");
 
 export const SESSIONS_KV = {
   async get(key, type) {
-    const row = kvGet.get(key);
+    const row = retryDb(() => kvGet.get(key));
     if (!row) return null;
     if (row.expires_at != null && row.expires_at < Date.now()) {
-      kvDel.run(key);
+      retryDb(() => kvDel.run(key));
       return null;
     }
     if (type === "json") {
@@ -116,11 +130,11 @@ export const SESSIONS_KV = {
 
   async put(key, value, opts = {}) {
     const expiresAt = opts.expirationTtl ? Date.now() + opts.expirationTtl * 1000 : null;
-    kvPut.run(key, String(value), expiresAt);
+    retryDb(() => kvPut.run(key, String(value), expiresAt));
   },
 
   async delete(key) {
-    kvDel.run(key);
+    retryDb(() => kvDel.run(key));
   }
 };
 
@@ -134,7 +148,7 @@ const insertOrder = db.prepare(`
 `);
 
 export function saveOrder(o) {
-  const info = insertOrder.run(
+  const info = retryDb(() => insertOrder.run(
     String(o.page_id || ""),
     String(o.page_name || ""),
     String(o.sender_id || ""),
@@ -145,7 +159,7 @@ export function saveOrder(o) {
     String(o.status || "جديد"),
     String(o.messenger_url || ""),
     Number(o.created_at) || Date.now()
-  );
+  ));
   const id = Number(info.lastInsertRowid);   // تفادي BigInt عند إرجاعه كـ JSON
   console.log(`💾 order saved #${id}: ${o.page_name} | ${o.order_string} | ${o.total}د | ${o.area} | ${o.phone}`);
   return id;
@@ -169,13 +183,13 @@ export function listOrders({ page_id, search, from, to, status, limit = 500, off
   const lim = Math.max(1, parseInt(limit, 10) || 500);
   const off = Math.max(0, parseInt(offset, 10) || 0);
 
-  const rows = db.prepare(
+  const rows = retryDb(() => db.prepare(
     `SELECT * FROM orders ${clause} ORDER BY created_at DESC LIMIT ${lim} OFFSET ${off}`
-  ).all(params);
+  ).all(params));
 
-  const totalCount = db.prepare(
+  const totalCount = retryDb(() => db.prepare(
     `SELECT COUNT(*) AS c, COALESCE(SUM(total),0) AS sum FROM orders ${clause}`
-  ).get(params);
+  ).get(params));
 
   return { rows, count: Number(totalCount.c), sum: Number(totalCount.sum) };
 }
@@ -190,7 +204,7 @@ export function orderExists(page_id, sender_id, order_string) {
 
 // تحديث أوردر موجود (للتحديث اللحظي أثناء المحادثة)
 export function updateOrder(id, f) {
-  db.prepare(
+  retryDb(() => db.prepare(
     "UPDATE orders SET order_string = ?, total = ?, area = ?, phone = ?, status = ? WHERE id = ?"
   ).run(
     String(f.order_string || ""),
@@ -199,7 +213,7 @@ export function updateOrder(id, f) {
     String(f.phone || ""),
     String(f.status || "جديد"),
     Number(id)
-  );
+  ));
 }
 
 // تعديل حقول الأوردر من اللوحة (بدون المساس بالحالة)
@@ -243,11 +257,11 @@ export function perPageStats() {
 
 export function ordersStats() {
   const today0 = new Date(); today0.setHours(0, 0, 0, 0);
-  return {
+  return retryDb(() => ({
     total:      db.prepare("SELECT COUNT(*) c, COALESCE(SUM(total),0) s FROM orders").get(),
     today:      db.prepare("SELECT COUNT(*) c, COALESCE(SUM(total),0) s FROM orders WHERE created_at >= ?").get(today0.getTime()),
     newCount:   db.prepare("SELECT COUNT(*) c FROM orders WHERE status = 'جديد'").get().c
-  };
+  }));
 }
 
 // ═══════════════════════════════════════════════════════════
