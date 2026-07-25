@@ -22,16 +22,17 @@ if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 const TURSO_URL = process.env.TURSO_DATABASE_URL || "";
 const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN || "";
 
-export const db = TURSO_URL
-  ? new Database(TURSO_URL, { authToken: TURSO_TOKEN })   // اتصال مباشر (تناسق فوري)
-  : new Database(WEB.DB_PATH);
-
-if (TURSO_URL) {
-  console.log("☁️  متصل مباشرة بـ Turso السحابي (تخزين دائم)");
-} else {
-  // WAL مفيد فقط للملف المحلي
-  try { db.pragma("journal_mode = WAL"); } catch { /* تجاهل */ }
+// اتصال قابل لإعادة الفتح (Turso أحياناً يُنهي الـ stream فنعيد الاتصال)
+export let db;
+function connect() {
+  db = TURSO_URL
+    ? new Database(TURSO_URL, { authToken: TURSO_TOKEN })
+    : new Database(WEB.DB_PATH);
+  if (!TURSO_URL) { try { db.pragma("journal_mode = WAL"); } catch { /* تجاهل */ } }
+  return db;
 }
+connect();
+if (TURSO_URL) console.log("☁️  متصل بـ Turso السحابي (تخزين دائم)");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS kv (
@@ -89,15 +90,18 @@ function cleanupExpired() {
 setInterval(cleanupExpired, 60 * 1000).unref?.();
 cleanupExpired();
 
-// 🔁 إعادة المحاولة على تقطّع شبكة Turso اللحظي (EOF / cursor error / reset)
-export function retryDb(fn, tries = 4) {
+// 🔁 إعادة المحاولة مع إعادة فتح الاتصال عند موت الـ stream / تقطّع الشبكة
+const _NET_ERR = /EOF|Hrana|cursor error|connection|reset|timeout|stream|broken pipe|not found|closed/i;
+export function retryDb(fn, tries = 5) {
   let last;
   for (let i = 0; i < tries; i++) {
     try { return fn(); }
     catch (e) {
       last = e;
       const msg = String((e && e.message) || "");
-      if (!/EOF|Hrana|cursor error|connection|reset|timeout|stream|broken pipe/i.test(msg)) throw e;
+      if (!_NET_ERR.test(msg)) throw e;
+      // الاتصال مات → افتح اتصال جديد قبل المحاولة التالية
+      try { connect(); } catch (ce) { console.error("reconnect failed:", ce && ce.message); }
     }
   }
   throw last;
@@ -107,19 +111,18 @@ export function retryDb(fn, tries = 4) {
 // محوّل KV متوافق مع Cloudflare Workers KV
 // يدعم: get(key, "json") / put(key, value, {expirationTtl}) / delete(key)
 // ═══════════════════════════════════════════════════════════
-const kvGet = db.prepare("SELECT value, expires_at FROM kv WHERE key = ?");
-const kvPut = db.prepare(`
-  INSERT INTO kv (key, value, expires_at) VALUES (?, ?, ?)
-  ON CONFLICT(key) DO UPDATE SET value = excluded.value, expires_at = excluded.expires_at
-`);
-const kvDel = db.prepare("DELETE FROM kv WHERE key = ?");
+// نصوص SQL (نحضّرها من الاتصال الحالي في كل نداء ليعمل reconnect بأمان)
+const KV_GET = "SELECT value, expires_at FROM kv WHERE key = ?";
+const KV_PUT = `INSERT INTO kv (key, value, expires_at) VALUES (?, ?, ?)
+  ON CONFLICT(key) DO UPDATE SET value = excluded.value, expires_at = excluded.expires_at`;
+const KV_DEL = "DELETE FROM kv WHERE key = ?";
 
 export const SESSIONS_KV = {
   async get(key, type) {
-    const row = retryDb(() => kvGet.get(key));
+    const row = retryDb(() => db.prepare(KV_GET).get(key));
     if (!row) return null;
     if (row.expires_at != null && row.expires_at < Date.now()) {
-      retryDb(() => kvDel.run(key));
+      retryDb(() => db.prepare(KV_DEL).run(key));
       return null;
     }
     if (type === "json") {
@@ -130,11 +133,11 @@ export const SESSIONS_KV = {
 
   async put(key, value, opts = {}) {
     const expiresAt = opts.expirationTtl ? Date.now() + opts.expirationTtl * 1000 : null;
-    retryDb(() => kvPut.run(key, String(value), expiresAt));
+    retryDb(() => db.prepare(KV_PUT).run(key, String(value), expiresAt));
   },
 
   async delete(key) {
-    retryDb(() => kvDel.run(key));
+    retryDb(() => db.prepare(KV_DEL).run(key));
   }
 };
 
@@ -142,13 +145,11 @@ export const SESSIONS_KV = {
 // دوال الأوردرات
 // ═══════════════════════════════════════════════════════════
 // نستخدم بارامترات ترتيبية (?) — الأضمن مع Turso/libsql
-const insertOrder = db.prepare(`
-  INSERT INTO orders (page_id, page_name, sender_id, order_string, total, area, phone, status, messenger_url, created_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`);
+const INSERT_ORDER = `INSERT INTO orders (page_id, page_name, sender_id, order_string, total, area, phone, status, messenger_url, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 export function saveOrder(o) {
-  const info = retryDb(() => insertOrder.run(
+  const info = retryDb(() => db.prepare(INSERT_ORDER).run(
     String(o.page_id || ""),
     String(o.page_name || ""),
     String(o.sender_id || ""),
@@ -238,21 +239,21 @@ export function deleteOrder(id) {
 }
 
 export function distinctPages() {
-  return db.prepare(
+  return retryDb(() => db.prepare(
     "SELECT DISTINCT page_id, page_name FROM orders WHERE page_name != '' ORDER BY page_name"
-  ).all();
+  ).all());
 }
 
 // إحصائيات لكل صفحة على حدة (لصفحة الأوردرات المنفصلة)
 export function perPageStats() {
-  return db.prepare(`
+  return retryDb(() => db.prepare(`
     SELECT page_id, page_name,
            COUNT(*) AS count,
            COALESCE(SUM(total),0) AS sum,
            SUM(CASE WHEN status='جديد' THEN 1 ELSE 0 END) AS new_count,
            MAX(created_at) AS last_at
     FROM orders GROUP BY page_id ORDER BY count DESC
-  `).all();
+  `).all());
 }
 
 export function ordersStats() {
@@ -268,7 +269,7 @@ export function ordersStats() {
 // دوال تغذية البوت بمعلومات إضافية (لكل صفحة)
 // ═══════════════════════════════════════════════════════════
 export function getKnowledge(pageId) {
-  const row = db.prepare("SELECT extra FROM page_knowledge WHERE page_id = ?").get(pageId);
+  const row = retryDb(() => db.prepare("SELECT extra FROM page_knowledge WHERE page_id = ?").get(pageId));
   return row ? row.extra : "";
 }
 
@@ -282,21 +283,19 @@ export function setKnowledge(pageId, extra) {
 // ═══════════════════════════════════════════════════════════
 // أرشيف الرسائل (حفظ كل الدردشات)
 // ═══════════════════════════════════════════════════════════
-const insertMessage = db.prepare(`
-  INSERT INTO messages (page_id, page_name, sender_id, direction, body, created_at)
-  VALUES (?, ?, ?, ?, ?, ?)
-`);
+const INSERT_MESSAGE = `INSERT INTO messages (page_id, page_name, sender_id, direction, body, created_at)
+  VALUES (?, ?, ?, ?, ?, ?)`;
 
 export function logMessage(m) {
   try {
-    insertMessage.run(
+    retryDb(() => db.prepare(INSERT_MESSAGE).run(
       String(m.page_id || ""),
       String(m.page_name || ""),
       String(m.sender_id || ""),
       String(m.direction || "in"),
       String(m.body || ""),
       Number(m.created_at) || Date.now()
-    );
+    ));
   } catch (e) {
     console.error("logMessage failed:", e && e.message);
   }
@@ -323,7 +322,7 @@ export function getChatMessages(pageId, senderId) {
 // دوال المستخدمين
 // ═══════════════════════════════════════════════════════════
 export function getUser(username) {
-  return db.prepare("SELECT * FROM users WHERE username = ?").get(username);
+  return retryDb(() => db.prepare("SELECT * FROM users WHERE username = ?").get(username));
 }
 
 export function createUser(username, passwordHash) {
