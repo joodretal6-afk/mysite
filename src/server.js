@@ -5,7 +5,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import { CONFIG, WEB } from "./config.js";
-import { SESSIONS_KV, countUsers, getUser, createUser, ordersStats } from "./db/database.js";
+import { SESSIONS_KV, countUsers, getUser, createUser, ordersStats, migrateFromTurso } from "./db/database.js";
 import { handleEvent } from "./bot/handler.js";
 import { adminRouter } from "./admin/routes.js";
 
@@ -26,6 +26,18 @@ process.on("unhandledRejection", e => console.error("⚠️ unhandledRejection:"
     console.error("⚠️ bootstrapAdmin skipped (Turso hiccup):", e && e.message);
   }
 })();
+
+// 🚚 نقل بيانات Turso القديمة للقرص المحلي (يعيد المحاولة كل دقيقة حتى ينجح لو Turso متعطّل)
+if (process.env.MIGRATE_FROM_TURSO === "true") {
+  const tryMigrate = () => {
+    try {
+      if (migrateFromTurso()) { clearInterval(migTimer); }
+    } catch (e) { console.error("migrate attempt error:", e && e.message); }
+  };
+  const migTimer = setInterval(tryMigrate, 60 * 1000);
+  migTimer.unref?.();
+  tryMigrate();
+}
 
 const app = express();
 app.use(cookieParser());

@@ -22,17 +22,22 @@ if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 const TURSO_URL = process.env.TURSO_DATABASE_URL || "";
 const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN || "";
 
+// USE_LOCAL_DB=true → القاعدة الأساسية على قرص Render المحلي (الأكثر موثوقية)
+//                     وتُستخدم بيانات Turso فقط كمصدر لنقل البيانات القديمة.
+const USE_LOCAL = process.env.USE_LOCAL_DB === "true";
+const REMOTE_PRIMARY = TURSO_URL && !USE_LOCAL;
+
 // اتصال قابل لإعادة الفتح (Turso أحياناً يُنهي الـ stream فنعيد الاتصال)
 export let db;
 function connect() {
-  db = TURSO_URL
+  db = REMOTE_PRIMARY
     ? new Database(TURSO_URL, { authToken: TURSO_TOKEN })
     : new Database(WEB.DB_PATH);
-  if (!TURSO_URL) { try { db.pragma("journal_mode = WAL"); } catch { /* تجاهل */ } }
+  if (!REMOTE_PRIMARY) { try { db.pragma("journal_mode = WAL"); } catch { /* تجاهل */ } }
   return db;
 }
 connect();
-if (TURSO_URL) console.log("☁️  متصل بـ Turso السحابي (تخزين دائم)");
+console.log(REMOTE_PRIMARY ? "☁️  متصل بـ Turso السحابي" : `💽 قاعدة محلية على القرص: ${WEB.DB_PATH}`);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS kv (
@@ -341,4 +346,56 @@ export function createUser(username, passwordHash) {
 
 export function countUsers() {
   return db.prepare("SELECT COUNT(*) c FROM users").get().c;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🚚 نقل البيانات القديمة من Turso إلى القرص المحلي (مرة واحدة)
+// يعمل عندما USE_LOCAL_DB=true + بيانات Turso متوفّرة كمصدر.
+// آمن للتكرار: محمي بعلامة داخلية، ويتجاهل الفشل (يعيد المحاولة لاحقاً).
+// ═══════════════════════════════════════════════════════════
+export function migrateFromTurso() {
+  if (!USE_LOCAL || !TURSO_URL) return false;   // فقط بوضع القرص المحلي مع مصدر Turso
+  try {
+    const done = db.prepare("SELECT value FROM kv WHERE key = '__migrated_turso'").get();
+    if (done) return true;   // تمّ النقل مسبقاً
+  } catch { /* الجدول قد لا يكون جاهزاً */ }
+
+  let src;
+  try {
+    src = new Database(TURSO_URL, { authToken: TURSO_TOKEN });
+    const orders = src.prepare(
+      "SELECT page_id,page_name,sender_id,order_string,total,area,phone,status,messenger_url,created_at FROM orders"
+    ).all();
+
+    const insO = db.prepare(INSERT_ORDER);
+    let n = 0;
+    for (const o of orders) {
+      insO.run(o.page_id, o.page_name, o.sender_id, o.order_string, o.total, o.area, o.phone, o.status, o.messenger_url, o.created_at);
+      n++;
+    }
+
+    // الرسائل (اختياري)
+    try {
+      const msgs = src.prepare("SELECT page_id,page_name,sender_id,direction,body,created_at FROM messages").all();
+      const insM = db.prepare(INSERT_MESSAGE);
+      for (const m of msgs) insM.run(m.page_id, m.page_name, m.sender_id, m.direction, m.body, m.created_at);
+    } catch { /* تجاهل */ }
+
+    // معلومات التغذية (اختياري)
+    try {
+      const ks = src.prepare("SELECT page_id,extra,updated_at FROM page_knowledge").all();
+      for (const k of ks) {
+        db.prepare("INSERT INTO page_knowledge (page_id,extra,updated_at) VALUES (?,?,?) ON CONFLICT(page_id) DO UPDATE SET extra=excluded.extra").run(k.page_id, k.extra, k.updated_at);
+      }
+    } catch { /* تجاهل */ }
+
+    db.prepare("INSERT INTO kv (key,value,expires_at) VALUES ('__migrated_turso','1',NULL) ON CONFLICT(key) DO NOTHING").run();
+    console.log(`✅ تم نقل ${n} أوردر من Turso إلى القرص المحلي`);
+    return true;
+  } catch (e) {
+    console.error("⏳ نقل Turso لم ينجح بعد (غالباً Turso متعطّل الآن)، سيعيد المحاولة:", e && e.message);
+    return false;
+  } finally {
+    try { src && src.close && src.close(); } catch { /* تجاهل */ }
+  }
 }
