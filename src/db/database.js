@@ -90,9 +90,12 @@ function cleanupExpired() {
 setInterval(cleanupExpired, 60 * 1000).unref?.();
 cleanupExpired();
 
-// 🔁 إعادة المحاولة مع إعادة فتح الاتصال عند موت الـ stream / تقطّع الشبكة
-const _NET_ERR = /EOF|Hrana|cursor error|connection|reset|timeout|stream|broken pipe|not found|closed/i;
-export function retryDb(fn, tries = 5) {
+// 🔁 إعادة المحاولة مع إعادة فتح الاتصال — بتهدئة (throttle) لتفادي عاصفة الاتصالات
+const _NET_ERR = /EOF|Hrana|cursor error|connection|reset|timeout|stream|broken pipe|not found|closed|502|bad gateway|upstream/i;
+let _lastReconnect = 0;
+const _sleep = ms => { const end = Date.now() + ms; while (Date.now() < end) { /* backoff قصير */ } };
+
+export function retryDb(fn, tries = 3) {
   let last;
   for (let i = 0; i < tries; i++) {
     try { return fn(); }
@@ -100,8 +103,13 @@ export function retryDb(fn, tries = 5) {
       last = e;
       const msg = String((e && e.message) || "");
       if (!_NET_ERR.test(msg)) throw e;
-      // الاتصال مات → افتح اتصال جديد قبل المحاولة التالية
-      try { connect(); } catch (ce) { console.error("reconnect failed:", ce && ce.message); }
+      // أعد فتح الاتصال مرة واحدة كل ثانيتين كحد أقصى (لتفادي إغراق Turso)
+      const now = Date.now();
+      if (now - _lastReconnect > 2000) {
+        _lastReconnect = now;
+        try { connect(); } catch (ce) { console.error("reconnect failed:", ce && ce.message); }
+      }
+      if (i < tries - 1) _sleep(150 * (i + 1));   // مهلة تصاعدية بسيطة قبل المحاولة
     }
   }
   throw last;
