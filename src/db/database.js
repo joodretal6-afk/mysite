@@ -132,6 +132,19 @@ db.exec(`
     updated_at INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS handoffs (
+    session_key TEXT PRIMARY KEY,  -- page_id + '_' + sender_id (طلب تدخّل واحد مفتوح لكل زبون)
+    page_id     TEXT,
+    page_name   TEXT,
+    sender_id   TEXT,
+    reason      TEXT,              -- سبب التدخّل (غضب / يطلب موظف / تكرار سؤال)
+    snippet     TEXT,              -- مقتطف من رسالة الزبون
+    paused      INTEGER DEFAULT 0, -- هل البوت معلّق لهذا الزبون
+    status      TEXT DEFAULT 'open', -- open / closed
+    created_at  INTEGER,
+    updated_at  INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS reviews (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     page_id    TEXT,
@@ -715,6 +728,66 @@ export function decrementStock(orderString) {
 }
 export function lowStockList() {
   return retryDb(() => db.prepare("SELECT product, stock, low FROM inventory WHERE stock <= low ORDER BY stock").all());
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🙋 التدخّل البشري (Human Handoff) — كشف الزبون الغاضب/المتردّد
+// ═══════════════════════════════════════════════════════════
+export function flagHandoff({ page_id, page_name, sender_id, reason, snippet, pause = 1 }) {
+  const key = `${page_id}_${sender_id}`;
+  const now = Date.now();
+  retryDb(() => db.prepare(
+    `INSERT INTO handoffs (session_key,page_id,page_name,sender_id,reason,snippet,paused,status,created_at,updated_at)
+     VALUES (?,?,?,?,?,?,?, 'open', ?, ?)
+     ON CONFLICT(session_key) DO UPDATE SET
+       reason=excluded.reason, snippet=excluded.snippet,
+       paused=MAX(handoffs.paused, excluded.paused), status='open', updated_at=excluded.updated_at`
+  ).run(key, String(page_id || ""), String(page_name || ""), String(sender_id || ""),
+        String(reason || ""), String(snippet || "").slice(0, 300), pause ? 1 : 0, now, now));
+  return key;
+}
+export function isBotPaused(page_id, sender_id) {
+  const row = retryDb(() => db.prepare(
+    "SELECT paused, status FROM handoffs WHERE session_key = ?"
+  ).get(`${page_id}_${sender_id}`));
+  return Boolean(row && row.status === "open" && row.paused);
+}
+export function listHandoffs() {
+  return retryDb(() => db.prepare(
+    "SELECT * FROM handoffs WHERE status = 'open' ORDER BY updated_at DESC LIMIT 200"
+  ).all());
+}
+export function setHandoffPause(session_key, paused) {
+  retryDb(() => db.prepare("UPDATE handoffs SET paused=?, updated_at=? WHERE session_key=?")
+    .run(paused ? 1 : 0, Date.now(), String(session_key)));
+}
+export function resolveHandoff(session_key) {
+  retryDb(() => db.prepare("UPDATE handoffs SET status='closed', paused=0, updated_at=? WHERE session_key=?")
+    .run(Date.now(), String(session_key)));
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🎯 تخصيص للزبائن السابقين: أكثر أصنافهم طلباً (للاقتراح الذكي)
+// ═══════════════════════════════════════════════════════════
+export function customerHistoryHint(senderId) {
+  if (!senderId) return "";
+  try {
+    const rows = retryDb(() => db.prepare(
+      "SELECT order_string FROM orders WHERE sender_id = ? AND status != 'ملغي' AND status != 'ناقص' ORDER BY created_at DESC LIMIT 20"
+    ).all(senderId));
+    if (!rows.length) return "";
+    const counts = {};
+    for (const r of rows) {
+      for (const part of String(r.order_string || "").split("+")) {
+        const m = part.match(/(.+?)\s*\(/);
+        if (m) { const name = m[1].trim(); if (name) counts[name] = (counts[name] || 0) + 1; }
+      }
+    }
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => x[0]);
+    if (!top.length) return `\n\n[زبون سابق] طلب معنا ${rows.length} مرة. رحّب فيه كزبون دائم بلطف.`;
+    return `\n\n[زبون سابق — تخصيص] طلب معنا ${rows.length} مرة، وأكثر أصنافه طلباً: ${top.join(" ، ")}. ` +
+      `رحّب فيه كزبون دائم واقترح عليه تكرار أصنافه المعتادة إن ناسب السياق (اقتراح واحد لطيف بدون إلحاح).`;
+  } catch (e) { console.error("customerHistoryHint:", e && e.message); return ""; }
 }
 
 // ═══════════════════════════════════════════════════════════

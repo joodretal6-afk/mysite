@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>التدخّل البشري — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1000px; margin:0 auto; padding:22px; }
+    .note { background:#fff8e1; border-radius:10px; padding:12px 16px; font-size:13px; color:#8d6e00; margin-bottom:16px; line-height:1.7; }
+    .empty { text-align:center; padding:50px; color:var(--mut); background:var(--card); border-radius:14px; }
+    .ho { background:var(--card); border-radius:14px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:16px; border-right:5px solid var(--red); }
+    .ho .top { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
+    .ho .reason { font-weight:800; color:var(--red); font-size:15px; }
+    .ho .meta { font-size:12px; color:var(--mut); }
+    .ho .snip { background:#fff5f5; border-radius:9px; padding:10px 13px; font-size:14px; margin-bottom:12px; }
+    .chat { max-height:240px; overflow-y:auto; background:#fafbfa; border-radius:10px; padding:10px; margin-bottom:12px; font-size:13px; display:none; }
+    .msg { margin:4px 0; padding:7px 11px; border-radius:10px; max-width:80%; line-height:1.5; }
+    .msg.in { background:#eceff1; margin-left:auto; }
+    .msg.out { background:#e8f5e9; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .replybar { display:flex; gap:8px; margin-top:10px; }
+    .replybar input { flex:1; padding:11px; border:1.5px solid var(--line); border-radius:9px; font-family:inherit; }
+    .btn { padding:9px 15px; border:none; border-radius:9px; cursor:pointer; font-family:inherit; font-size:13px; font-weight:700; color:#fff; }
+    .btn.send { background:var(--green); } .btn.resume { background:#1565c0; } .btn.done { background:var(--green2); }
+    .btn.ghost { background:#607d8b; }
+    .pausetag { padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; background:#ffcdd2; color:#b71c1c; }
+    .pausetag.off { background:#e8f5e9; color:var(--green2); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🙋 التدخّل البشري</h1>
+    <div>
+      <a href="/admin/chats" style="margin-left:6px">💬 الدردشات</a>
+      <a href="/admin">→ اللوحة الرئيسية</a>
+    </div>
+  </header>
+  <div class="wrap">
+    <div class="note">
+      💡 هون بتظهر المحادثات اللي الزبون فيها زعلان أو طلب موظف بشري. لما ينفتح تدخّل، <b>البوت بيوقف تلقائياً</b> لهالزبون وبتقدر تردّ عليه بنفسك.
+      <br>لما تخلص، اضغط <b>«رجّع البوت»</b> عشان البوت يكمّل معه عادي.
+    </div>
+    <div id="list"></div>
+    <div class="empty" id="empty" style="display:none">🎉 ما في أي طلب تدخّل حالياً — كل شي تمام!</div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    let prevCount=0;
+    async function load(){
+      const r=await fetch('/admin/api/handoffs');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const {handoffs}=await r.json();
+      const list=document.getElementById('list'), empty=document.getElementById('empty');
+      if((handoffs.length>prevCount) && prevCount>=0){ try{beep();}catch(e){} }
+      prevCount=handoffs.length;
+      if(!handoffs.length){ list.innerHTML=''; empty.style.display='block'; return; }
+      empty.style.display='none';
+      list.innerHTML=handoffs.map(h=>{
+        const k=esc(h.session_key).replace(/'/g,"&#39;");
+        const paused=Number(h.paused)===1;
+        return `<div class="ho">
+          <div class="top">
+            <span class="reason">⚠️ ${esc(h.reason)}</span>
+            <span class="meta">${esc(h.page_name)} — ${new Date(h.updated_at).toLocaleString('ar-EG')}
+              <span class="pausetag ${paused?'':'off'}">${paused?'🤖 البوت موقوف':'🤖 البوت شغّال'}</span></span>
+          </div>
+          <div class="snip">💬 «${esc(h.snippet)}»</div>
+          <div class="chat" id="chat_${k}"></div>
+          <div class="actions">
+            <button class="btn ghost" onclick="viewChat('${k}','${esc(h.page_id)}','${esc(h.sender_id)}')">👁️ عرض المحادثة</button>
+            ${paused
+              ? `<button class="btn resume" onclick="pauseBot('${k}',false)">▶️ رجّع البوت للعمل</button>`
+              : `<button class="btn ghost" onclick="pauseBot('${k}',true)">⏸️ أوقف البوت</button>`}
+            <a class="btn ghost" style="text-decoration:none" href="https://m.me/${esc(h.sender_id)}" target="_blank">↗️ افتح بالماسنجر</a>
+            <button class="btn done" onclick="resolveHo('${k}')">✅ خلّصت التدخّل</button>
+          </div>
+          <div class="replybar">
+            <input id="rin_${k}" placeholder="اكتب ردّك للزبون هون..." onkeydown="if(event.key==='Enter')reply('${k}')">
+            <button class="btn send" onclick="reply('${k}')">📨 إرسال</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    async function viewChat(key,pageId,senderId){
+      const box=document.getElementById('chat_'+key);
+      if(box.style.display==='block'){ box.style.display='none'; return; }
+      box.style.display='block'; box.innerHTML='...';
+      const r=await fetch('/admin/api/chat?page_id='+encodeURIComponent(pageId)+'&sender_id='+encodeURIComponent(senderId));
+      const {messages}=await r.json();
+      box.innerHTML=(messages||[]).slice(-40).map(m=>`<div class="msg ${m.direction==='in'?'in':'out'}">${esc(m.body)}</div>`).join('')||'لا رسائل';
+      box.scrollTop=box.scrollHeight;
+    }
+    async function reply(key){
+      const inp=document.getElementById('rin_'+key);
+      const text=inp.value.trim(); if(!text) return;
+      inp.disabled=true;
+      const r=await fetch('/admin/api/handoffs/'+encodeURIComponent(key)+'/reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+      inp.disabled=false;
+      if(r.ok){ inp.value=''; const box=document.getElementById('chat_'+key); if(box.style.display==='block'){ box.insertAdjacentHTML('beforeend',`<div class="msg out">${esc(text)}</div>`); box.scrollTop=box.scrollHeight; } }
+      else { const d=await r.json(); alert(d.error||'فشل الإرسال'); }
+    }
+    async function pauseBot(key,paused){
+      await fetch('/admin/api/handoffs/'+encodeURIComponent(key)+'/pause',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paused})});
+      load();
+    }
+    async function resolveHo(key){
+      if(!confirm('تأكيد إنهاء التدخّل ورجوع البوت للعمل مع هالزبون؟')) return;
+      await fetch('/admin/api/handoffs/'+encodeURIComponent(key)+'/resolve',{method:'POST'});
+      load();
+    }
+    function beep(){ try{ const c=new(window.AudioContext||window.webkitAudioContext)(); const o=c.createOscillator(),g=c.createGain(); o.connect(g);g.connect(c.destination); o.type='sine';o.frequency.value=760;g.gain.value=0.15; o.start(); o.frequency.setValueAtTime(520,c.currentTime+0.15); o.stop(c.currentTime+0.3);}catch(e){} }
+    load(); setInterval(load, 8000);   // تحديث تلقائي كل 8 ثوانٍ
+  </script>
+</body>
+</html>

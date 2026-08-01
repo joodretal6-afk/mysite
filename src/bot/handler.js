@@ -7,7 +7,20 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } f
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
-import { saveOrder, updateOrder, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, armFollowup, completeFollowup, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse } from "../db/database.js";
+import { saveOrder, updateOrder, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, armFollowup, completeFollowup, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint } from "../db/database.js";
+
+// 🙋 كشف حاجة الزبون لتدخّل بشري (غضب / يطلب موظف / حيرة) — بدون تكلفة ذكاء
+function detectNeedsHuman(text) {
+  if (!text) return null;
+  const t = text.trim();
+  // غضب/شكوى قوية أو تهديد
+  if (/(نصاب|احتيال|حرامي|حرامية|بلّغ عنكم|ابلغ عنكم|بشتكي|شكوى رسمية|محامي|بقاطعكم|زفت|قرف|مقرف|كذابين|كذاب|وقحين|قليل أدب|قليلين أدب|بكرهكم|أسوأ|اسوأ|فاشلين|غشيتوني|غششتوني)/i.test(t))
+    return { reason: "زبون غاضب/شكوى", pause: true };
+  // يطلب موظف بشري صراحةً
+  if (/(بدي (?:احكي|أحكي|اتواصل|أتواصل) مع (?:حدا|موظف|شخص|إنسان|انسان|بشر|مدير)|في حدا (?:بيرد|يرد|موجود)|بدي موظف|بدي مدير|موظف بشري|مش بوت|إنت بوت|انت بوت|بدي إنسان|بدي انسان)/i.test(t))
+    return { reason: "يطلب موظف بشري", pause: true };
+  return null;
+}
 
 // كشف تقييم/رأي الزبون من نص الرسالة (مع تفادي النفي والالتقاط الخاطئ)
 function detectReview(text) {
@@ -87,6 +100,18 @@ export async function handleEvent(event, env, ctx) {
     direction: "in", body: userMsg, created_at: Date.now()
   });
 
+  // 🙋 لو البوت معلّق لهذا الزبون (تدخّل بشري نشط): نؤرشف الرسالة فقط ولا نرد — الموظف يتولّى
+  try {
+    if (isBotPaused(recipientId, senderId)) {
+      // نحفظ الرسالة في الذاكرة حتى يكمل السياق لو رجع البوت لاحقاً
+      memory.history = memory.history || [];
+      memory.history.push({ role: "user", content: userMsg });
+      memory.history = memory.history.slice(-CONFIG.MAX_HISTORY);
+      await env.SESSIONS_KV.put(sessionKey, JSON.stringify(memory), { expirationTtl: CONFIG.SESSION_TTL });
+      return;
+    }
+  } catch (e) { console.error("pause check:", e && e.message); }
+
   // ⭐ التقاط التقييمات من كلام الزبون (نجوم / مديح / شكوى)
   try {
     const review = detectReview(userMsg);
@@ -115,6 +140,31 @@ export async function handleEvent(event, env, ctx) {
     memory.cart = {};
     memory.sent = false;
   }
+
+  // 🙋 كشف حاجة الزبون لتدخّل بشري (غضب / يطلب موظف) → تنبيه فوري + تعليق البوت + رسالة طمأنة
+  try {
+    const need = detectNeedsHuman(userMsg);
+    if (need && !memory.handoffFlagged) {
+      memory.handoffFlagged = true;
+      flagHandoff({
+        page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
+        reason: need.reason, snippet: userMsg, pause: need.pause ? 1 : 0
+      });
+      ctx.waitUntil(notifyTelegram(
+        `🙋 تدخّل بشري مطلوب — (${pageConfig.name})\n⚠️ ${need.reason}\n💬 «${userMsg.slice(0, 200)}»\n🔗 https://m.me/${senderId}`
+      ));
+      const ack = "آسفين على أي إزعاج 🌹 وصلت رسالتك، ورح يتواصل معك موظف من الفريق حالاً ويهتم فيك شخصياً. لحظات ونكون معك 🙏";
+      await sendText(token, senderId, ack);
+      logMessage({
+        page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
+        direction: "out", body: ack, created_at: Date.now()
+      });
+      memory.history.push({ role: "user", content: userMsg }, { role: "assistant", content: ack });
+      memory.history = memory.history.slice(-CONFIG.MAX_HISTORY);
+      await env.SESSIONS_KV.put(sessionKey, JSON.stringify(memory), { expirationTtl: CONFIG.SESSION_TTL });
+      return;   // نوقف البوت هنا — الموظف يتولّى
+    }
+  } catch (e) { console.error("handoff detect:", e && e.message); }
 
   if (!memory.sent && userMsg !== "[رسالة صوتية]") {
     parseMessage(memory, userMsg, pageConfig);
@@ -218,7 +268,9 @@ export async function handleEvent(event, env, ctx) {
     }), { expirationTtl: CONFIG.CRM_TTL }));
 
   } else {
-    const extraKnowledge = getKnowledge(recipientId);
+    let extraKnowledge = getKnowledge(recipientId);
+    // 🎯 تخصيص للزبون السابق: نحقن أكثر أصنافه طلباً ليقترحها البوت بذكاء
+    try { extraKnowledge += customerHistoryHint(senderId); } catch {}
     reply = await askAI(memory.history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
     memory.invalidPhoneProvided = false;   // بعد ما ننبّه الزبون منصفّر الفلاغ
   }

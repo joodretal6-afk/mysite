@@ -9,14 +9,15 @@ import path from "node:path";
 import {
   getUser, listOrders, updateOrderStatus, deleteOrder,
   distinctPages, ordersStats, saveOrder, orderExists,
-  getKnowledge, setKnowledge, listChatThreads, getChatMessages, perPageStats, editOrder,
+  getKnowledge, setKnowledge, listChatThreads, getChatMessages, perPageStats, editOrder, logMessage,
   analyticsData, salesReport, listCustomers, customerOrders,
   listCoupons, addCoupon, toggleCoupon, deleteCoupon, getOrder,
   dueForReorder, markReorderSent, listReviews, reviewStats,
   listAddons, addAddon, updateAddon, toggleAddon, deleteAddon,
   logActivity, listActivity, setCost, getCosts, deleteCost, profitReport,
   listUsers, setUserRole, deleteUser, broadcastTargets, addUser,
-  listInventory, setInventory, deleteInventory, decrementStock, lowStockList
+  listInventory, setInventory, deleteInventory, decrementStock, lowStockList,
+  listHandoffs, setHandoffPause, resolveHandoff
 } from "../db/database.js";
 import { sendText } from "../bot/messenger.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
@@ -91,6 +92,7 @@ adminRouter.get("/broadcast", requireAuth, (req, res) => res.sendFile(path.join(
 adminRouter.get("/profit", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "profit.html")));
 adminRouter.get("/team", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "team.html")));
 adminRouter.get("/inventory", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "inventory.html")));
+adminRouter.get("/handoffs", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "handoffs.html")));
 
 // ── API: المنتجات الإضافية (بيع إضافي) ──
 adminRouter.get("/api/addons", requireAuth, (req, res) => res.json({ addons: listAddons() }));
@@ -563,6 +565,42 @@ adminRouter.post("/api/inventory", requireAuth, (req, res) => {
 });
 adminRouter.delete("/api/inventory/:product", requireAuth, (req, res) => {
   deleteInventory(decodeURIComponent(req.params.product));
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════
+// 🙋 التدخّل البشري (Human Handoff)
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/api/handoffs", requireAuth, (req, res) => {
+  res.json({ handoffs: listHandoffs() });
+});
+// تعليق/تشغيل البوت يدوياً لزبون معيّن
+adminRouter.post("/api/handoffs/:key/pause", requireAuth, (req, res) => {
+  const paused = req.body?.paused ? 1 : 0;
+  setHandoffPause(decodeURIComponent(req.params.key), paused);
+  logActivity(req.user, paused ? "تعليق البوت" : "تشغيل البوت", decodeURIComponent(req.params.key));
+  res.json({ ok: true });
+});
+// رد الموظف مباشرةً على الزبون (أثناء التدخّل البشري)
+adminRouter.post("/api/handoffs/:key/reply", requireAuth, async (req, res) => {
+  const text = String(req.body?.text || "").trim();
+  if (!text) return res.status(400).json({ error: "اكتب الرسالة" });
+  const key = decodeURIComponent(req.params.key);
+  const idx = key.indexOf("_");
+  const pageId = key.slice(0, idx), senderId = key.slice(idx + 1);
+  const page = PAGES[pageId];
+  if (!page?.PAGE_TOKEN || !senderId) return res.status(400).json({ error: "صفحة/زبون غير معروف" });
+  try {
+    await sendText(page.PAGE_TOKEN, senderId, text);
+    logMessage({ page_id: pageId, page_name: page.name, sender_id: senderId, direction: "out", body: "👤 " + text, created_at: Date.now() });
+    logActivity(req.user, "رد يدوي", key);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e && e.message }); }
+});
+// إنهاء التدخّل (يرجّع البوت للعمل)
+adminRouter.post("/api/handoffs/:key/resolve", requireAuth, (req, res) => {
+  resolveHandoff(decodeURIComponent(req.params.key));
+  logActivity(req.user, "إنهاء تدخّل", decodeURIComponent(req.params.key));
   res.json({ ok: true });
 });
 
