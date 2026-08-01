@@ -12,7 +12,8 @@ import {
   getKnowledge, setKnowledge, listChatThreads, getChatMessages, perPageStats, editOrder,
   analyticsData, salesReport, listCustomers, customerOrders,
   listCoupons, addCoupon, toggleCoupon, deleteCoupon, getOrder,
-  dueForReorder, markReorderSent, listReviews, reviewStats
+  dueForReorder, markReorderSent, listReviews, reviewStats,
+  listAddons, addAddon, updateAddon, toggleAddon, deleteAddon
 } from "../db/database.js";
 import { sendText } from "../bot/messenger.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
@@ -67,6 +68,28 @@ adminRouter.get("/coupons", requireAuth, (req, res) => res.sendFile(path.join(pu
 adminRouter.get("/invoice/:id", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "invoice.html")));
 adminRouter.get("/reminders", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "reminders.html")));
 adminRouter.get("/reviews", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "reviews.html")));
+adminRouter.get("/products", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "products.html")));
+
+// ── API: المنتجات الإضافية (بيع إضافي) ──
+adminRouter.get("/api/addons", requireAuth, (req, res) => res.json({ addons: listAddons() }));
+adminRouter.post("/api/addons", requireAuth, (req, res) => {
+  const { name } = req.body || {};
+  if (!name || !name.trim()) return res.status(400).json({ error: "اكتب اسم المنتج" });
+  addAddon(req.body);
+  res.json({ ok: true });
+});
+adminRouter.post("/api/addons/:id", requireAuth, (req, res) => {
+  updateAddon(req.params.id, req.body || {});
+  res.json({ ok: true });
+});
+adminRouter.post("/api/addons/:id/toggle", requireAuth, (req, res) => {
+  toggleAddon(req.params.id, !!req.body?.active);
+  res.json({ ok: true });
+});
+adminRouter.delete("/api/addons/:id", requireAuth, (req, res) => {
+  deleteAddon(req.params.id);
+  res.json({ ok: true });
+});
 
 // ── API: تذكير إعادة الطلب ──
 adminRouter.get("/api/due-reorder", requireAuth, (req, res) => {

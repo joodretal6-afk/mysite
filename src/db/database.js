@@ -92,6 +92,16 @@ db.exec(`
     created_at INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS addons (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT,
+    price       REAL,
+    weight      TEXT,
+    description TEXT,
+    active      INTEGER DEFAULT 1,
+    created_at  INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS reviews (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     page_id    TEXT,
@@ -525,6 +535,32 @@ export function listReviews() {
 }
 export function reviewStats() {
   return retryDb(() => db.prepare("SELECT COUNT(*) c, COALESCE(AVG(rating),0) avg FROM reviews WHERE rating > 0").get());
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🛒 المنتجات الإضافية (بيع إضافي — موحّدة لكل الصفحات)
+// ═══════════════════════════════════════════════════════════
+export function listAddons() {
+  return retryDb(() => db.prepare("SELECT * FROM addons ORDER BY created_at DESC").all());
+}
+export function getActiveAddons() {
+  return retryDb(() => db.prepare("SELECT * FROM addons WHERE active = 1 ORDER BY id").all());
+}
+export function addAddon(a) {
+  return retryDb(() => db.prepare(
+    "INSERT INTO addons (name,price,weight,description,active,created_at) VALUES (?,?,?,?,1,?)"
+  ).run(String(a.name||"").trim(), Number(a.price)||0, String(a.weight||""), String(a.description||""), Date.now()));
+}
+export function updateAddon(id, a) {
+  return retryDb(() => db.prepare(
+    "UPDATE addons SET name=?, price=?, weight=?, description=? WHERE id=?"
+  ).run(String(a.name||"").trim(), Number(a.price)||0, String(a.weight||""), String(a.description||""), Number(id)));
+}
+export function toggleAddon(id, active) {
+  return retryDb(() => db.prepare("UPDATE addons SET active=? WHERE id=?").run(active?1:0, Number(id)));
+}
+export function deleteAddon(id) {
+  return retryDb(() => db.prepare("DELETE FROM addons WHERE id=?").run(Number(id)));
 }
 
 // ═══════════════════════════════════════════════════════════

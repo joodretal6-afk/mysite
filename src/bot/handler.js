@@ -7,7 +7,7 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } f
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
-import { saveOrder, updateOrder, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview } from "../db/database.js";
+import { saveOrder, updateOrder, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons } from "../db/database.js";
 
 // كشف تقييم/رأي الزبون من نص الرسالة
 function detectReview(text) {
@@ -197,6 +197,20 @@ export async function handleEvent(event, env, ctx) {
   const chunks = reply.split("[[SPLIT]]").map(s => s.trim()).filter(Boolean);
   for (const chunk of chunks) {
     await sendText(token, senderId, chunk);
+  }
+
+  // 🛒 بيع إضافي: بعد اكتمال الطلب، اعرض الأصناف الإضافية (موحّدة لكل الصفحات)
+  if (justSentInvoice) {
+    try {
+      const addons = getActiveAddons();
+      if (addons.length) {
+        const lines = addons.map(a =>
+          `• ${a.name} — ${a.price}د${a.weight ? ` (${a.weight})` : ""}${a.description ? ` — ${a.description}` : ""}`
+        ).join("\n");
+        await sendText(token, senderId,
+          `🌟 وقبل ما نجهّز طلبك، عنا كمان أصناف بتحب تضيفها؟\n\n${lines}\n\nإذا حاب شي، بس قلّي شو بتضيف ونزيده على طلبك 🌹`);
+      }
+    } catch (e) { console.error("cross-sell:", e && e.message); }
   }
 
   // 🔴 زر الإشعارات (OTN) مباشرة بعد الفاتورة (فقط لو مفعّل وعندك الصلاحية)
