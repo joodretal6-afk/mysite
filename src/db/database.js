@@ -132,6 +132,26 @@ db.exec(`
     updated_at INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS blocklist (
+    sender_id  TEXT PRIMARY KEY,
+    page_id    TEXT,
+    note       TEXT,
+    created_at INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS price_overrides (
+    page_id    TEXT,
+    product    TEXT,
+    price      REAL,
+    updated_at INTEGER,
+    PRIMARY KEY (page_id, product)
+  );
+
   CREATE TABLE IF NOT EXISTS handoffs (
     session_key TEXT PRIMARY KEY,  -- page_id + '_' + sender_id (طلب تدخّل واحد مفتوح لكل زبون)
     page_id     TEXT,
@@ -764,6 +784,82 @@ export function setHandoffPause(session_key, paused) {
 export function resolveHandoff(session_key) {
   retryDb(() => db.prepare("UPDATE handoffs SET status='closed', paused=0, updated_at=? WHERE session_key=?")
     .run(Date.now(), String(session_key)));
+}
+
+// ═══════════════════════════════════════════════════════════
+// ⚙️ إعدادات عامة (key/value) — هدف المبيعات، ساعات العمل...
+// ═══════════════════════════════════════════════════════════
+export function getSetting(key, def = null) {
+  try {
+    const r = retryDb(() => db.prepare("SELECT value FROM settings WHERE key = ?").get(String(key)));
+    return r ? r.value : def;
+  } catch { return def; }
+}
+export function setSetting(key, value) {
+  retryDb(() => db.prepare(
+    "INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+  ).run(String(key), String(value)));
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🚫 حظر الزبائن المزعجين
+// ═══════════════════════════════════════════════════════════
+export function isBlocked(senderId) {
+  if (!senderId) return false;
+  const r = retryDb(() => db.prepare("SELECT sender_id FROM blocklist WHERE sender_id = ?").get(String(senderId)));
+  return Boolean(r);
+}
+export function listBlocked() {
+  return retryDb(() => db.prepare("SELECT * FROM blocklist ORDER BY created_at DESC").all());
+}
+export function addBlock(senderId, pageId, note) {
+  retryDb(() => db.prepare(
+    "INSERT INTO blocklist (sender_id,page_id,note,created_at) VALUES (?,?,?,?) ON CONFLICT(sender_id) DO UPDATE SET note=excluded.note"
+  ).run(String(senderId), String(pageId || ""), String(note || ""), Date.now()));
+}
+export function removeBlock(senderId) {
+  retryDb(() => db.prepare("DELETE FROM blocklist WHERE sender_id = ?").run(String(senderId)));
+}
+
+// ═══════════════════════════════════════════════════════════
+// 💵 تعديل أسعار المنتجات من الموقع (تتجاوز أسعار الكود)
+// ═══════════════════════════════════════════════════════════
+export function listPriceOverrides(pageId) {
+  if (pageId) return retryDb(() => db.prepare("SELECT * FROM price_overrides WHERE page_id = ? ORDER BY product").all(String(pageId)));
+  return retryDb(() => db.prepare("SELECT * FROM price_overrides ORDER BY page_id, product").all());
+}
+export function setPriceOverride(pageId, product, price) {
+  retryDb(() => db.prepare(
+    "INSERT INTO price_overrides (page_id,product,price,updated_at) VALUES (?,?,?,?) ON CONFLICT(page_id,product) DO UPDATE SET price=excluded.price, updated_at=excluded.updated_at"
+  ).run(String(pageId), String(product).trim(), Number(price) || 0, Date.now()));
+}
+export function deletePriceOverride(pageId, product) {
+  retryDb(() => db.prepare("DELETE FROM price_overrides WHERE page_id=? AND product=?").run(String(pageId), String(product)));
+}
+// خريطة {product: price} للصفحة (للدمج مع أسعار الكود)
+export function priceOverrideMap(pageId) {
+  const map = {};
+  for (const r of listPriceOverrides(pageId)) map[r.product] = r.price;
+  return map;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🏆 أكثر المنتجات مبيعاً (من order_string للطلبات المكتملة)
+// ═══════════════════════════════════════════════════════════
+export function topProducts(limit = 20) {
+  const rows = retryDb(() => db.prepare(
+    "SELECT order_string FROM orders WHERE status != 'ملغي' AND status != 'ناقص'"
+  ).all());
+  const counts = {};
+  for (const r of rows) {
+    for (const part of String(r.order_string || "").split("+")) {
+      const m = part.match(/(.+?)\s*\((\d+(?:\.\d+)?)/);
+      if (m) { const name = m[1].trim(); const qty = parseFloat(m[2]) || 0;
+        if (name) counts[name] = (counts[name] || 0) + qty; }
+    }
+  }
+  return Object.entries(counts).map(([product, qty]) => ({ product, qty }))
+    .sort((a, b) => b.qty - a.qty).slice(0, limit);
 }
 
 // ═══════════════════════════════════════════════════════════

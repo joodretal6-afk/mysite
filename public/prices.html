@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تعديل الأسعار — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; } header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:800px; margin:0 auto; padding:22px; }
+    .note { background:#fff8e1; border-radius:10px; padding:12px 16px; font-size:13px; color:#8d6e00; margin-bottom:16px; line-height:1.7; }
+    .bar { background:var(--card); border-radius:12px; padding:14px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .bar select { width:100%; padding:11px; border:1.5px solid var(--line); border-radius:9px; font-family:inherit; font-size:14px; }
+    .card { background:var(--card); border-radius:14px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { padding:11px 13px; text-align:right; border-bottom:1px solid var(--line); }
+    th { background:#f0f4f1; color:var(--green2); }
+    input.pi { width:110px; padding:8px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; }
+    .base { color:var(--mut); font-size:13px; }
+    .ov { color:var(--green2); font-weight:700; }
+    .btn { padding:7px 12px; background:var(--green); color:#fff; border:none; border-radius:8px; cursor:pointer; font-family:inherit; font-size:12px; }
+    .btn.reset { background:#607d8b; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💵 تعديل أسعار المنتجات</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="note">
+      💡 عدّل سعر أي منتج لأي صفحة، والسعر الجديد بينطبق فوراً على الطلبات الجديدة. اترك الحقل فاضي واضغط «رجّع» لاسترجاع سعر الأصل.
+      <br>⚠️ هدا بيغيّر <b>الحساب المطبّق على الفاتورة</b>. تأكد من الرقم قبل الحفظ.
+    </div>
+    <div class="bar">
+      <select id="page" onchange="loadPrices()"><option value="">— اختر الصفحة —</option></select>
+    </div>
+    <div class="card">
+      <table><thead><tr><th>المنتج</th><th>سعر الأصل</th><th>السعر الحالي</th><th>سعر جديد</th><th></th></tr></thead>
+        <tbody id="rows"><tr><td colspan="5" style="text-align:center;color:#78909c;padding:24px">اختر صفحة أولاً</td></tr></tbody></table>
+    </div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    async function loadPages(){
+      const r=await fetch('/admin/api/pages-all');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const pages=await r.json();
+      const sel=document.getElementById('page');
+      (Array.isArray(pages)?pages:[]).forEach(p=>sel.insertAdjacentHTML('beforeend',`<option value="${esc(p.id)}">${esc(p.name)}</option>`));
+    }
+    async function loadPrices(){
+      const pid=document.getElementById('page').value;
+      const tb=document.getElementById('rows');
+      if(!pid){ tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:#78909c;padding:24px">اختر صفحة أولاً</td></tr>'; return; }
+      const r=await fetch('/admin/api/prices?page_id='+encodeURIComponent(pid));
+      const {base,overrides}=await r.json();
+      tb.innerHTML='';
+      Object.keys(base||{}).forEach(prod=>{
+        const pn=esc(prod).replace(/'/g,"&#39;");
+        const ov=overrides[prod];
+        const cur = ov!=null ? `<span class="ov">${ov}د ✏️</span>` : `<span class="base">${base[prod]}د</span>`;
+        tb.insertAdjacentHTML('beforeend',`<tr>
+          <td>${esc(prod)}</td>
+          <td class="base">${base[prod]}د</td>
+          <td>${cur}</td>
+          <td><input class="pi" id="p_${pn}" type="number" step="0.25" placeholder="${base[prod]}" value="${ov!=null?ov:''}"></td>
+          <td>
+            <button class="btn" onclick="save('${pid}','${pn}')">حفظ</button>
+            ${ov!=null?`<button class="btn reset" onclick="reset('${pid}','${pn}')">رجّع</button>`:''}
+          </td></tr>`);
+      });
+      if(!Object.keys(base||{}).length) tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:#78909c;padding:24px">لا منتجات لهذه الصفحة</td></tr>';
+    }
+    async function save(pid,prod){
+      const val=document.getElementById('p_'+prod).value;
+      if(val===''){ return reset(pid,prod); }
+      await fetch('/admin/api/prices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page_id:pid,product:prod,price:val})});
+      loadPrices();
+    }
+    async function reset(pid,prod){
+      await fetch('/admin/api/prices?page_id='+encodeURIComponent(pid)+'&product='+encodeURIComponent(prod),{method:'DELETE'});
+      loadPrices();
+    }
+    loadPages();
+  </script>
+</body>
+</html>

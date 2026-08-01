@@ -17,8 +17,12 @@ import {
   logActivity, listActivity, setCost, getCosts, deleteCost, profitReport,
   listUsers, setUserRole, deleteUser, broadcastTargets, addUser,
   listInventory, setInventory, deleteInventory, decrementStock, lowStockList,
-  listHandoffs, setHandoffPause, resolveHandoff
+  listHandoffs, setHandoffPause, resolveHandoff,
+  getSetting, setSetting, isBlocked, listBlocked, addBlock, removeBlock,
+  listPriceOverrides, setPriceOverride, deletePriceOverride, topProducts
 } from "../db/database.js";
+import fs from "node:fs";
+import { WEB } from "../config.js";
 import { sendText } from "../bot/messenger.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
 import { PAGES } from "../bot/brain.js";
@@ -93,6 +97,8 @@ adminRouter.get("/profit", requireAuth, (req, res) => res.sendFile(path.join(pub
 adminRouter.get("/team", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "team.html")));
 adminRouter.get("/inventory", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "inventory.html")));
 adminRouter.get("/handoffs", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "handoffs.html")));
+adminRouter.get("/settings", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "settings.html")));
+adminRouter.get("/prices", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "prices.html")));
 
 // ── API: المنتجات الإضافية (بيع إضافي) ──
 adminRouter.get("/api/addons", requireAuth, (req, res) => res.json({ addons: listAddons() }));
@@ -602,6 +608,92 @@ adminRouter.post("/api/handoffs/:key/resolve", requireAuth, (req, res) => {
   resolveHandoff(decodeURIComponent(req.params.key));
   logActivity(req.user, "إنهاء تدخّل", decodeURIComponent(req.params.key));
   res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════
+// 🎯 هدف المبيعات + 🕐 ساعات العمل (إعدادات)
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/api/settings", requireAuth, (req, res) => {
+  let hours = null; try { hours = JSON.parse(getSetting("business_hours") || "null"); } catch {}
+  const rep = salesReport();
+  res.json({
+    goal: Number(getSetting("sales_goal", "0")) || 0,
+    goalProgress: Number(rep.month?.s || 0),
+    businessHours: hours || { enabled: false, from: 9, to: 22, msg: "" }
+  });
+});
+adminRouter.post("/api/settings/goal", requireAuth, (req, res) => {
+  setSetting("sales_goal", String(Number(req.body?.goal) || 0));
+  logActivity(req.user, "تعديل هدف المبيعات", String(req.body?.goal));
+  res.json({ ok: true });
+});
+adminRouter.post("/api/settings/hours", requireAuth, (req, res) => {
+  const b = req.body || {};
+  const hours = {
+    enabled: !!b.enabled,
+    from: Math.min(23, Math.max(0, Number(b.from) || 0)),
+    to: Math.min(24, Math.max(0, Number(b.to) || 24)),
+    msg: String(b.msg || "").slice(0, 500)
+  };
+  setSetting("business_hours", JSON.stringify(hours));
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════
+// 🚫 حظر الزبائن
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/api/blocklist", requireAuth, (req, res) => res.json({ blocked: listBlocked() }));
+adminRouter.post("/api/blocklist", requireAuth, (req, res) => {
+  const { sender_id, page_id, note } = req.body || {};
+  if (!sender_id) return res.status(400).json({ error: "معرّف الزبون مطلوب" });
+  addBlock(sender_id, page_id, note);
+  logActivity(req.user, "حظر زبون", String(sender_id));
+  res.json({ ok: true });
+});
+adminRouter.delete("/api/blocklist/:id", requireAuth, (req, res) => {
+  removeBlock(decodeURIComponent(req.params.id));
+  logActivity(req.user, "فك حظر", req.params.id);
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════
+// 💵 تعديل أسعار المنتجات من الموقع
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/api/prices", requireAuth, (req, res) => {
+  const pageId = String(req.query.page_id || "");
+  const base = (PAGES[pageId] && PAGES[pageId].PRICES) || {};
+  const overrides = {}; for (const r of listPriceOverrides(pageId)) overrides[r.product] = r.price;
+  res.json({ page_id: pageId, base, overrides });
+});
+adminRouter.post("/api/prices", requireAuth, (req, res) => {
+  const { page_id, product, price } = req.body || {};
+  if (!page_id || !product) return res.status(400).json({ error: "الصفحة والمنتج مطلوبان" });
+  setPriceOverride(page_id, product, price);
+  logActivity(req.user, "تعديل سعر", `${product} → ${price}د`);
+  res.json({ ok: true });
+});
+adminRouter.delete("/api/prices", requireAuth, (req, res) => {
+  const { page_id, product } = req.query;
+  deletePriceOverride(page_id, product);
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════
+// 🏆 أكثر المنتجات مبيعاً
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/api/top-products", requireAuth, (req, res) => {
+  res.json({ products: topProducts(20) });
+});
+
+// ═══════════════════════════════════════════════════════════
+// 💾 تحميل نسخة احتياطية فورية من قاعدة البيانات
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/api/backup", requireAuth, (req, res) => {
+  const src = WEB.DB_PATH;
+  if (!src || !fs.existsSync(src)) return res.status(400).json({ error: "النسخ الاحتياطي متاح فقط بوضع القرص المحلي" });
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  logActivity(req.user, "تحميل نسخة احتياطية", stamp);
+  res.download(src, `backup-${stamp}.db`);
 });
 
 // ── تصدير Excel (.xlsx) ──

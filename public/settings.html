@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الإعدادات والأدوات — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; } header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:960px; margin:0 auto; padding:22px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:800px){ .grid{grid-template-columns:1fr;} }
+    .card { background:var(--card); border-radius:14px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:16px; }
+    .card h3 { font-size:15px; color:var(--green2); margin-bottom:14px; }
+    label { display:block; font-size:13px; font-weight:700; color:var(--green2); margin:8px 0 5px; }
+    input, select, textarea { width:100%; padding:11px; border:1.5px solid var(--line); border-radius:9px; font-family:inherit; font-size:14px; }
+    textarea { min-height:70px; resize:vertical; }
+    .row { display:flex; gap:10px; } .row > div { flex:1; }
+    .btn { padding:10px 18px; background:var(--green); color:#fff; border:none; border-radius:9px; cursor:pointer; font-family:inherit; font-size:14px; font-weight:700; margin-top:10px; }
+    .btn.del { background:var(--red); padding:7px 12px; font-size:12px; margin:0; }
+    .btn.dl { background:#1565c0; text-decoration:none; display:inline-block; }
+    .msg { font-size:13px; margin-top:8px; color:var(--green2); }
+    .bar { background:#eceff1; border-radius:20px; height:22px; overflow:hidden; margin-top:8px; }
+    .bar > div { height:100%; background:var(--green); color:#fff; font-size:12px; text-align:center; line-height:22px; transition:width .4s; white-space:nowrap; }
+    table { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
+    th,td { padding:8px; text-align:right; border-bottom:1px solid var(--line); }
+    .flex { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .sw { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+    .sw input { width:auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⚙️ الإعدادات والأدوات</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="grid">
+      <!-- هدف المبيعات -->
+      <div class="card">
+        <h3>🎯 هدف المبيعات الشهري</h3>
+        <div class="bar"><div id="goalbar" style="width:0%">0%</div></div>
+        <div id="goaltxt" style="font-size:13px;color:var(--mut);margin-top:6px"></div>
+        <label>الهدف (دينار / الشهر)</label>
+        <input id="goal" type="number" step="10" placeholder="مثال: 5000">
+        <button class="btn" onclick="saveGoal()">حفظ الهدف</button>
+        <div class="msg" id="goalmsg"></div>
+      </div>
+      <!-- ساعات العمل -->
+      <div class="card">
+        <h3>🕐 ساعات العمل</h3>
+        <div class="sw"><input type="checkbox" id="bhEn"><label for="bhEn" style="margin:0">تفعيل رسالة خارج الدوام</label></div>
+        <div class="row">
+          <div><label>من الساعة</label><input id="bhFrom" type="number" min="0" max="23" value="9"></div>
+          <div><label>إلى الساعة</label><input id="bhTo" type="number" min="0" max="24" value="22"></div>
+        </div>
+        <label>الرسالة خارج الدوام</label>
+        <textarea id="bhMsg" placeholder="شكراً لتواصلك 🌹 إحنا خارج الدوام حالياً، وصلنا طلبك ورح نرد أول ما نفتح."></textarea>
+        <button class="btn" onclick="saveHours()">حفظ ساعات العمل</button>
+        <div class="msg" id="hoursmsg"></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- أكثر المنتجات مبيعاً -->
+      <div class="card">
+        <h3>🏆 أكثر المنتجات مبيعاً</h3>
+        <table><thead><tr><th>#</th><th>المنتج</th><th>الكمية المباعة</th></tr></thead><tbody id="top"></tbody></table>
+      </div>
+      <!-- النسخ الاحتياطي -->
+      <div class="card">
+        <h3>💾 نسخة احتياطية</h3>
+        <p style="font-size:13px;color:#546e7a;line-height:1.8">نزّل نسخة كاملة من قاعدة بياناتك (كل الطلبات والزبائن) بضغطة زر. احفظها بمكان آمن.</p>
+        <a class="btn dl" href="/admin/api/backup">⬇️ تحميل نسخة احتياطية الآن</a>
+        <p style="font-size:12px;color:var(--mut);margin-top:10px">💡 النظام كمان بياخد نسخة تلقائية يومياً.</p>
+      </div>
+    </div>
+
+    <!-- حظر الزبائن -->
+    <div class="card">
+      <h3>🚫 حظر الزبائن المزعجين</h3>
+      <div class="flex">
+        <input id="blkId" placeholder="معرّف الزبون (Sender ID)" style="flex:2">
+        <input id="blkNote" placeholder="ملاحظة (اختياري)" style="flex:2">
+        <button class="btn" style="margin:0" onclick="block()">حظر</button>
+      </div>
+      <p style="font-size:12px;color:var(--mut);margin-top:6px">💡 معرّف الزبون بتلاقيه برابط الماسنجر أو بصفحة التدخّل البشري.</p>
+      <table><thead><tr><th>المعرّف</th><th>ملاحظة</th><th>التاريخ</th><th></th></tr></thead><tbody id="blk"></tbody></table>
+    </div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    async function load(){
+      const r=await fetch('/admin/api/settings');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const d=await r.json();
+      document.getElementById('goal').value=d.goal||'';
+      const pct=d.goal>0?Math.min(100,Math.round(d.goalProgress/d.goal*100)):0;
+      const gb=document.getElementById('goalbar'); gb.style.width=pct+'%'; gb.textContent=pct+'%';
+      document.getElementById('goaltxt').textContent=`تحقّق ${(+d.goalProgress).toFixed(0)}د من ${d.goal||0}د هالشهر`;
+      const bh=d.businessHours||{};
+      document.getElementById('bhEn').checked=!!bh.enabled;
+      document.getElementById('bhFrom').value=bh.from??9;
+      document.getElementById('bhTo').value=bh.to??22;
+      document.getElementById('bhMsg').value=bh.msg||'';
+      loadTop(); loadBlk();
+    }
+    async function saveGoal(){
+      await fetch('/admin/api/settings/goal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({goal:document.getElementById('goal').value})});
+      document.getElementById('goalmsg').textContent='✅ تم الحفظ'; load();
+    }
+    async function saveHours(){
+      const body={enabled:document.getElementById('bhEn').checked,from:document.getElementById('bhFrom').value,to:document.getElementById('bhTo').value,msg:document.getElementById('bhMsg').value};
+      await fetch('/admin/api/settings/hours',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      document.getElementById('hoursmsg').textContent='✅ تم الحفظ';
+    }
+    async function loadTop(){
+      const r=await fetch('/admin/api/top-products'); const {products}=await r.json();
+      const tb=document.getElementById('top'); tb.innerHTML='';
+      (products||[]).forEach((p,i)=>tb.insertAdjacentHTML('beforeend',`<tr><td>${i+1}</td><td>${esc(p.product)}</td><td>${p.qty}</td></tr>`));
+      if(!(products||[]).length) tb.innerHTML='<tr><td colspan="3" style="text-align:center;color:#78909c;padding:16px">لا مبيعات بعد</td></tr>';
+    }
+    async function loadBlk(){
+      const r=await fetch('/admin/api/blocklist'); const {blocked}=await r.json();
+      const tb=document.getElementById('blk'); tb.innerHTML='';
+      (blocked||[]).forEach(b=>tb.insertAdjacentHTML('beforeend',`<tr>
+        <td>${esc(b.sender_id)}</td><td>${esc(b.note)}</td>
+        <td>${new Date(b.created_at).toLocaleDateString('ar-EG')}</td>
+        <td><button class="btn del" onclick="unblock('${esc(b.sender_id).replace(/'/g,"&#39;")}')">فك الحظر</button></td></tr>`));
+      if(!(blocked||[]).length) tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:#78909c;padding:16px">ما في محظورين</td></tr>';
+    }
+    async function block(){
+      const sender_id=document.getElementById('blkId').value.trim(); if(!sender_id) return;
+      await fetch('/admin/api/blocklist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sender_id,note:document.getElementById('blkNote').value})});
+      document.getElementById('blkId').value=''; document.getElementById('blkNote').value=''; loadBlk();
+    }
+    async function unblock(id){
+      await fetch('/admin/api/blocklist/'+encodeURIComponent(id),{method:'DELETE'}); loadBlk();
+    }
+    load();
+  </script>
+</body>
+</html>

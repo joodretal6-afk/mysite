@@ -7,7 +7,21 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } f
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
-import { saveOrder, updateOrder, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, armFollowup, completeFollowup, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint } from "../db/database.js";
+import { saveOrder, updateOrder, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, armFollowup, completeFollowup, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting } from "../db/database.js";
+
+// 🕐 هل نحن خارج ساعات العمل؟ (إعداد اختياري من الموقع)
+function offHoursMessage() {
+  try {
+    const raw = getSetting("business_hours");
+    if (!raw) return null;
+    const bh = JSON.parse(raw);
+    if (!bh || !bh.enabled) return null;
+    const h = new Date().getHours();
+    const from = Number(bh.from), to = Number(bh.to);
+    const open = from <= to ? (h >= from && h < to) : (h >= from || h < to);
+    return open ? null : (bh.msg || "شكراً لتواصلك 🌹 إحنا حالياً خارج ساعات العمل، بس طلبك وصلنا ورح نرد عليك أول ما نفتح بإذن الله.");
+  } catch { return null; }
+}
 
 // 🙋 كشف حاجة الزبون لتدخّل بشري (غضب / يطلب موظف / حيرة) — بدون تكلفة ذكاء
 function detectNeedsHuman(text) {
@@ -55,6 +69,16 @@ export async function handleEvent(event, env, ctx) {
 
   // 🛑 صفحة موقوفة عن العمل: تجاهل الرسالة تماماً (لا رد ولا حفظ)
   if (CONFIG.DISABLED_PAGES.includes(recipientId)) return;
+
+  // 🚫 زبون محظور: تجاهل تماماً
+  try { if (isBlocked(senderId)) return; } catch (e) { console.error("block check:", e && e.message); }
+
+  // 💵 دمج أسعار الموقع (التعديلات اليدوية تتجاوز أسعار الكود) في نسخة فعّالة من إعداد الصفحة
+  let effConfig = pageConfig;
+  try {
+    const ov = priceOverrideMap(recipientId);
+    if (ov && Object.keys(ov).length) effConfig = { ...pageConfig, PRICES: { ...pageConfig.PRICES, ...ov } };
+  } catch (e) { console.error("price override:", e && e.message); }
 
   const token = pageConfig.PAGE_TOKEN;
   if (!token) { console.error("No page token for", recipientId); return; }
@@ -217,7 +241,7 @@ export async function handleEvent(event, env, ctx) {
   const hasIntent = cartItemsCount > 0 && (memory.area || memory.phone);
   if (hasIntent) {
     try {
-      const { total, orderString } = computeOrder(pageConfig, memory.cart, memory.coupon);
+      const { total, orderString } = computeOrder(effConfig, memory.cart, memory.coupon);
       const status = complete ? "جديد" : "ناقص";
       // منع التكرار: لو ضاع orderId (انتهت الجلسة) استرجع الأوردر المفتوح لنفس الزبون
       if (!memory.orderId) memory.orderId = getRecentOpenOrderId(recipientId, senderId);
@@ -244,7 +268,7 @@ export async function handleEvent(event, env, ctx) {
 
   // 🔴 إصدار الفاتورة للزبون عند اكتمال الطلب (مرة واحدة)
   if (readyForInvoice) {
-    const { total, orderString, detailedString, priceString } = computeOrder(pageConfig, memory.cart, memory.coupon);
+    const { total, orderString, detailedString, priceString } = computeOrder(effConfig, memory.cart, memory.coupon);
     reply = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, memory.area, memory.phone);
     memory.sent = true;
     justSentInvoice = true;
@@ -274,6 +298,14 @@ export async function handleEvent(event, env, ctx) {
     reply = await askAI(memory.history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
     memory.invalidPhoneProvided = false;   // بعد ما ننبّه الزبون منصفّر الفلاغ
   }
+
+  // 🕐 تنبيه خارج ساعات العمل (مرة واحدة لكل جلسة) قبل الرد العادي
+  try {
+    if (!memory.offHoursNotified) {
+      const oh = offHoursMessage();
+      if (oh) { reply = oh + "[[SPLIT]]" + reply; memory.offHoursNotified = true; }
+    }
+  } catch (e) { console.error("off-hours:", e && e.message); }
 
   // إرسال الرد (مع دعم تقسيمه لرسالتين عبر [[SPLIT]])
   const chunks = reply.split("[[SPLIT]]").map(s => s.trim()).filter(Boolean);
