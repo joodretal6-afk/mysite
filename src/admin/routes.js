@@ -11,8 +11,10 @@ import {
   distinctPages, ordersStats, saveOrder, orderExists,
   getKnowledge, setKnowledge, listChatThreads, getChatMessages, perPageStats, editOrder,
   analyticsData, salesReport, listCustomers, customerOrders,
-  listCoupons, addCoupon, toggleCoupon, deleteCoupon, getOrder
+  listCoupons, addCoupon, toggleCoupon, deleteCoupon, getOrder,
+  dueForReorder, markReorderSent, listReviews, reviewStats
 } from "../db/database.js";
+import { sendText } from "../bot/messenger.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
 import { PAGES } from "../bot/brain.js";
 import { fetchConversations, fetchMessages, collectConversationsInRange } from "../bot/inbox.js";
@@ -63,6 +65,33 @@ adminRouter.get("/analytics", requireAuth, (req, res) => res.sendFile(path.join(
 adminRouter.get("/customers", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "customers.html")));
 adminRouter.get("/coupons", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "coupons.html")));
 adminRouter.get("/invoice/:id", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "invoice.html")));
+adminRouter.get("/reminders", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "reminders.html")));
+adminRouter.get("/reviews", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "reviews.html")));
+
+// ── API: تذكير إعادة الطلب ──
+adminRouter.get("/api/due-reorder", requireAuth, (req, res) => {
+  const days = parseInt(req.query.days, 10) || 14;
+  res.json({ days, customers: dueForReorder(days) });
+});
+adminRouter.post("/api/send-reorder", requireAuth, async (req, res) => {
+  const { page_id, sender_id, phone, message } = req.body || {};
+  const page = PAGES[page_id];
+  if (!page?.PAGE_TOKEN || !sender_id) return res.status(400).json({ error: "بيانات ناقصة" });
+  const text = (message && message.trim()) ||
+    "يا هلا فيك 🌹 اشتقنالك! جبنتنا الطازة جاهزة، بتحب نجهّزلك طلبك المعتاد؟ 🧀";
+  try {
+    await sendText(page.PAGE_TOKEN, sender_id, text);
+    if (phone) markReorderSent(phone);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: "تعذّر الإرسال (قد يكون خارج نافذة 24 ساعة المسموحة من فيسبوك)" });
+  }
+});
+
+// ── API: التقييمات ──
+adminRouter.get("/api/reviews", requireAuth, (req, res) => {
+  res.json({ reviews: listReviews(), stats: reviewStats() });
+});
 
 // ── API: تحليلات وتقارير ──
 adminRouter.get("/api/analytics", requireAuth, (req, res) => {

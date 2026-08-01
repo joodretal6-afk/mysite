@@ -7,7 +7,19 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } f
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
-import { saveOrder, updateOrder, getKnowledge, logMessage } from "../db/database.js";
+import { saveOrder, updateOrder, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview } from "../db/database.js";
+
+// كشف تقييم/رأي الزبون من نص الرسالة
+function detectReview(text) {
+  if (!text) return null;
+  const star = text.match(/([1-5])\s*(?:نجوم|نجمة|نجمات|stars?|⭐)/i);
+  if (star) return { rating: parseInt(star[1], 10), comment: text.slice(0, 200) };
+  const complaint = /(سيئ|زفت|مش حلو|مو حلو|ما عجبت|رديئة|رديء|بطيء|تأخر|زعلان|مش راضي|ما بنصح)/i.test(text);
+  if (complaint) return { rating: 2, comment: text.slice(0, 200) };
+  const praise = /(ممتاز|رائع|زاكي|زاكية|طيبة كتير|حلوة كتير|بنصح فيكم|تسلم ايديكم|يعطيكم العافية|أحلى جبنة|احلى جبنة|ما شاء الله عليكم|ماشاء الله عليكم|أفضل جبنة|افضل جبنة)/i.test(text);
+  if (praise && text.length < 140) return { rating: 5, comment: text.slice(0, 200) };
+  return null;
+}
 
 export async function handleEvent(event, env, ctx) {
   if (!event || event.optin) return;                       // كبسة الإشعارات OTN
@@ -66,6 +78,19 @@ export async function handleEvent(event, env, ctx) {
     page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
     direction: "in", body: userMsg, created_at: Date.now()
   });
+
+  // ⭐ التقاط التقييمات من كلام الزبون (نجوم / مديح / شكوى)
+  try {
+    const review = detectReview(userMsg);
+    const isCustomer = memory.sent || customerCompletedCountBySender(senderId) > 0 ||
+      (memory.phone && customerCompletedCount(memory.phone) > 0);
+    if (review && isCustomer) {
+      addReview({
+        page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
+        phone: memory.phone || "", rating: review.rating, comment: review.comment
+      });
+    }
+  } catch (e) { console.error("review capture:", e && e.message); }
 
   // أمر التصفير
   if (/^(مسح|امسح|reset)$/i.test(userMsg)) {
@@ -145,6 +170,14 @@ export async function handleEvent(event, env, ctx) {
     reply = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, memory.area, memory.phone);
     memory.sent = true;
     justSentInvoice = true;
+
+    // 🎁 برنامج الولاء: كل طلب خامس مكتمل → مكافأة
+    try {
+      const loyaltyCount = customerCompletedCount(memory.phone);
+      if (loyaltyCount > 0 && loyaltyCount % 5 === 0) {
+        reply += `\n\n🎁 مبروك! هذا طلبك رقم ${loyaltyCount} معنا — كزبون وفيّ إلك خصم خاص على طلبك الجاي 🌹`;
+      }
+    } catch (e) { console.error("loyalty check:", e && e.message); }
 
     ctx.waitUntil(notifyTelegram(
       `🔔 طلب جديد من (${pageConfig.name})!\n\n🧀 الطلب: ${orderString}\n💰 الحساب: ${total}د\n📍 العنوان: ${memory.area}\n📞 التلفون: ${memory.phone}\n🔗 رابط الماسنجر: ${messengerUrl}`

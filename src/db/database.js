@@ -92,11 +92,30 @@ db.exec(`
     created_at INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS reviews (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    page_id    TEXT,
+    page_name  TEXT,
+    sender_id  TEXT,
+    phone      TEXT,
+    rating     INTEGER,
+    comment    TEXT,
+    created_at INTEGER
+  );
+
   CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
   CREATE INDEX IF NOT EXISTS idx_orders_page    ON orders(page_id);
   CREATE INDEX IF NOT EXISTS idx_orders_phone   ON orders(phone);
   CREATE INDEX IF NOT EXISTS idx_msg_conv       ON messages(page_id, sender_id, created_at);
 `);
+
+// أعمدة إضافية (ALTER آمن — SQLite لا يدعم IF NOT EXISTS للأعمدة)
+for (const col of [
+  "ALTER TABLE orders ADD COLUMN followed_up INTEGER DEFAULT 0",   // تمّت متابعة الطلب الناقص
+  "ALTER TABLE orders ADD COLUMN reorder_sent INTEGER DEFAULT 0"   // أُرسل تذكير إعادة الطلب
+]) {
+  try { db.exec(col); } catch { /* العمود موجود */ }
+}
 
 // ── تنظيف دوري للمفاتيح المنتهية ──
 function cleanupExpired() {
@@ -441,6 +460,71 @@ export function deleteCoupon(code) {
 export function getActiveCoupon(code) {
   if (!code) return null;
   return retryDb(() => db.prepare("SELECT * FROM coupons WHERE code=? AND active=1").get(String(code).trim().toUpperCase()));
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🔄 استرجاع الطلبات الناقصة (خلال نافذة 24 ساعة المسموحة)
+// ═══════════════════════════════════════════════════════════
+export function pendingFollowups() {
+  const now = Date.now();
+  const from = now - 23 * 3600 * 1000;   // ضمن 24 ساعة
+  const to = now - 45 * 60 * 1000;       // مرّ 45 دقيقة على الأقل
+  return retryDb(() => db.prepare(
+    `SELECT id, page_id, sender_id, order_string FROM orders
+     WHERE status = 'ناقص' AND followed_up = 0 AND sender_id != ''
+       AND created_at BETWEEN ? AND ?`
+  ).all(from, to));
+}
+export function markFollowedUp(id) {
+  retryDb(() => db.prepare("UPDATE orders SET followed_up = 1 WHERE id = ?").run(Number(id)));
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🎁 برنامج الولاء — عدد الطلبات المكتملة للزبون
+// ═══════════════════════════════════════════════════════════
+export function customerCompletedCount(phone) {
+  if (!phone) return 0;
+  return retryDb(() => db.prepare(
+    "SELECT COUNT(*) c FROM orders WHERE phone = ? AND status != 'ملغي' AND status != 'ناقص'"
+  ).get(phone)).c;
+}
+export function customerCompletedCountBySender(senderId) {
+  if (!senderId) return 0;
+  return retryDb(() => db.prepare(
+    "SELECT COUNT(*) c FROM orders WHERE sender_id = ? AND status != 'ملغي' AND status != 'ناقص'"
+  ).get(senderId)).c;
+}
+
+// ═══════════════════════════════════════════════════════════
+// ⏰ تذكير إعادة الطلب — زبائن آخر طلب لهم قديم
+// ═══════════════════════════════════════════════════════════
+export function dueForReorder(days = 14) {
+  const cutoff = Date.now() - days * 86400000;
+  return retryDb(() => db.prepare(
+    `SELECT phone, MAX(sender_id) sender_id, MAX(page_id) page_id, MAX(page_name) page_name,
+            MAX(created_at) last_at, COUNT(*) orders_count, MAX(messenger_url) messenger_url,
+            MAX(reorder_sent) reorder_sent
+     FROM orders WHERE phone != '' AND status != 'ناقص'
+     GROUP BY phone HAVING last_at < ? ORDER BY last_at DESC LIMIT 300`
+  ).all(cutoff));
+}
+export function markReorderSent(phone) {
+  retryDb(() => db.prepare("UPDATE orders SET reorder_sent = 1 WHERE phone = ?").run(phone));
+}
+
+// ═══════════════════════════════════════════════════════════
+// ⭐ التقييمات
+// ═══════════════════════════════════════════════════════════
+export function addReview(r) {
+  retryDb(() => db.prepare(
+    "INSERT INTO reviews (page_id,page_name,sender_id,phone,rating,comment,created_at) VALUES (?,?,?,?,?,?,?)"
+  ).run(String(r.page_id||""), String(r.page_name||""), String(r.sender_id||""), String(r.phone||""), Number(r.rating)||0, String(r.comment||""), Date.now()));
+}
+export function listReviews() {
+  return retryDb(() => db.prepare("SELECT * FROM reviews ORDER BY created_at DESC LIMIT 300").all());
+}
+export function reviewStats() {
+  return retryDb(() => db.prepare("SELECT COUNT(*) c, COALESCE(AVG(rating),0) avg FROM reviews WHERE rating > 0").get());
 }
 
 // ═══════════════════════════════════════════════════════════

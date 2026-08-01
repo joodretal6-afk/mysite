@@ -5,9 +5,12 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import { CONFIG, WEB } from "./config.js";
-import { SESSIONS_KV, countUsers, getUser, createUser, ordersStats, migrateFromTurso } from "./db/database.js";
+import { SESSIONS_KV, countUsers, getUser, createUser, ordersStats, migrateFromTurso,
+  pendingFollowups, markFollowedUp } from "./db/database.js";
 import { handleEvent } from "./bot/handler.js";
 import { adminRouter } from "./admin/routes.js";
+import { PAGES } from "./bot/brain.js";
+import { sendText } from "./bot/messenger.js";
 
 // 🛡️ حماية من توقّف السيرفر بسبب تقطّع شبكة Turso اللحظي (نسجّل الخطأ ونكمّل)
 process.on("uncaughtException", e => console.error("⚠️ uncaughtException:", e && e.message));
@@ -43,6 +46,23 @@ const app = express();
 app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// 🔄 استرجاع الطلبات الناقصة تلقائياً (ضمن نافذة 24 ساعة المسموحة من فيسبوك)
+async function runFollowups() {
+  try {
+    const list = pendingFollowups();
+    for (const o of list) {
+      if (CONFIG.DISABLED_PAGES.includes(o.page_id)) { markFollowedUp(o.id); continue; }
+      const page = PAGES[o.page_id];
+      if (!page?.PAGE_TOKEN) continue;
+      await sendText(page.PAGE_TOKEN, o.sender_id,
+        "يا هلا فيك 🌹 لاحظنا إن طلبك لسا ما اكتمل. بتحب نكمّله؟ بس بعتلنا العنوان ورقمك ومنجهّزلك ياه 🧀");
+      markFollowedUp(o.id);
+    }
+    if (list.length) console.log(`🔄 تمت متابعة ${list.length} طلب ناقص`);
+  } catch (e) { console.error("followup job error:", e && e.message); }
+}
+setInterval(runFollowups, 10 * 60 * 1000).unref?.();   // كل 10 دقائق
 
 // بيئة متوافقة مع كود الـ Worker الأصلي (env + ctx)
 const env = { SESSIONS_KV };
