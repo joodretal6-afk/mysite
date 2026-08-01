@@ -7,7 +7,10 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } f
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
-import { saveOrder, updateOrder, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, armFollowup, completeFollowup, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting } from "../db/database.js";
+import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, armFollowup, completeFollowup, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting } from "../db/database.js";
+
+// إلغاء صريح للطلب (منفصل عن "تعديل/تغيير الرأي")
+const CANCEL_INTENT = /(الغي الطلب|ألغي الطلب|الغاء الطلب|إلغاء الطلب|بطّل الطلب|بطل الطلب|ما بدي الطلب|ما عاد بدي|ما بديش|كنسل|cancel|لا تبعت|لا ترسل|ما بدي اكمل|ما بدي أكمل)/i;
 
 // 🕐 هل نحن خارج ساعات العمل؟ (إعداد اختياري من الموقع)
 function offHoursMessage() {
@@ -27,12 +30,22 @@ function offHoursMessage() {
 function detectNeedsHuman(text) {
   if (!text) return null;
   const t = text.trim();
-  // غضب/شكوى قوية أو تهديد
-  if (/(نصاب|احتيال|حرامي|حرامية|بلّغ عنكم|ابلغ عنكم|بشتكي|شكوى رسمية|محامي|بقاطعكم|زفت|قرف|مقرف|كذابين|كذاب|وقحين|قليل أدب|قليلين أدب|بكرهكم|أسوأ|اسوأ|فاشلين|غشيتوني|غششتوني)/i.test(t))
-    return { reason: "زبون غاضب/شكوى", pause: true };
+  // غضب/شكوى/شعور بالغش أو الاستياء (بمفردات أردنية) أو تهديد
+  if (/(نصاب|نصب|احتيال|تخويت|تخوت|مخوّت|مخوت|بتخوّت|حرامي|حرامية|سرقة|بتسرقوا|بلّغ عنكم|ابلغ عنكم|بشتكي|شكوى|محامي|بقاطعكم|زفت|قرف|مقرف|كذابين|كذاب|وقحين|قليل أدب|قليلين أدب|قلة أدب|بكرهكم|أسوأ|اسوأ|فاشلين|غشيتوني|غششتوني|غش|بتغشوا|زعلان|زعلانة|زعلانه|متضايق|متضايقة|مش راضي|مش راضية|ما رح ارضى|ما راح ارضى|مش عاجبني الاسلوب|اسلوبكم|أسلوبكم|الاسلوب|حرام عليكم|عيب عليكم|غالي كتير|بتغلوا)/i.test(t))
+    return { reason: "زبون غاضب/شكوى/استياء", pause: true };
   // يطلب موظف بشري صراحةً
-  if (/(بدي (?:احكي|أحكي|اتواصل|أتواصل) مع (?:حدا|موظف|شخص|إنسان|انسان|بشر|مدير)|في حدا (?:بيرد|يرد|موجود)|بدي موظف|بدي مدير|موظف بشري|مش بوت|إنت بوت|انت بوت|بدي إنسان|بدي انسان)/i.test(t))
+  if (/(بدي (?:احكي|أحكي|اتواصل|أتواصل) مع (?:حدا|موظف|شخص|إنسان|انسان|بشر|مدير|صاحب المحل)|في حدا (?:بيرد|يرد|موجود)|بدي موظف|بدي مدير|بدي صاحب|موظف بشري|مش بوت|إنت بوت|انت بوت|انتا بوت|بدي إنسان|بدي انسان|بدي احكي مع زلمة)/i.test(t))
     return { reason: "يطلب موظف بشري", pause: true };
+  return null;
+}
+
+// 👩 كشف جنس الزبون من كلامه (علامات المؤنث) — لمخاطبته بالصيغة الصحيحة
+function detectGender(text) {
+  if (!text) return null;
+  // أفعال/صفات تدل على أن المتكلّمة أنثى (تتحدث عن نفسها) — نهاية الكلمة بحدّ غير حرفي
+  if (/(زعلان[ةه]|حاس[ةه]|حابب?[ةه]|جاهز[ةه]|موافق[ةه]|متأكد[ةه]|مبسوط[ةه]|متضايق[ةه]|رافض[ةه]|مشتاق[ةه]|مستني[ةه]|قاعد[ةه]|منزعج[ةه]|متضايق[ةه])(?=\s|$|[.,!؟،:])/i.test(text)
+      || /(شكرا حبيبتي|أختك الكريمة|اختك الكريمة|انا ست|أنا ست|انا بنت|أنا بنت)/i.test(text))
+    return "f";
   return null;
 }
 
@@ -152,10 +165,36 @@ export async function handleEvent(event, env, ctx) {
     }
   } catch (e) { console.error("review capture:", e && e.message); }
 
+  // 👩 كشف جنس الزبون (مرة تُثبَّت) — مبكراً حتى قبل أي تحويل بشري
+  try { if (!memory.gender) { const g = detectGender(userMsg); if (g) memory.gender = g; } } catch {}
+
   // أمر التصفير
   if (/^(مسح|امسح|reset)$/i.test(userMsg)) {
     await env.SESSIONS_KV.delete(sessionKey);
     await sendText(token, senderId, "تم تفريغ السلة والبيانات، تفضل اطلب من جديد.");
+    return;
+  }
+
+  // 🚫 إلغاء صريح للطلب: نعلّم الطلب "ملغي" ونؤكّد للزبون بوضوح (بدل ما يجادله البوت)
+  if (CANCEL_INTENT.test(userMsg)) {
+    try {
+      if (!memory.orderId) memory.orderId = getRecentOpenOrderId(recipientId, senderId);
+      if (memory.orderId) updateOrderStatus(memory.orderId, "ملغي");
+    } catch (e) { console.error("cancel order:", e && e.message); }
+    memory.cart = {};
+    memory.sent = false;
+    memory.coupon = null;
+    memory.orderId = null;
+    const fem = memory.gender === "f";
+    const ack = fem
+      ? "تم إلغاء طلبك 🌹 ولا يهمّك. إذا حابة تطلبي من جديد أو تعدّلي الكمية، أنا بخدمتك وبكل سرور."
+      : "تم إلغاء طلبك 🌹 ولا يهمّك. إذا حابب تطلب من جديد أو تعدّل الكمية، أنا بخدمتك وبكل سرور.";
+    await sendText(token, senderId, ack);
+    logMessage({ page_id: recipientId, page_name: pageConfig.name, sender_id: senderId, direction: "out", body: ack, created_at: Date.now() });
+    memory.history.push({ role: "user", content: userMsg }, { role: "assistant", content: ack });
+    memory.history = memory.history.slice(-CONFIG.MAX_HISTORY);
+    try { completeFollowup(recipientId, senderId); } catch {}
+    await env.SESSIONS_KV.put(sessionKey, JSON.stringify(memory), { expirationTtl: CONFIG.SESSION_TTL });
     return;
   }
 
@@ -295,6 +334,10 @@ export async function handleEvent(event, env, ctx) {
     let extraKnowledge = getKnowledge(recipientId);
     // 🎯 تخصيص للزبون السابق: نحقن أكثر أصنافه طلباً ليقترحها البوت بذكاء
     try { extraKnowledge += customerHistoryHint(senderId); } catch {}
+    // 👩 مخاطبة الأنثى بالصيغة الصحيحة إن اكتُشف جنسها
+    if (memory.gender === "f") {
+      extraKnowledge += "\n\n[هام جداً] الزبونة أنثى — خاطبها دائماً بصيغة المؤنث (حياكي الله، تفضلي، يا هلا فيكي، أهلين فيكي، حبيبتي/أختي الكريمة، شو حابة، بدك تطلبي) ولا تستخدم أبداً (يا أخوي، يا غالي، يا شيخ، يا زعيم، حابب، بدك). كوني لطيفة ومحترمة.";
+    }
     reply = await askAI(memory.history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
     memory.invalidPhoneProvided = false;   // بعد ما ننبّه الزبون منصفّر الفلاغ
   }
