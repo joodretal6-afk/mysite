@@ -21,6 +21,12 @@
     th { background:#f0f4f1; color:var(--green2); font-weight:700; }
     tr:hover { background:#fafcfa; }
     .vip { background:#fff8e1; color:#b8860b; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:700; }
+    .rep { background:#e3f2fd; color:#1565c0; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:700; }
+    .ftab { padding:9px 16px; border:1.5px solid var(--line); background:#fff; border-radius:9px; cursor:pointer; font-family:inherit; font-size:14px; font-weight:600; }
+    .ftab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .sc { background:var(--card); border-radius:12px; padding:14px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:22px; font-weight:800; color:var(--green2); }
+    .sc .l { font-size:12px; color:var(--mut); margin-top:3px; }
     .spent { font-weight:700; color:var(--green2); }
     a.msg { color:var(--green); text-decoration:none; font-size:13px; }
     .empty { text-align:center; padding:40px; color:var(--mut); }
@@ -32,7 +38,14 @@
     <a href="/admin">→ اللوحة الرئيسية</a>
   </header>
   <div class="wrap">
-    <div class="bar"><input id="search" placeholder="🔍 بحث برقم الهاتف أو المنطقة..."></div>
+    <div class="bar" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+      <input id="search" placeholder="🔍 بحث برقم الهاتف أو المنطقة..." style="flex:1;min-width:200px">
+      <div style="display:flex;gap:8px">
+        <button id="btnAll" class="ftab active" onclick="setFilter('all')">كل الزبائن</button>
+        <button id="btnRepeat" class="ftab" onclick="setFilter('repeat')">🔁 المكرّرين فقط</button>
+      </div>
+    </div>
+    <div id="summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px"></div>
     <div class="card">
       <div class="tbl-scroll">
         <table>
@@ -46,19 +59,42 @@
   <script>
     function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
     function fmt(t){ return t?new Date(t).toLocaleDateString('ar-EG'):'—'; }
+    let filter='all', allCustomers=[];
+
+    function setFilter(f){
+      filter=f;
+      document.getElementById('btnAll').classList.toggle('active',f==='all');
+      document.getElementById('btnRepeat').classList.toggle('active',f==='repeat');
+      render();
+    }
+
     async function load(){
       const s=document.getElementById('search').value;
       const r=await fetch('/admin/api/customers'+(s?'?search='+encodeURIComponent(s):''));
       if(r.status===401){ location.href='/admin/login'; return; }
-      const {customers}=await r.json();
+      allCustomers=(await r.json()).customers;
+      render();
+    }
+
+    function render(){
+      const repeat=allCustomers.filter(c=>c.orders_count>=2);
+      const repeatSpent=repeat.reduce((a,c)=>a+(+c.total_spent),0);
+      document.getElementById('summary').innerHTML=`
+        <div class="sc"><div class="n">${allCustomers.length}</div><div class="l">إجمالي الزبائن</div></div>
+        <div class="sc"><div class="n">${repeat.length}</div><div class="l">🔁 زبائن مكرّرين</div></div>
+        <div class="sc"><div class="n">${repeatSpent.toFixed(0)}د</div><div class="l">إنفاق المكرّرين</div></div>`;
+
+      const list=(filter==='repeat'?repeat:allCustomers);
       const tb=document.getElementById('rows'), empty=document.getElementById('empty');
       tb.innerHTML='';
-      if(!customers.length){ empty.style.display='block'; return; }
+      if(!list.length){ empty.style.display='block'; empty.textContent=filter==='repeat'?'لا يوجد زبائن مكرّرين بعد':'لا يوجد زبائن بعد'; return; }
       empty.style.display='none';
-      customers.forEach(c=>{
-        const vip=c.orders_count>=3?'<span class="vip">زبون دائم ⭐</span>':'';
+      list.forEach(c=>{
+        let badge='';
+        if(c.orders_count>=3) badge='<span class="vip">دائم ⭐</span>';
+        else if(c.orders_count>=2) badge='<span class="rep">مكرّر 🔁</span>';
         tb.insertAdjacentHTML('beforeend',`<tr>
-          <td>📞 ${esc(c.phone)} ${vip}</td>
+          <td>📞 ${esc(c.phone)} ${badge}</td>
           <td>${c.orders_count}</td>
           <td class="spent">${(+c.total_spent).toFixed(2)}د</td>
           <td>${esc((c.area||'').slice(0,40))}</td>
