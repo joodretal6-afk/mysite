@@ -32,10 +32,20 @@ export const CONFIG = {
   GEMINI_TIMEOUT_MS: 20000
 };
 
+import crypto from "node:crypto";
+
+// مفتاح توقيع الجلسات: إن لم يُضبط بالبيئة، نولّد مفتاحاً عشوائياً عند الإقلاع
+// (آمن — لا يمكن تزويره؛ الجلسات فقط تُعاد عند إعادة التشغيل). لا نستخدم قيمة ثابتة معروفة.
+let _secret = process.env.SESSION_SECRET;
+if (!_secret) {
+  _secret = crypto.randomBytes(32).toString("hex");
+  console.warn("⚠️ SESSION_SECRET غير مضبوط — تم توليد مفتاح عشوائي (يُفضّل ضبطه بالبيئة ليبقى الدخول ثابتاً).");
+}
+
 // إعدادات الموقع / لوحة التحكم
 export const WEB = {
   PORT: parseInt(process.env.PORT || "3000", 10),
-  SESSION_SECRET: process.env.SESSION_SECRET || "ajban-default-secret-change-me-please-2026",
+  SESSION_SECRET: _secret,
   DB_PATH: process.env.DB_PATH || "./data/platform.db",
   ADMIN_SESSION_TTL_MS: 1000 * 60 * 60 * 24 * 3   // جلسة الأدمن 3 أيام
 };

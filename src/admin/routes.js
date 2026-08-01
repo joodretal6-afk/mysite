@@ -33,12 +33,27 @@ adminRouter.get("/login", (req, res) => {
   res.sendFile(path.join(publicDir, "login.html"));
 });
 
+// حدّ بسيط لمحاولات الدخول (ضد التخمين): 8 محاولات فاشلة كل 10 دقائق لكل IP
+const _loginHits = new Map();
+function loginLimited(ip) {
+  const now = Date.now();
+  const rec = _loginHits.get(ip) || { n: 0, resetAt: now + 600000 };
+  if (now > rec.resetAt) { rec.n = 0; rec.resetAt = now + 600000; }
+  return { rec, blocked: rec.n >= 8 };
+}
+
 adminRouter.post("/login", (req, res) => {
+  const ip = req.ip || "unknown";
+  const { rec, blocked } = loginLimited(ip);
+  if (blocked) return res.status(429).json({ error: "محاولات كثيرة، حاول بعد قليل" });
+
   const { username, password } = req.body || {};
   const user = getUser((username || "").trim());
   if (!user || !bcrypt.compareSync(password || "", user.password_hash)) {
+    rec.n++; _loginHits.set(ip, rec);
     return res.status(401).json({ error: "اسم المستخدم أو كلمة السر غير صحيحة" });
   }
+  _loginHits.delete(ip);
   setAuthCookie(res, user.username);
   res.json({ ok: true });
 });
@@ -72,14 +87,22 @@ adminRouter.get("/products", requireAuth, (req, res) => res.sendFile(path.join(p
 
 // ── API: المنتجات الإضافية (بيع إضافي) ──
 adminRouter.get("/api/addons", requireAuth, (req, res) => res.json({ addons: listAddons() }));
+function cleanAddon(b) {
+  return {
+    name: String(b?.name || "").trim().slice(0, 120),
+    price: Math.max(0, Number(b?.price) || 0),
+    weight: String(b?.weight || "").slice(0, 60),
+    description: String(b?.description || "").slice(0, 200)
+  };
+}
 adminRouter.post("/api/addons", requireAuth, (req, res) => {
-  const { name } = req.body || {};
-  if (!name || !name.trim()) return res.status(400).json({ error: "اكتب اسم المنتج" });
-  addAddon(req.body);
+  const a = cleanAddon(req.body);
+  if (!a.name) return res.status(400).json({ error: "اكتب اسم المنتج" });
+  addAddon(a);
   res.json({ ok: true });
 });
 adminRouter.post("/api/addons/:id", requireAuth, (req, res) => {
-  updateAddon(req.params.id, req.body || {});
+  updateAddon(req.params.id, cleanAddon(req.body));
   res.json({ ok: true });
 });
 adminRouter.post("/api/addons/:id/toggle", requireAuth, (req, res) => {
@@ -148,7 +171,11 @@ adminRouter.get("/api/coupons", requireAuth, (req, res) => res.json({ coupons: l
 adminRouter.post("/api/coupons", requireAuth, (req, res) => {
   const { code, type, value } = req.body || {};
   if (!code || !code.trim()) return res.status(400).json({ error: "اكتب كود الكوبون" });
-  addCoupon(code, type, value);
+  const t = type === "fixed" ? "fixed" : "percent";
+  const v = Math.max(0, Number(value) || 0);
+  if (v <= 0) return res.status(400).json({ error: "قيمة خصم غير صالحة" });
+  if (t === "percent" && v > 100) return res.status(400).json({ error: "النسبة لا تتجاوز 100%" });
+  addCoupon(code.trim(), t, v);
   res.json({ ok: true });
 });
 adminRouter.post("/api/coupons/:code/toggle", requireAuth, (req, res) => {

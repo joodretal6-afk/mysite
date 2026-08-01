@@ -57,7 +57,7 @@
     </div>
   </div>
   <script>
-    function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     async function load(){
       const r=await fetch('/admin/api/coupons');
       if(r.status===401){ location.href='/admin/login'; return; }

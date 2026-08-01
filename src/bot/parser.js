@@ -66,21 +66,15 @@ const _bound = "[\\s،.,:/\\-]";
 export const JORDAN_PLACES = new RegExp(`(?:^|${_bound})(?:${_terms})(?=$|${_bound})`, "i");
 
 export function extractPhone(memory, text) {
-  const compact = text.replace(/[\s\-\.]/g, "");
-  const attempt = compact.match(/(?:07\d*|\+962\d*|00962\d*|\d{6,14})/);
-  if (!attempt) { memory.invalidPhoneProvided = false; return; }
+  // نوحّد الصيغة الدولية ثم نبحث عن رقم أردني صحيح
+  const norm = text.replace(/[\s\-\.]/g, "").replace(/(?:\+962|00962)7/g, "07");
+  const valid = norm.match(/07[789]\d{7}/);
+  if (valid) { memory.phone = valid[0]; memory.invalidPhoneProvided = false; return; }
 
-  let p = attempt[0];
-  const strict = /^(?:07[789]\d{7}|(?:00|\+)9627[789]\d{7})$/;
-
-  if (strict.test(p)) {
-    if (p.startsWith("00962")) p = "0" + p.slice(5);
-    else if (p.startsWith("+962")) p = "0" + p.slice(4);
-    memory.phone = p;
-    memory.invalidPhoneProvided = false;
-  } else if (!memory.phone && p.length >= 6) {
-    memory.invalidPhoneProvided = true;
-  }
+  // نعتبره "رقم خاطئ" فقط إذا بدا كمحاولة رقم هاتف (يبدأ بـ 07/+962) لكن غير مكتمل،
+  // حتى لا نظنّ أرقام العناوين (عمارة 123، رقم بناية...) رقم هاتف خاطئ.
+  const looksLikePhoneAttempt = /(?:^|[^0-9])(?:07\d{4,}|(?:\+962|00962)\d{6,})/.test(text.replace(/[\s\-\.]/g, ""));
+  memory.invalidPhoneProvided = (!memory.phone && looksLikePhoneAttempt) ? true : false;
 }
 
 export function extractQty(text, pageConfig) {

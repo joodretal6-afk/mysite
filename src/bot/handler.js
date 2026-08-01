@@ -7,18 +7,26 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } f
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
-import { saveOrder, updateOrder, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, armFollowup, completeFollowup } from "../db/database.js";
+import { saveOrder, updateOrder, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, armFollowup, completeFollowup, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse } from "../db/database.js";
 
-// كشف تقييم/رأي الزبون من نص الرسالة
+// كشف تقييم/رأي الزبون من نص الرسالة (مع تفادي النفي والالتقاط الخاطئ)
 function detectReview(text) {
   if (!text) return null;
   const star = text.match(/([1-5])\s*(?:نجوم|نجمة|نجمات|stars?|⭐)/i);
   if (star) return { rating: parseInt(star[1], 10), comment: text.slice(0, 200) };
-  const complaint = /(سيئ|زفت|مش حلو|مو حلو|ما عجبت|رديئة|رديء|بطيء|تأخر|زعلان|مش راضي|ما بنصح)/i.test(text);
-  if (complaint) return { rating: 2, comment: text.slice(0, 200) };
+  // شكوى صريحة فقط (كلمات قوية) — مع استثناء النفي "ما/مش/مو"
+  const complaint = /(سيئ|زفت|رديئة|رديء|بشعة|ما عجبتني|مش راضي|زعلان منكم|خربانة)/i.test(text);
+  const negated = /(ما|مش|مو|مو في|بدون)\s+\S*(تأخر|سيئ|مشكلة|زفت)/i.test(text);
+  if (complaint && !negated) return { rating: 2, comment: text.slice(0, 200) };
   const praise = /(ممتاز|رائع|زاكي|زاكية|طيبة كتير|حلوة كتير|بنصح فيكم|تسلم ايديكم|يعطيكم العافية|أحلى جبنة|احلى جبنة|ما شاء الله عليكم|ماشاء الله عليكم|أفضل جبنة|افضل جبنة)/i.test(text);
   if (praise && text.length < 140) return { rating: 5, comment: text.slice(0, 200) };
   return null;
+}
+
+// هل الرسالة تحتوي طلب منتج؟ (حتى لا نلتقط تقييماً وسط بناء طلب)
+function cartAddedThisTurn(text, pageConfig) {
+  const kws = pageConfig.PRODUCT_KEYWORDS || {};
+  return Object.values(kws).some(rx => rx.test(text));
 }
 
 export async function handleEvent(event, env, ctx) {
@@ -84,11 +92,14 @@ export async function handleEvent(event, env, ctx) {
     const review = detectReview(userMsg);
     const isCustomer = memory.sent || customerCompletedCountBySender(senderId) > 0 ||
       (memory.phone && customerCompletedCount(memory.phone) > 0);
-    if (review && isCustomer) {
+    // تقييم واحد لكل زبون بالجلسة (بدون تكرار) + ليس أثناء بناء طلب جديد
+    const buildingOrder = cartAddedThisTurn(userMsg, pageConfig);
+    if (review && isCustomer && !memory.reviewed && !buildingOrder) {
       addReview({
         page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
         phone: memory.phone || "", rating: review.rating, comment: review.comment
       });
+      memory.reviewed = true;
     }
   } catch (e) { console.error("review capture:", e && e.message); }
 
@@ -118,16 +129,32 @@ export async function handleEvent(event, env, ctx) {
       ].filter(Boolean).join("\n");
       const ai = await extractOrderWithAI(convText, pageConfig);
       if (ai.ok) {
-        // الذكاء الاصطناعي مرجع نهائي (يرى المحادثة كاملة) — يصحّح أخطاء الرادار
-        memory.cart = {};
-        ai.items.forEach(it => { memory.cart[it.product] = it.qty; });
-        memory.area = ai.area || "";                 // يمسح أي عنوان خاطئ التقطه الرادار
+        // نستبدل السلة فقط لو الذكاء لقى طلباً فعلياً (حتى لا نمسح سلة سابقة برسالة سؤال/سلام)
+        if (ai.is_order && ai.items.length) {
+          memory.cart = {};
+          ai.items.forEach(it => { memory.cart[it.product] = it.qty; });
+        }
+        // نحدّث العنوان/الرقم فقط لو الذكاء رجّع قيمة فعلية (لا نمسحهم)
+        if (ai.area) memory.area = ai.area;
         if (ai.phone) { memory.phone = ai.phone; memory.invalidPhoneProvided = false; }
       }
       // لو فشل الذكاء (ai.ok=false) نُبقي نتائج الرادار كما هي
     } catch (e) {
       console.error("live AI extract failed:", e && e.message);
     }
+  }
+
+  // 🎟️ كشف كود الخصم من رسالة الزبون (يُطبّق على الحساب)
+  if (!memory.coupon) {
+    try {
+      const upper = userMsg.toUpperCase();
+      for (const c of getActiveCouponsList()) {
+        if (new RegExp(`(^|\\s)${c.code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`).test(upper)) {
+          memory.coupon = { code: c.code, type: c.type, value: c.value };
+          break;
+        }
+      }
+    } catch (e) { console.error("coupon detect:", e && e.message); }
   }
 
   const cartItemsCount = memory.cart ? Object.keys(memory.cart).length : 0;
@@ -137,12 +164,13 @@ export async function handleEvent(event, env, ctx) {
   const messengerUrl = `https://m.me/${senderId}`;
 
   // 🟢 وصول فوري للسستم: أي أوردر فيه أصناف + (عنوان أو رقم) ينزل باللوحة مباشرة
-  //    ويتحدّث لحظياً لين يكتمل. الحالة "ناقص" حتى يكتمل ثم "جديد".
   const hasIntent = cartItemsCount > 0 && (memory.area || memory.phone);
   if (hasIntent) {
     try {
-      const { total, orderString } = computeOrder(pageConfig, memory.cart);
+      const { total, orderString } = computeOrder(pageConfig, memory.cart, memory.coupon);
       const status = complete ? "جديد" : "ناقص";
+      // منع التكرار: لو ضاع orderId (انتهت الجلسة) استرجع الأوردر المفتوح لنفس الزبون
+      if (!memory.orderId) memory.orderId = getRecentOpenOrderId(recipientId, senderId);
       if (memory.orderId) {
         updateOrder(memory.orderId, {
           order_string: orderString, total,
@@ -166,10 +194,12 @@ export async function handleEvent(event, env, ctx) {
 
   // 🔴 إصدار الفاتورة للزبون عند اكتمال الطلب (مرة واحدة)
   if (readyForInvoice) {
-    const { total, orderString, detailedString, priceString } = computeOrder(pageConfig, memory.cart);
+    const { total, orderString, detailedString, priceString } = computeOrder(pageConfig, memory.cart, memory.coupon);
     reply = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, memory.area, memory.phone);
     memory.sent = true;
     justSentInvoice = true;
+
+    if (memory.coupon) { try { incrementCouponUse(memory.coupon.code); } catch {} }
 
     // 🎁 برنامج الولاء: كل طلب خامس مكتمل → مكافأة
     try {

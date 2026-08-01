@@ -113,7 +113,7 @@
 
     function topMsg(text, type){ document.getElementById('topmsg').innerHTML = text ? `<div class="msgbar ${type}">${text}</div>` : ''; }
     function fmt(t){ try{ return new Date(t).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}); }catch{ return ''; } }
-    function esc(s){ return String(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
     async function loadPages(){
       const r = await fetch('/admin/api/pages-all');

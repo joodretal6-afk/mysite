@@ -43,7 +43,10 @@
     async function load(){
       const r = await fetch('/admin/api/analytics');
       if(r.status===401){ location.href='/admin/login'; return; }
-      const {analytics:a, report:rep} = await r.json();
+      const d = await r.json();
+      const a = d.analytics || {}; const rep = d.report || {};
+      a.byDay = a.byDay || []; a.byPage = a.byPage || []; a.byHour = a.byHour || []; a.byStatus = a.byStatus || [];
+      rep.today = rep.today || {c:0,s:0}; rep.week = rep.week || {c:0,s:0}; rep.month = rep.month || {c:0,s:0}; rep.all = rep.all || {c:0,s:0};
       document.getElementById('report').innerHTML = `
         <div class="rc"><div class="n">${rep.today.c}</div><div class="m">${(+rep.today.s).toFixed(0)}د</div><div class="l">اليوم</div></div>
         <div class="rc"><div class="n">${rep.week.c}</div><div class="m">${(+rep.week.s).toFixed(0)}د</div><div class="l">آخر 7 أيام</div></div>

@@ -47,7 +47,7 @@
 
   <script>
     let curPage="";
-    function esc(s){ return String(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     function fmt(t){ try{ return new Date(t).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}); }catch{ return ''; } }
 
     async function loadPages(){

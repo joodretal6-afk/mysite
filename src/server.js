@@ -4,6 +4,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 import { CONFIG, WEB } from "./config.js";
 import { SESSIONS_KV, countUsers, getUser, createUser, ordersStats, migrateFromTurso,
   dueFollowups, markFollowupSent } from "./db/database.js";
@@ -43,9 +44,24 @@ if (process.env.MIGRATE_FROM_TURSO === "true") {
 }
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(cookieParser());
-app.use(express.json({ limit: "2mb" }));
+// نلتقط الـ body الخام للتحقق من توقيع فيسبوك
+app.use(express.json({ limit: "2mb", verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true }));
+
+// التحقق من توقيع فيسبوك X-Hub-Signature-256 (يعمل فقط إن ضُبط APP_SECRET)
+function verifyFbSignature(req) {
+  const appSecret = process.env.FB_APP_SECRET;
+  if (!appSecret) return true;   // غير مفعّل → لا نمنع (اختياري)
+  const sig = req.get("x-hub-signature-256") || "";
+  if (!sig.startsWith("sha256=") || !req.rawBody) return false;
+  const expected = "sha256=" + crypto.createHmac("sha256", appSecret).update(req.rawBody).digest("hex");
+  try {
+    return sig.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+  } catch { return false; }
+}
 
 // ⏰ المتابعة التلقائية: كل زبون بعد 10 دقائق من آخر رسالة (إن لم يُكمل طلبه)
 async function runFollowups() {
@@ -90,6 +106,10 @@ app.get("/webhook", (req, res) => {
 // استقبال الرسائل (POST)
 app.post("/webhook", async (req, res) => {
   try {
+    if (!verifyFbSignature(req)) {
+      console.error("⚠️ webhook signature mismatch — rejected");
+      return res.status(403).send("bad signature");
+    }
     const body = req.body || {};
     const entries = body.entry || [];
     const ctx = makeCtx();
@@ -116,11 +136,16 @@ app.use("/admin", adminRouter);
 // الصفحة الرئيسية → لوحة التحكم
 app.get("/", (req, res) => res.redirect("/admin"));
 
-// فحص صحة الخادم (مع عدد الأوردرات للتشخيص)
-app.get("/health", (req, res) => {
+// فحص صحة الخادم (عام — بدون كشف بيانات)
+app.get("/health", (req, res) => res.json({ ok: true, ts: Date.now() }));
+
+// تشخيص محمي (يتطلب توكن سري) — للفحص عن بُعد بدون كشف عام
+app.get("/health/diag", (req, res) => {
+  if (!process.env.DIAG_TOKEN || req.query.token !== process.env.DIAG_TOKEN) {
+    return res.status(403).json({ error: "forbidden" });
+  }
   let orders = null, err = null;
-  try { orders = Number(ordersStats().total.c); }
-  catch (e) { err = e && e.message; }
+  try { orders = Number(ordersStats().total.c); } catch (e) { err = e && e.message; }
   res.json({ ok: true, ts: Date.now(), orders, dbError: err });
 });
 

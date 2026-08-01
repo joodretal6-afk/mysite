@@ -53,7 +53,7 @@
     </div>
   </div>
   <script>
-    function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     function daysAgo(t){ return Math.floor((Date.now()-t)/86400000); }
     async function load(){
       const days=document.getElementById('days').value;

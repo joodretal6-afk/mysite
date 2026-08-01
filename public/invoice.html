@@ -36,7 +36,7 @@
   </div>
   <div class="invoice" id="inv"><div style="text-align:center;padding:40px;color:#78909c">جاري التحميل...</div></div>
   <script>
-    function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     const id = location.pathname.split('/').pop();
     async function load(){
       const r = await fetch('/admin/api/order/'+id);

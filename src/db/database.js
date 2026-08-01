@@ -144,9 +144,9 @@ setInterval(cleanupExpired, 60 * 1000).unref?.();
 cleanupExpired();
 
 // 🔁 إعادة المحاولة مع إعادة فتح الاتصال — بتهدئة (throttle) لتفادي عاصفة الاتصالات
-const _NET_ERR = /EOF|Hrana|cursor error|connection|reset|timeout|stream|broken pipe|not found|closed|502|bad gateway|upstream/i;
+// أخطاء شبكة/stream حقيقية من libsql/Hrana فقط (لا نعيد المحاولة لأخطاء منطقية)
+const _NET_ERR = /Hrana|stream not found|unexpected EOF|broken pipe|upstream forward failed|502|bad gateway|ECONNRESET|ETIMEDOUT|socket hang up|connection (reset|closed|refused)/i;
 let _lastReconnect = 0;
-const _sleep = ms => { const end = Date.now() + ms; while (Date.now() < end) { /* backoff قصير */ } };
 
 export function retryDb(fn, tries = 3) {
   let last;
@@ -156,13 +156,12 @@ export function retryDb(fn, tries = 3) {
       last = e;
       const msg = String((e && e.message) || "");
       if (!_NET_ERR.test(msg)) throw e;
-      // أعد فتح الاتصال مرة واحدة كل ثانيتين كحد أقصى (لتفادي إغراق Turso)
+      // أعد فتح الاتصال مرة واحدة كل ثانيتين كحد أقصى (بدون حجب المعالج بحلقة انتظار)
       const now = Date.now();
       if (now - _lastReconnect > 2000) {
         _lastReconnect = now;
         try { connect(); } catch (ce) { console.error("reconnect failed:", ce && ce.message); }
       }
-      if (i < tries - 1) _sleep(150 * (i + 1));   // مهلة تصاعدية بسيطة قبل المحاولة
     }
   }
   throw last;
@@ -261,6 +260,16 @@ export function getOrder(id) {
   return retryDb(() => db.prepare("SELECT * FROM orders WHERE id = ?").get(Number(id)));
 }
 
+// أحدث أوردر مفتوح لنفس الزبون خلال 6 ساعات (لمنع تكرار الصفوف عند انتهاء الجلسة)
+export function getRecentOpenOrderId(pageId, senderId) {
+  if (!senderId) return null;
+  const since = Date.now() - 6 * 3600 * 1000;
+  const row = retryDb(() => db.prepare(
+    "SELECT id FROM orders WHERE page_id=? AND sender_id=? AND status IN ('ناقص','جديد') AND created_at>=? ORDER BY created_at DESC LIMIT 1"
+  ).get(pageId, senderId, since));
+  return row ? row.id : null;
+}
+
 export function orderExists(page_id, sender_id, order_string) {
   const row = db.prepare(
     "SELECT id FROM orders WHERE page_id = ? AND sender_id = ? AND order_string = ?"
@@ -284,7 +293,7 @@ export function updateOrder(id, f) {
 
 // تعديل حقول الأوردر من اللوحة (بدون المساس بالحالة)
 export function editOrder(id, f) {
-  db.prepare(
+  return retryDb(() => db.prepare(
     "UPDATE orders SET order_string = ?, total = ?, area = ?, phone = ? WHERE id = ?"
   ).run(
     String(f.order_string || ""),
@@ -292,15 +301,15 @@ export function editOrder(id, f) {
     String(f.area || ""),
     String(f.phone || ""),
     Number(id)
-  );
+  ));
 }
 
 export function updateOrderStatus(id, status) {
-  return db.prepare("UPDATE orders SET status = ? WHERE id = ?").run(status, id);
+  return retryDb(() => db.prepare("UPDATE orders SET status = ? WHERE id = ?").run(String(status), Number(id)));
 }
 
 export function deleteOrder(id) {
-  return db.prepare("DELETE FROM orders WHERE id = ?").run(id);
+  return retryDb(() => db.prepare("DELETE FROM orders WHERE id = ?").run(Number(id)));
 }
 
 export function distinctPages() {
@@ -339,10 +348,10 @@ export function getKnowledge(pageId) {
 }
 
 export function setKnowledge(pageId, extra) {
-  db.prepare(`
+  retryDb(() => db.prepare(`
     INSERT INTO page_knowledge (page_id, extra, updated_at) VALUES (?, ?, ?)
     ON CONFLICT(page_id) DO UPDATE SET extra = excluded.extra, updated_at = excluded.updated_at
-  `).run(pageId, String(extra || ""), Date.now());
+  `).run(pageId, String(extra || ""), Date.now()));
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -391,9 +400,9 @@ export function getUser(username) {
 }
 
 export function createUser(username, passwordHash) {
-  return db.prepare(
+  return retryDb(() => db.prepare(
     "INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)"
-  ).run(username, passwordHash, Date.now());
+  ).run(username, passwordHash, Date.now()));
 }
 
 export function countUsers() {
@@ -442,8 +451,8 @@ export function salesReport() {
 // 👥 ملف الزبائن (CRM) — تجميع حسب رقم الهاتف
 // ═══════════════════════════════════════════════════════════
 export function listCustomers({ search } = {}) {
-  const s = search ? `%${search}%` : "";
   const cond = search ? "AND (phone LIKE @s OR area LIKE @s)" : "";
+  const params = search ? { s: `%${search}%` } : {};   // لا نمرّر بارامتر غير مستخدم
   return retryDb(() => db.prepare(`
     SELECT phone, MAX(sender_id) sender_id, MAX(area) area,
            COUNT(*) orders_count, COALESCE(SUM(total),0) total_spent,
@@ -451,7 +460,7 @@ export function listCustomers({ search } = {}) {
            MAX(messenger_url) messenger_url
     FROM orders WHERE phone != '' ${cond}
     GROUP BY phone ORDER BY orders_count DESC, last_at DESC LIMIT 300
-  `).all({ s }));
+  `).all(params));
 }
 export function customerOrders(phone) {
   return retryDb(() => db.prepare(
@@ -479,6 +488,12 @@ export function deleteCoupon(code) {
 export function getActiveCoupon(code) {
   if (!code) return null;
   return retryDb(() => db.prepare("SELECT * FROM coupons WHERE code=? AND active=1").get(String(code).trim().toUpperCase()));
+}
+export function getActiveCouponsList() {
+  return retryDb(() => db.prepare("SELECT code,type,value FROM coupons WHERE active=1").all());
+}
+export function incrementCouponUse(code) {
+  return retryDb(() => db.prepare("UPDATE coupons SET uses=uses+1 WHERE code=?").run(String(code).toUpperCase()));
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -602,34 +617,27 @@ export function migrateFromTurso() {
   let src;
   try {
     src = new Database(TURSO_URL, { authToken: TURSO_TOKEN });
+    // نقرأ كل شيء من Turso أولاً (لو تعطّل يرمي هنا قبل أي كتابة)
     const orders = src.prepare(
       "SELECT page_id,page_name,sender_id,order_string,total,area,phone,status,messenger_url,created_at FROM orders"
     ).all();
+    let msgs = [];
+    try { msgs = src.prepare("SELECT page_id,page_name,sender_id,direction,body,created_at FROM messages").all(); } catch { /* تجاهل */ }
+    let ks = [];
+    try { ks = src.prepare("SELECT page_id,extra,updated_at FROM page_knowledge").all(); } catch { /* تجاهل */ }
 
-    const insO = db.prepare(INSERT_ORDER);
-    let n = 0;
-    for (const o of orders) {
-      insO.run(o.page_id, o.page_name, o.sender_id, o.order_string, o.total, o.area, o.phone, o.status, o.messenger_url, o.created_at);
-      n++;
-    }
-
-    // الرسائل (اختياري)
-    try {
-      const msgs = src.prepare("SELECT page_id,page_name,sender_id,direction,body,created_at FROM messages").all();
+    // كل الكتابة + علامة الإتمام داخل معاملة واحدة (الكل أو لا شيء → لا تكرار عند إعادة المحاولة)
+    const doMigrate = db.transaction(() => {
+      const insO = db.prepare(INSERT_ORDER);
+      for (const o of orders) insO.run(o.page_id, o.page_name, o.sender_id, o.order_string, o.total, o.area, o.phone, o.status, o.messenger_url, o.created_at);
       const insM = db.prepare(INSERT_MESSAGE);
       for (const m of msgs) insM.run(m.page_id, m.page_name, m.sender_id, m.direction, m.body, m.created_at);
-    } catch { /* تجاهل */ }
-
-    // معلومات التغذية (اختياري)
-    try {
-      const ks = src.prepare("SELECT page_id,extra,updated_at FROM page_knowledge").all();
-      for (const k of ks) {
-        db.prepare("INSERT INTO page_knowledge (page_id,extra,updated_at) VALUES (?,?,?) ON CONFLICT(page_id) DO UPDATE SET extra=excluded.extra").run(k.page_id, k.extra, k.updated_at);
-      }
-    } catch { /* تجاهل */ }
-
-    db.prepare("INSERT INTO kv (key,value,expires_at) VALUES ('__migrated_turso','1',NULL) ON CONFLICT(key) DO NOTHING").run();
-    console.log(`✅ تم نقل ${n} أوردر من Turso إلى القرص المحلي`);
+      const insK = db.prepare("INSERT INTO page_knowledge (page_id,extra,updated_at) VALUES (?,?,?) ON CONFLICT(page_id) DO UPDATE SET extra=excluded.extra");
+      for (const k of ks) insK.run(k.page_id, k.extra, k.updated_at);
+      db.prepare("INSERT INTO kv (key,value,expires_at) VALUES ('__migrated_turso','1',NULL) ON CONFLICT(key) DO NOTHING").run();
+    });
+    doMigrate();
+    console.log(`✅ تم نقل ${orders.length} أوردر من Turso إلى القرص المحلي`);
     return true;
   } catch (e) {
     console.error("⏳ نقل Turso لم ينجح بعد (غالباً Turso متعطّل الآن)، سيعيد المحاولة:", e && e.message);

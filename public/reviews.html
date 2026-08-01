@@ -35,7 +35,7 @@
     <div id="list"></div>
   </div>
   <script>
-    function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     function stars(n){ return '⭐'.repeat(Math.max(0,Math.min(5,n))) + '☆'.repeat(Math.max(0,5-n)); }
     async function load(){
       const r=await fetch('/admin/api/reviews');
