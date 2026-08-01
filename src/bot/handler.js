@@ -7,7 +7,7 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } f
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
-import { saveOrder, updateOrder, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons } from "../db/database.js";
+import { saveOrder, updateOrder, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, armFollowup, completeFollowup } from "../db/database.js";
 
 // كشف تقييم/رأي الزبون من نص الرسالة
 function detectReview(text) {
@@ -243,6 +243,12 @@ export async function handleEvent(event, env, ctx) {
     { role: "assistant", content: memory.lastReply }
   );
   memory.history = memory.history.slice(-CONFIG.MAX_HISTORY);
+
+  // ⏰ المتابعة التلقائية: لو أكمل الطلب لا تتابعه، وإلا اضبط تايمر 10 دقائق
+  try {
+    if (memory.sent) completeFollowup(recipientId, senderId);
+    else armFollowup(recipientId, senderId);
+  } catch (e) { console.error("followup arm:", e && e.message); }
 
   await env.SESSIONS_KV.put(sessionKey, JSON.stringify(memory), { expirationTtl: CONFIG.SESSION_TTL });
 }

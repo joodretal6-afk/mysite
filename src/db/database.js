@@ -92,6 +92,15 @@ db.exec(`
     created_at INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS followups (
+    key       TEXT PRIMARY KEY,   -- page_id + '_' + sender_id
+    page_id   TEXT,
+    sender_id TEXT,
+    due_at    INTEGER,
+    status    TEXT DEFAULT 'pending',  -- pending / sent / completed
+    sends     INTEGER DEFAULT 0
+  );
+
   CREATE TABLE IF NOT EXISTS addons (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT,
@@ -473,20 +482,35 @@ export function getActiveCoupon(code) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 🔄 استرجاع الطلبات الناقصة (خلال نافذة 24 ساعة المسموحة)
+// 🔄 متابعة تلقائية للزبائن غير المكتملين (تايمر 10 دقائق لكل زبون)
 // ═══════════════════════════════════════════════════════════
-export function pendingFollowups() {
-  const now = Date.now();
-  const from = now - 23 * 3600 * 1000;   // ضمن 24 ساعة
-  const to = now - 45 * 60 * 1000;       // مرّ 45 دقيقة على الأقل
-  return retryDb(() => db.prepare(
-    `SELECT id, page_id, sender_id, order_string FROM orders
-     WHERE status = 'ناقص' AND followed_up = 0 AND sender_id != ''
-       AND created_at BETWEEN ? AND ?`
-  ).all(from, to));
+const FOLLOWUP_DELAY_MS = 10 * 60 * 1000;   // 10 دقائق بعد آخر رسالة
+
+// تشغيل/إعادة ضبط التايمر عند كل رسالة من زبون لم يُكمل (مرة متابعة واحدة فقط)
+export function armFollowup(pageId, senderId) {
+  const key = pageId + "_" + senderId;
+  const due = Date.now() + FOLLOWUP_DELAY_MS;
+  retryDb(() => {
+    const row = db.prepare("SELECT sends, status FROM followups WHERE key = ?").get(key);
+    if (row && (row.sends >= 1 || row.status === "completed")) return;  // تابعناه مسبقاً أو أكمل
+    db.prepare(`INSERT INTO followups (key,page_id,sender_id,due_at,status,sends)
+                VALUES (?,?,?,?, 'pending', 0)
+                ON CONFLICT(key) DO UPDATE SET due_at=excluded.due_at, status='pending'`)
+      .run(key, pageId, senderId, due);
+  });
 }
-export function markFollowedUp(id) {
-  retryDb(() => db.prepare("UPDATE orders SET followed_up = 1 WHERE id = ?").run(Number(id)));
+// عند اكتمال الطلب: لا تتابعه نهائياً
+export function completeFollowup(pageId, senderId) {
+  retryDb(() => db.prepare("UPDATE followups SET status='completed' WHERE key = ?").run(pageId + "_" + senderId));
+}
+// الزبائن الذين حان وقت متابعتهم
+export function dueFollowups() {
+  return retryDb(() => db.prepare(
+    "SELECT * FROM followups WHERE status='pending' AND due_at <= ?"
+  ).all(Date.now()));
+}
+export function markFollowupSent(key) {
+  retryDb(() => db.prepare("UPDATE followups SET status='sent', sends=sends+1 WHERE key = ?").run(key));
 }
 
 // ═══════════════════════════════════════════════════════════

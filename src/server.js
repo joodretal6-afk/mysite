@@ -6,7 +6,7 @@ import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import { CONFIG, WEB } from "./config.js";
 import { SESSIONS_KV, countUsers, getUser, createUser, ordersStats, migrateFromTurso,
-  pendingFollowups, markFollowedUp } from "./db/database.js";
+  dueFollowups, markFollowupSent } from "./db/database.js";
 import { handleEvent } from "./bot/handler.js";
 import { adminRouter } from "./admin/routes.js";
 import { PAGES } from "./bot/brain.js";
@@ -47,22 +47,22 @@ app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// 🔄 استرجاع الطلبات الناقصة تلقائياً (ضمن نافذة 24 ساعة المسموحة من فيسبوك)
+// ⏰ المتابعة التلقائية: كل زبون بعد 10 دقائق من آخر رسالة (إن لم يُكمل طلبه)
 async function runFollowups() {
   try {
-    const list = pendingFollowups();
-    for (const o of list) {
-      if (CONFIG.DISABLED_PAGES.includes(o.page_id)) { markFollowedUp(o.id); continue; }
-      const page = PAGES[o.page_id];
+    const list = dueFollowups();
+    for (const f of list) {
+      markFollowupSent(f.key);   // علّمها أولاً حتى لا تتكرر
+      if (CONFIG.DISABLED_PAGES.includes(f.page_id)) continue;
+      const page = PAGES[f.page_id];
       if (!page?.PAGE_TOKEN) continue;
-      await sendText(page.PAGE_TOKEN, o.sender_id,
-        "يا هلا فيك 🌹 لاحظنا إن طلبك لسا ما اكتمل. بتحب نكمّله؟ بس بعتلنا العنوان ورقمك ومنجهّزلك ياه 🧀");
-      markFollowedUp(o.id);
+      await sendText(page.PAGE_TOKEN, f.sender_id,
+        "يا هلا فيك 🌹 شو صار معك؟ ضلّينا مستنيينك. لو حابب تكمّل طلبك بس قلّي شو بتحب ومنجهّزلك ياه 🧀");
     }
-    if (list.length) console.log(`🔄 تمت متابعة ${list.length} طلب ناقص`);
+    if (list.length) console.log(`⏰ تمت متابعة ${list.length} زبون`);
   } catch (e) { console.error("followup job error:", e && e.message); }
 }
-setInterval(runFollowups, 10 * 60 * 1000).unref?.();   // كل 10 دقائق
+setInterval(runFollowups, 60 * 1000).unref?.();   // فحص كل دقيقة (التايمر 10 دقائق لكل زبون)
 
 // بيئة متوافقة مع كود الـ Worker الأصلي (env + ctx)
 const env = { SESSIONS_KV };
