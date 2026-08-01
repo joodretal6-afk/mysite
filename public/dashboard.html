@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>لوحة التحكم — منصة الأجبان</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#2e7d32">
+  <link rel="apple-touch-icon" href="/icon.svg">
   <style>
     :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --txt:#263238; --mut:#78909c; }
     * { box-sizing:border-box; margin:0; padding:0; }
@@ -86,6 +89,10 @@
       <a href="/admin/coupons" class="nav">🎟️ كوبونات</a>
       <a href="/admin/reminders" class="nav">⏰ تذكير</a>
       <a href="/admin/reviews" class="nav">⭐ تقييمات</a>
+      <a href="/admin/broadcast" class="nav">📢 حملة</a>
+      <a href="/admin/profit" class="nav">💰 الأرباح</a>
+      <a href="/admin/inventory" class="nav">📦 المخزون</a>
+      <a href="/admin/team" class="nav">👥 الفريق</a>
       <a href="/admin/knowledge" class="nav">🧠 تغذية البوت</a>
       <button onclick="logout()">تسجيل خروج</button>
     </div>
@@ -188,9 +195,7 @@
       if(lastTotal !== null && total > lastTotal){
         const n = total - lastTotal;
         beep();
-        if(Notification.permission==='granted'){
-          new Notification('🧀 طلب جديد!', { body:`وصلك ${n} طلب جديد على المنصة`, icon:'' });
-        }
+        notify('🧀 طلب جديد!', `وصلك ${n} طلب جديد على المنصة`);
       }
       lastTotal = total;
     }
@@ -204,7 +209,23 @@
         o.stop(ctx.currentTime+0.3);
       }catch(e){}
     }
+    // 🔔 إشعار عبر Service Worker (يشتغل حتى لو التطبيق مثبّت على الجوال) مع fallback
+    function notify(title, body){
+      try{
+        if('Notification' in window && Notification.permission!=='granted') return;
+        if(navigator.serviceWorker && navigator.serviceWorker.controller){
+          navigator.serviceWorker.controller.postMessage({ type:'notify', title, body, tag:'order' });
+        } else if('Notification' in window){
+          new Notification(title, { body, icon:'/icon.svg' });
+        }
+      }catch(e){}
+    }
     if('Notification' in window && Notification.permission==='default'){ Notification.requestPermission(); }
+
+    // 📱 تسجيل Service Worker (PWA) — يخلّي المنصة قابلة للتثبيت كتطبيق على الجوال
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('/sw.js').catch(e=>console.warn('SW:',e));
+    }
 
     function renderStats(s){
       document.getElementById('stats').innerHTML = `

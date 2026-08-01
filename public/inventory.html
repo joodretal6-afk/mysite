@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>المخزون — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:900px; margin:0 auto; padding:22px; }
+    .note { background:#fff8e1; border-radius:10px; padding:12px 16px; font-size:13px; color:#8d6e00; margin-bottom:16px; line-height:1.7; }
+    .alert { background:#ffebee; border-radius:10px; padding:12px 16px; font-size:14px; color:#c62828; margin-bottom:16px; font-weight:600; display:none; }
+    .card { background:var(--card); border-radius:14px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:16px; }
+    .card h3 { font-size:15px; color:var(--green2); margin-bottom:12px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { padding:11px; text-align:right; border-bottom:1px solid var(--line); }
+    th { color:var(--green2); }
+    tr.low td { background:#fff5f5; }
+    input.ci { width:90px; padding:7px; border:1.5px solid var(--line); border-radius:7px; font-family:inherit; }
+    .btn { padding:8px 14px; background:var(--green); color:#fff; border:none; border-radius:8px; cursor:pointer; font-family:inherit; font-size:13px; }
+    .btn.del { background:#c62828; }
+    .addrow { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center; }
+    .addrow input { padding:9px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; }
+    .pill { padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+    .pill.ok{background:#e8f5e9;color:var(--green2);} .pill.bad{background:#ffcdd2;color:#b71c1c;}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📦 المخزون</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="note">
+      💡 حدّد كمية كل صنف وحد التنبيه. الكمية بتنخصم تلقائياً لما تعلّم الطلب "<b>تم التسليم</b>".
+      <br>⚠️ لازم اسم الصنف نفس اللي بيظهر بالطلب (مثال: <b>غنم</b>، <b>بقر</b>، <b>مهيري</b>).
+    </div>
+    <div class="alert" id="alert"></div>
+    <div class="card">
+      <h3>الأصناف</h3>
+      <table><thead><tr><th>الصنف</th><th>المتوفّر</th><th>حد التنبيه</th><th>الحالة</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+      <div class="addrow">
+        <input id="p" placeholder="اسم الصنف" style="flex:1">
+        <input id="s" type="number" step="0.1" placeholder="الكمية" style="width:100px">
+        <input id="l" type="number" step="0.1" placeholder="حد التنبيه" style="width:110px">
+        <button class="btn" onclick="add()">+ إضافة</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    async function load(){
+      const r=await fetch('/admin/api/inventory');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const {inventory,low}=await r.json();
+      const al=document.getElementById('alert');
+      if((low||[]).length){ al.style.display='block'; al.textContent='⚠️ أصناف على وشك الخلوص: '+low.map(x=>esc(x.product)+' ('+x.stock+')').join('، '); }
+      else al.style.display='none';
+      const tb=document.getElementById('rows'); tb.innerHTML='';
+      (inventory||[]).forEach(it=>{
+        const isLow=Number(it.stock)<=Number(it.low);
+        const pn=esc(it.product).replace(/'/g,"&#39;");
+        tb.insertAdjacentHTML('beforeend',`<tr class="${isLow?'low':''}">
+          <td>${esc(it.product)}</td>
+          <td><input class="ci" type="number" step="0.1" value="${it.stock}" onchange="save('${pn}',this.value,${it.low})"></td>
+          <td><input class="ci" type="number" step="0.1" value="${it.low}" onchange="save('${pn}',${it.stock},this.value)"></td>
+          <td><span class="pill ${isLow?'bad':'ok'}">${isLow?'ناقص':'متوفّر'}</span></td>
+          <td><button class="btn del" onclick="del('${pn}')">حذف</button></td>
+        </tr>`);
+      });
+      if(!(inventory||[]).length) tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:#78909c;padding:20px">ما في أصناف بعد</td></tr>';
+    }
+    async function add(){
+      const product=document.getElementById('p').value.trim();
+      const stock=document.getElementById('s').value||0, low=document.getElementById('l').value||5;
+      if(!product) return;
+      await fetch('/admin/api/inventory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product,stock,low})});
+      document.getElementById('p').value=''; document.getElementById('s').value=''; document.getElementById('l').value='';
+      load();
+    }
+    async function save(product,stock,low){
+      await fetch('/admin/api/inventory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product,stock,low})});
+      load();
+    }
+    async function del(product){
+      if(!confirm('حذف '+product+' من المخزون؟')) return;
+      await fetch('/admin/api/inventory/'+encodeURIComponent(product),{method:'DELETE'});
+      load();
+    }
+    load();
+  </script>
+</body>
+</html>

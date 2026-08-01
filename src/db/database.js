@@ -111,6 +111,27 @@ db.exec(`
     created_at  INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS activity_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    username   TEXT,
+    action     TEXT,
+    detail     TEXT,
+    created_at INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS product_costs (
+    product    TEXT PRIMARY KEY,   -- اسم الصنف (يطابق مفاتيح الأسعار)
+    cost       REAL,
+    updated_at INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS inventory (
+    product    TEXT PRIMARY KEY,   -- اسم الصنف (يطابق مفاتيح الأسعار)
+    stock      REAL DEFAULT 0,     -- الكمية المتوفّرة
+    low        REAL DEFAULT 5,     -- حد التنبيه
+    updated_at INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS reviews (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     page_id    TEXT,
@@ -131,7 +152,8 @@ db.exec(`
 // أعمدة إضافية (ALTER آمن — SQLite لا يدعم IF NOT EXISTS للأعمدة)
 for (const col of [
   "ALTER TABLE orders ADD COLUMN followed_up INTEGER DEFAULT 0",   // تمّت متابعة الطلب الناقص
-  "ALTER TABLE orders ADD COLUMN reorder_sent INTEGER DEFAULT 0"   // أُرسل تذكير إعادة الطلب
+  "ALTER TABLE orders ADD COLUMN reorder_sent INTEGER DEFAULT 0",  // أُرسل تذكير إعادة الطلب
+  "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'admin'"         // دور المستخدم
 ]) {
   try { db.exec(col); } catch { /* العمود موجود */ }
 }
@@ -405,6 +427,12 @@ export function createUser(username, passwordHash) {
   ).run(username, passwordHash, Date.now()));
 }
 
+export function addUser(username, passwordHash, role = "staff") {
+  return retryDb(() => db.prepare(
+    "INSERT INTO users (username, password_hash, role, created_at) VALUES (?, ?, ?, ?)"
+  ).run(username, passwordHash, role, Date.now()));
+}
+
 export function countUsers() {
   return db.prepare("SELECT COUNT(*) c FROM users").get().c;
 }
@@ -600,6 +628,117 @@ export function toggleAddon(id, active) {
 }
 export function deleteAddon(id) {
   return retryDb(() => db.prepare("DELETE FROM addons WHERE id=?").run(Number(id)));
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📝 سجل النشاط
+// ═══════════════════════════════════════════════════════════
+export function logActivity(username, action, detail) {
+  try {
+    retryDb(() => db.prepare("INSERT INTO activity_log (username,action,detail,created_at) VALUES (?,?,?,?)")
+      .run(String(username || "?"), String(action || ""), String(detail || ""), Date.now()));
+  } catch (e) { console.error("logActivity:", e && e.message); }
+}
+export function listActivity() {
+  return retryDb(() => db.prepare("SELECT * FROM activity_log ORDER BY created_at DESC LIMIT 300").all());
+}
+
+// ═══════════════════════════════════════════════════════════
+// 💰 التكاليف والأرباح
+// ═══════════════════════════════════════════════════════════
+export function setCost(product, cost) {
+  retryDb(() => db.prepare("INSERT INTO product_costs (product,cost,updated_at) VALUES (?,?,?) ON CONFLICT(product) DO UPDATE SET cost=excluded.cost, updated_at=excluded.updated_at")
+    .run(String(product).trim(), Number(cost) || 0, Date.now()));
+}
+export function getCosts() {
+  return retryDb(() => db.prepare("SELECT product,cost FROM product_costs").all());
+}
+export function deleteCost(product) {
+  retryDb(() => db.prepare("DELETE FROM product_costs WHERE product=?").run(String(product)));
+}
+// حساب تكلفة الطلبات (من order_string: "صنف (عدد وحدة) + ...") مقابل خريطة التكاليف
+function round2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+export function profitReport({ from, to } = {}) {
+  const where = ["status != 'ملغي'", "status != 'ناقص'"];
+  const params = {};
+  if (from) { where.push("created_at >= @from"); params.from = from; }
+  if (to)   { where.push("created_at <= @to");   params.to = to; }
+  const clause = "WHERE " + where.join(" AND ");
+  const rows = retryDb(() => db.prepare(`SELECT order_string, total FROM orders ${clause}`).all(params));
+  const costs = {};
+  for (const c of getCosts()) costs[c.product] = c.cost;
+  let revenue = 0, cost = 0;
+  for (const r of rows) {
+    revenue += Number(r.total) || 0;
+    for (const part of String(r.order_string || "").split("+")) {
+      const m = part.match(/(.+?)\s*\((\d+(?:\.\d+)?)/);   // "غنم (2 نصية)"
+      if (m) {
+        const name = m[1].trim(); const qty = parseFloat(m[2]) || 0;
+        if (costs[name] != null) cost += costs[name] * qty;
+      }
+    }
+  }
+  return { revenue: round2(revenue), cost: round2(cost), profit: round2(revenue - cost), orders: rows.length };
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📦 إدارة المخزون
+// ═══════════════════════════════════════════════════════════
+export function listInventory() {
+  return retryDb(() => db.prepare("SELECT product, stock, low FROM inventory ORDER BY product").all());
+}
+export function setInventory(product, stock, low) {
+  retryDb(() => db.prepare(
+    `INSERT INTO inventory (product,stock,low,updated_at) VALUES (?,?,?,?)
+     ON CONFLICT(product) DO UPDATE SET stock=excluded.stock, low=excluded.low, updated_at=excluded.updated_at`
+  ).run(String(product).trim(), Number(stock) || 0, Number(low) || 0, Date.now()));
+}
+export function deleteInventory(product) {
+  retryDb(() => db.prepare("DELETE FROM inventory WHERE product=?").run(String(product)));
+}
+// خصم كميات طلب من المخزون (من order_string: "صنف (عدد وحدة) + ...")
+export function decrementStock(orderString) {
+  try {
+    const map = {};
+    for (const c of listInventory()) map[c.product] = true;
+    for (const part of String(orderString || "").split("+")) {
+      const m = part.match(/(.+?)\s*\((\d+(?:\.\d+)?)/);
+      if (m) {
+        const name = m[1].trim(); const qty = parseFloat(m[2]) || 0;
+        if (map[name] && qty > 0) {
+          retryDb(() => db.prepare("UPDATE inventory SET stock = stock - ?, updated_at=? WHERE product=?")
+            .run(qty, Date.now(), name));
+        }
+      }
+    }
+  } catch (e) { console.error("decrementStock:", e && e.message); }
+}
+export function lowStockList() {
+  return retryDb(() => db.prepare("SELECT product, stock, low FROM inventory WHERE stock <= low ORDER BY stock").all());
+}
+
+// ═══════════════════════════════════════════════════════════
+// 👤 إدارة المستخدمين (أدوار)
+// ═══════════════════════════════════════════════════════════
+export function listUsers() {
+  return retryDb(() => db.prepare("SELECT id, username, role, created_at FROM users ORDER BY created_at").all());
+}
+export function setUserRole(username, role) {
+  retryDb(() => db.prepare("UPDATE users SET role=? WHERE username=?").run(String(role), String(username)));
+}
+export function deleteUser(username) {
+  retryDb(() => db.prepare("DELETE FROM users WHERE username=?").run(String(username)));
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📢 قائمة الزبائن للحملات (لكل زبون: صفحته وsender_id)
+// ═══════════════════════════════════════════════════════════
+export function broadcastTargets() {
+  return retryDb(() => db.prepare(
+    `SELECT sender_id, MAX(page_id) page_id, MAX(page_name) page_name, MAX(phone) phone, MAX(created_at) last_at
+     FROM orders WHERE sender_id != '' AND status != 'ناقص'
+     GROUP BY sender_id ORDER BY last_at DESC LIMIT 1000`
+  ).all());
 }
 
 // ═══════════════════════════════════════════════════════════

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الأرباح والتكاليف — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1000px; margin:0 auto; padding:22px; }
+    .note { background:#fff8e1; border-radius:10px; padding:12px 16px; font-size:13px; color:#8d6e00; margin-bottom:16px; line-height:1.7; }
+    .report { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px; }
+    .rc { background:var(--card); border-radius:14px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.05); text-align:center; }
+    .rc .n { font-size:24px; font-weight:800; }
+    .rc .l { font-size:13px; color:var(--mut); margin-top:4px; }
+    .rc.rev .n{color:#1565c0;} .rc.cost .n{color:#c62828;} .rc.prof .n{color:var(--green2);}
+    .bar { background:var(--card); border-radius:12px; padding:14px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,.05); display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .bar input { padding:9px 12px; border:1.5px solid var(--line); border-radius:9px; font-family:inherit; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:760px){ .grid2{grid-template-columns:1fr;} }
+    .card { background:var(--card); border-radius:14px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .card h3 { font-size:15px; color:var(--green2); margin-bottom:12px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { padding:10px; text-align:right; border-bottom:1px solid var(--line); }
+    th { color:var(--green2); }
+    input.ci { width:90px; padding:7px; border:1.5px solid var(--line); border-radius:7px; font-family:inherit; }
+    .btn { padding:8px 14px; background:var(--green); color:#fff; border:none; border-radius:8px; cursor:pointer; font-family:inherit; font-size:13px; }
+    .btn.del { background:#c62828; }
+    .addrow { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+    .addrow input { padding:9px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💰 الأرباح والتكاليف</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="note">
+      💡 حط تكلفة كل صنف (سعر شرائه عليك)، والنظام بيحسب أرباحك الصافية تلقائياً من الطلبات المكتملة.
+      <br>⚠️ لازم يكون اسم الصنف نفس الاسم اللي بيظهر بالطلب (مثال: <b>غنم</b>، <b>بقر</b>، <b>مهيري</b>).
+    </div>
+    <div class="bar">
+      <label>من:</label><input type="date" id="from">
+      <label>إلى:</label><input type="date" id="to">
+      <button class="btn" onclick="load()">تحديث</button>
+    </div>
+    <div class="report" id="report"></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>تكاليف الأصناف</h3>
+        <table><thead><tr><th>الصنف</th><th>التكلفة (د)</th><th></th></tr></thead><tbody id="costs"></tbody></table>
+        <div class="addrow">
+          <input id="cp" placeholder="اسم الصنف" style="flex:1">
+          <input id="cc" type="number" step="0.01" placeholder="التكلفة" style="width:110px">
+          <button class="btn" onclick="addCost()">+ إضافة</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>كيف يعمل الحساب؟</h3>
+        <p style="font-size:13px;line-height:1.9;color:#546e7a">
+          • <b>الإيرادات</b> = مجموع مبالغ الطلبات المكتملة.<br>
+          • <b>التكاليف</b> = لكل صنف بالطلب، عدده × تكلفته.<br>
+          • <b>الربح</b> = الإيرادات − التكاليف.<br><br>
+          الطلبات الملغية والناقصة ما بتدخل بالحساب.
+        </p>
+      </div>
+    </div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    async function load(){
+      const from=document.getElementById('from').value, to=document.getElementById('to').value;
+      const q=new URLSearchParams(); if(from)q.set('from',from); if(to)q.set('to',to+'T23:59:59');
+      const r=await fetch('/admin/api/profit?'+q);
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const d=await r.json();
+      document.getElementById('report').innerHTML=`
+        <div class="rc rev"><div class="n">${(+d.revenue).toFixed(2)}د</div><div class="l">الإيرادات</div></div>
+        <div class="rc cost"><div class="n">${(+d.cost).toFixed(2)}د</div><div class="l">التكاليف</div></div>
+        <div class="rc prof"><div class="n">${(+d.profit).toFixed(2)}د</div><div class="l">صافي الربح</div></div>
+        <div class="rc"><div class="n">${d.orders}</div><div class="l">عدد الطلبات</div></div>`;
+      loadCosts();
+    }
+    async function loadCosts(){
+      const r=await fetch('/admin/api/costs'); const {costs}=await r.json();
+      const tb=document.getElementById('costs'); tb.innerHTML='';
+      (costs||[]).forEach(c=>{
+        tb.insertAdjacentHTML('beforeend',`<tr>
+          <td>${esc(c.product)}</td>
+          <td><input class="ci" type="number" step="0.01" value="${c.cost}" onchange="setCost('${esc(c.product).replace(/'/g,"&#39;")}',this.value)"></td>
+          <td><button class="btn del" onclick="delCost('${esc(c.product).replace(/'/g,"&#39;")}')">حذف</button></td>
+        </tr>`);
+      });
+      if(!(costs||[]).length) tb.innerHTML='<tr><td colspan="3" style="text-align:center;color:#78909c;padding:20px">ما في تكاليف بعد</td></tr>';
+    }
+    async function addCost(){
+      const product=document.getElementById('cp').value.trim(), cost=document.getElementById('cc').value;
+      if(!product) return;
+      await fetch('/admin/api/costs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product,cost})});
+      document.getElementById('cp').value=''; document.getElementById('cc').value='';
+      load();
+    }
+    async function setCost(product,cost){
+      await fetch('/admin/api/costs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product,cost})});
+      load();
+    }
+    async function delCost(product){
+      if(!confirm('حذف تكلفة '+product+'؟')) return;
+      await fetch('/admin/api/costs/'+encodeURIComponent(product),{method:'DELETE'});
+      load();
+    }
+    load();
+  </script>
+</body>
+</html>

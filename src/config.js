@@ -25,6 +25,11 @@ export const CONFIG = {
   // زر الإشعارات OTN يحتاج صلاحية Advanced Messaging من فيسبوك.
   // مطفأ افتراضياً حتى لا يسبب خطأ. فعّله بـ ENABLE_OTN=true بعد الحصول على الصلاحية.
   ENABLE_OTN: process.env.ENABLE_OTN === "true",
+  // ── واتساب (Cloud API) — اختياري، يعمل فقط إن ضُبطت المتغيّرات ──
+  WHATSAPP_TOKEN: process.env.WHATSAPP_TOKEN || "",
+  WHATSAPP_PHONE_ID: process.env.WHATSAPP_PHONE_ID || "",   // Phone Number ID
+  WHATSAPP_VERIFY_TOKEN: process.env.WHATSAPP_VERIFY_TOKEN || "talebbot",
+  WHATSAPP_PAGE_ID: process.env.WHATSAPP_PAGE_ID || "",     // أي صفحة تُستخدم معرفتها للواتساب (فاضي = أول صفحة)
   DEFAULT_PRICE: 14,          // سعر احتياطي لو الصنف مش موجود
   SESSION_TTL: 60 * 60 * 24 * 30,   // عمر الجلسة شهر (يتذكر الزبون أطول)
   CRM_TTL: 60 * 60 * 24 * 365,      // عمر بيانات الزبون سنة

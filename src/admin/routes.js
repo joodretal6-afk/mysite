@@ -13,7 +13,10 @@ import {
   analyticsData, salesReport, listCustomers, customerOrders,
   listCoupons, addCoupon, toggleCoupon, deleteCoupon, getOrder,
   dueForReorder, markReorderSent, listReviews, reviewStats,
-  listAddons, addAddon, updateAddon, toggleAddon, deleteAddon
+  listAddons, addAddon, updateAddon, toggleAddon, deleteAddon,
+  logActivity, listActivity, setCost, getCosts, deleteCost, profitReport,
+  listUsers, setUserRole, deleteUser, broadcastTargets, addUser,
+  listInventory, setInventory, deleteInventory, decrementStock, lowStockList
 } from "../db/database.js";
 import { sendText } from "../bot/messenger.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
@@ -84,6 +87,10 @@ adminRouter.get("/invoice/:id", requireAuth, (req, res) => res.sendFile(path.joi
 adminRouter.get("/reminders", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "reminders.html")));
 adminRouter.get("/reviews", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "reviews.html")));
 adminRouter.get("/products", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "products.html")));
+adminRouter.get("/broadcast", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "broadcast.html")));
+adminRouter.get("/profit", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "profit.html")));
+adminRouter.get("/team", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "team.html")));
+adminRouter.get("/inventory", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "inventory.html")));
 
 // ── API: المنتجات الإضافية (بيع إضافي) ──
 adminRouter.get("/api/addons", requireAuth, (req, res) => res.json({ addons: listAddons() }));
@@ -428,11 +435,29 @@ adminRouter.get("/api/orders", requireAuth, (req, res) => {
 });
 
 // تحديث حالة أوردر
-adminRouter.post("/api/orders/:id/status", requireAuth, (req, res) => {
+adminRouter.post("/api/orders/:id/status", requireAuth, async (req, res) => {
   const { status } = req.body || {};
   const allowed = ["ناقص", "جديد", "تم التواصل", "تم الشحن", "تم التسليم", "ملغي"];
   if (!allowed.includes(status)) return res.status(400).json({ error: "حالة غير صالحة" });
   updateOrderStatus(req.params.id, status);
+  logActivity(req.user, "تغيير حالة", `أوردر #${req.params.id} → ${status}`);
+
+  // 📦 خصم المخزون تلقائياً عند تسليم الطلب
+  if (status === "تم التسليم") {
+    try { const o = getOrder(req.params.id); if (o?.order_string) decrementStock(o.order_string); }
+    catch (e) { console.error("stock decrement:", e && e.message); }
+  }
+
+  // 🚚 إخطار الزبون تلقائياً عند الشحن/التسليم
+  const MSG = { "تم الشحن": "🚚 طلبك بالطريق! رح يوصلك اليوم إن شاء الله. صحتين وعافية 🌹",
+                "تم التسليم": "✅ تم تسليم طلبك، نتمنى ينال رضاك! صحتين وعافية، ومستنيينك دايماً 🌹" };
+  if (MSG[status]) {
+    try {
+      const o = getOrder(req.params.id);
+      const page = o && PAGES[o.page_id];
+      if (page?.PAGE_TOKEN && o.sender_id) await sendText(page.PAGE_TOKEN, o.sender_id, MSG[status]);
+    } catch (e) { console.error("status notify:", e && e.message); }
+  }
   res.json({ ok: true });
 });
 
@@ -446,6 +471,98 @@ adminRouter.post("/api/orders/:id/edit", requireAuth, (req, res) => {
 // حذف أوردر
 adminRouter.delete("/api/orders/:id", requireAuth, (req, res) => {
   deleteOrder(req.params.id);
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════
+// 📢 حملات تسويقية (Broadcast)
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/api/broadcast/targets", requireAuth, (req, res) => {
+  res.json({ targets: broadcastTargets() });
+});
+adminRouter.post("/api/broadcast/send", requireAuth, async (req, res) => {
+  const text = String(req.body?.text || "").trim();
+  const pageFilter = req.body?.page_id ? String(req.body.page_id) : null;
+  if (!text) return res.status(400).json({ error: "اكتب نص الرسالة" });
+  let targets = broadcastTargets();
+  if (pageFilter) targets = targets.filter(t => String(t.page_id) === pageFilter);
+  let sent = 0, failed = 0;
+  for (const t of targets) {
+    const page = PAGES[t.page_id];
+    if (!page?.PAGE_TOKEN || !t.sender_id) { failed++; continue; }
+    try { await sendText(page.PAGE_TOKEN, t.sender_id, text); sent++; }
+    catch { failed++; }
+    await new Promise(r => setTimeout(r, 120)); // احترام حدود فيسبوك
+  }
+  logActivity(req.user, "حملة تسويقية", `أُرسلت لـ ${sent} زبون (فشل ${failed})`);
+  res.json({ ok: true, sent, failed, total: targets.length });
+});
+
+// ═══════════════════════════════════════════════════════════
+// 💰 الأرباح والتكاليف
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/api/costs", requireAuth, (req, res) => res.json({ costs: getCosts() }));
+adminRouter.post("/api/costs", requireAuth, (req, res) => {
+  const { product, cost } = req.body || {};
+  if (!product || !String(product).trim()) return res.status(400).json({ error: "اسم المنتج مطلوب" });
+  setCost(product, cost);
+  res.json({ ok: true });
+});
+adminRouter.delete("/api/costs/:product", requireAuth, (req, res) => {
+  deleteCost(decodeURIComponent(req.params.product));
+  res.json({ ok: true });
+});
+adminRouter.get("/api/profit", requireAuth, (req, res) => {
+  const { from, to } = req.query;
+  const parse = v => { const n = Date.parse(v); return Number.isNaN(n) ? undefined : n; };
+  res.json(profitReport({ from: from ? parse(from) : undefined, to: to ? parse(to) : undefined }));
+});
+
+// ═══════════════════════════════════════════════════════════
+// 👤 فريق العمل (المستخدمون + الأدوار) + سجل النشاط
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/api/team", requireAuth, (req, res) => {
+  res.json({ users: listUsers(), me: req.user });
+});
+adminRouter.post("/api/team", requireAuth, async (req, res) => {
+  const username = String(req.body?.username || "").trim();
+  const password = String(req.body?.password || "");
+  const role = ["admin", "staff"].includes(req.body?.role) ? req.body.role : "staff";
+  if (!username || password.length < 4) return res.status(400).json({ error: "اسم مستخدم وكلمة سر (4 أحرف على الأقل)" });
+  if (getUser(username)) return res.status(400).json({ error: "اسم المستخدم موجود مسبقاً" });
+  const hash = bcrypt.hashSync(password, 10);
+  addUser(username, hash, role);
+  logActivity(req.user, "إضافة مستخدم", `${username} (${role})`);
+  res.json({ ok: true });
+});
+adminRouter.post("/api/team/:username/role", requireAuth, (req, res) => {
+  const role = ["admin", "staff"].includes(req.body?.role) ? req.body.role : "staff";
+  setUserRole(req.params.username, role);
+  logActivity(req.user, "تغيير دور", `${req.params.username} → ${role}`);
+  res.json({ ok: true });
+});
+adminRouter.delete("/api/team/:username", requireAuth, (req, res) => {
+  if (req.params.username === req.user) return res.status(400).json({ error: "لا يمكنك حذف نفسك" });
+  deleteUser(req.params.username);
+  logActivity(req.user, "حذف مستخدم", req.params.username);
+  res.json({ ok: true });
+});
+adminRouter.get("/api/activity", requireAuth, (req, res) => res.json({ activity: listActivity() }));
+
+// ═══════════════════════════════════════════════════════════
+// 📦 المخزون
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/api/inventory", requireAuth, (req, res) => {
+  res.json({ inventory: listInventory(), low: lowStockList() });
+});
+adminRouter.post("/api/inventory", requireAuth, (req, res) => {
+  const { product, stock, low } = req.body || {};
+  if (!product || !String(product).trim()) return res.status(400).json({ error: "اسم المنتج مطلوب" });
+  setInventory(product, stock, low);
+  res.json({ ok: true });
+});
+adminRouter.delete("/api/inventory/:product", requireAuth, (req, res) => {
+  deleteInventory(decodeURIComponent(req.params.product));
   res.json({ ok: true });
 });
 

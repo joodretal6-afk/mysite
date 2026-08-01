@@ -5,13 +5,17 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 import { CONFIG, WEB } from "./config.js";
 import { SESSIONS_KV, countUsers, getUser, createUser, ordersStats, migrateFromTurso,
-  dueFollowups, markFollowupSent } from "./db/database.js";
+  dueFollowups, markFollowupSent, salesReport, listOrders } from "./db/database.js";
 import { handleEvent } from "./bot/handler.js";
 import { adminRouter } from "./admin/routes.js";
 import { PAGES } from "./bot/brain.js";
-import { sendText } from "./bot/messenger.js";
+import { sendText, notifyTelegram } from "./bot/messenger.js";
+import { whatsappEnabled, handleWhatsAppMessage } from "./bot/whatsapp.js";
 
 // 🛡️ حماية من توقّف السيرفر بسبب تقطّع شبكة Turso اللحظي (نسجّل الخطأ ونكمّل)
 process.on("uncaughtException", e => console.error("⚠️ uncaughtException:", e && e.message));
@@ -80,6 +84,58 @@ async function runFollowups() {
 }
 setInterval(runFollowups, 60 * 1000).unref?.();   // فحص كل دقيقة (التايمر 10 دقائق لكل زبون)
 
+// ═══════════════════════════════════════════════════════════
+// 📊 تقرير يومي تلقائي (يُرسل لتيليجرام) + 💾 نسخة احتياطية يومية
+// يعمل مرة كل يوم عند تجاوز الساعة المستهدفة (بتوقيت الخادم).
+// ═══════════════════════════════════════════════════════════
+const DAILY_REPORT_HOUR = Number(process.env.DAILY_REPORT_HOUR ?? 21);   // 9 مساءً افتراضياً
+let _lastReportDay = null, _lastBackupDay = null;
+
+async function dailyReport() {
+  try {
+    const r = salesReport();
+    const t = r.today || { c: 0, s: 0 };
+    const msg =
+      `📊 تقرير اليوم — منصة الأجبان\n` +
+      `━━━━━━━━━━━━━━━\n` +
+      `🧾 طلبات اليوم: ${t.c}\n` +
+      `💵 مبيعات اليوم: ${Number(t.s).toFixed(2)} دينار\n` +
+      `📅 آخر 7 أيام: ${r.week.c} طلب — ${Number(r.week.s).toFixed(0)}د\n` +
+      `📆 آخر 30 يوم: ${r.month.c} طلب — ${Number(r.month.s).toFixed(0)}د\n` +
+      `📦 الإجمالي: ${r.all.c} طلب — ${Number(r.all.s).toFixed(0)}د`;
+    await notifyTelegram(msg);
+    console.log("📊 تم إرسال التقرير اليومي");
+  } catch (e) { console.error("dailyReport error:", e && e.message); }
+}
+
+function dailyBackup() {
+  try {
+    const src = WEB.DB_PATH;
+    if (!src || !fs.existsSync(src)) return;   // متاح فقط في وضع القرص المحلي
+    const dir = path.join(path.dirname(src), "backups");
+    fs.mkdirSync(dir, { recursive: true });
+    const stamp = new Date().toISOString().slice(0, 10);
+    fs.copyFileSync(src, path.join(dir, `backup-${stamp}.db`));
+    // نحتفظ بآخر 14 نسخة فقط
+    const files = fs.readdirSync(dir).filter(f => f.startsWith("backup-")).sort();
+    while (files.length > 14) { try { fs.unlinkSync(path.join(dir, files.shift())); } catch {} }
+    console.log(`💾 نسخة احتياطية: backup-${stamp}.db`);
+  } catch (e) { console.error("dailyBackup error:", e && e.message); }
+}
+
+function dailyJobsTick() {
+  const now = new Date();
+  const day = now.toISOString().slice(0, 10);
+  if (now.getHours() >= DAILY_REPORT_HOUR && _lastReportDay !== day) {
+    _lastReportDay = day; dailyReport();
+  }
+  if (_lastBackupDay !== day) {   // نسخة احتياطية أول تشغيل باليوم
+    _lastBackupDay = day; dailyBackup();
+  }
+}
+setInterval(dailyJobsTick, 5 * 60 * 1000).unref?.();   // فحص كل 5 دقائق
+dailyJobsTick();   // نسخة احتياطية فورية عند الإقلاع
+
 // بيئة متوافقة مع كود الـ Worker الأصلي (env + ctx)
 const env = { SESSIONS_KV };
 function makeCtx() {
@@ -129,9 +185,45 @@ app.post("/webhook", async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// 📱 ويبهوك واتساب (WhatsApp Cloud API) — اختياري
+// ═══════════════════════════════════════════════════════════
+app.get("/whatsapp", (req, res) => {
+  if (req.query["hub.mode"] === "subscribe" &&
+      req.query["hub.verify_token"] === CONFIG.WHATSAPP_VERIFY_TOKEN) {
+    return res.send(req.query["hub.challenge"] || "");
+  }
+  return res.status(403).send("Unauthorized");
+});
+app.post("/whatsapp", async (req, res) => {
+  res.send("EVENT_RECEIVED");   // نرد فوراً حتى لا يعيد فيسبوك الإرسال
+  try {
+    if (!whatsappEnabled()) return;
+    const entries = req.body?.entry || [];
+    for (const entry of entries) {
+      for (const change of entry.changes || []) {
+        const value = change.value || {};
+        const contactName = value.contacts?.[0]?.profile?.name || "";
+        for (const msg of value.messages || []) {
+          if (msg.type === "text") {
+            await handleWhatsAppMessage(msg, contactName, SESSIONS_KV)
+              .catch(e => console.error("WA handle:", e && e.message));
+          }
+        }
+      }
+    }
+  } catch (e) { console.error("WhatsApp webhook error:", e && e.message); }
+});
+
+// ═══════════════════════════════════════════════════════════
 // لوحة التحكم
 // ═══════════════════════════════════════════════════════════
 app.use("/admin", adminRouter);
+
+// ملفات PWA (تُخدَم من الجذر حتى يعمل Service Worker على كامل الموقع)
+const pwaDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
+app.get("/sw.js", (req, res) => res.sendFile(path.join(pwaDir, "sw.js")));
+app.get("/manifest.webmanifest", (req, res) => res.sendFile(path.join(pwaDir, "manifest.webmanifest")));
+app.get("/icon.svg", (req, res) => res.sendFile(path.join(pwaDir, "icon.svg")));
 
 // الصفحة الرئيسية → لوحة التحكم
 app.get("/", (req, res) => res.redirect("/admin"));
