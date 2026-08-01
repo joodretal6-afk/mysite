@@ -19,6 +19,8 @@
       border-radius:8px; cursor:pointer; font-family:inherit; font-size:13px;
     }
     header button:hover { background:rgba(255,255,255,.32); }
+    header .nav { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 11px; border-radius:8px; font-size:13px; }
+    header .nav:hover { background:rgba(255,255,255,.34); }
     .wrap { padding:22px; max-width:1400px; margin:0 auto; }
 
     .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:20px; }
@@ -75,10 +77,13 @@
     <h1>🧀 منصة الأجبان — لوحة التحكم</h1>
     <div class="right">
       <span id="who"></span>
-      <a href="/admin/pages" style="background:rgba(255,255,255,.2);color:#fff;text-decoration:none;padding:8px 12px;border-radius:8px;font-size:13px">📄 الصفحات</a>
-      <a href="/admin/inbox" style="background:rgba(255,255,255,.2);color:#fff;text-decoration:none;padding:8px 12px;border-radius:8px;font-size:13px">📥 الوارد</a>
-      <a href="/admin/chats" style="background:rgba(255,255,255,.2);color:#fff;text-decoration:none;padding:8px 12px;border-radius:8px;font-size:13px">💬 الدردشات</a>
-      <a href="/admin/knowledge" style="background:rgba(255,255,255,.2);color:#fff;text-decoration:none;padding:8px 12px;border-radius:8px;font-size:13px">🧠 تغذية البوت</a>
+      <a href="/admin/analytics" class="nav">📊 تحليلات</a>
+      <a href="/admin/customers" class="nav">👥 الزبائن</a>
+      <a href="/admin/pages" class="nav">📄 الصفحات</a>
+      <a href="/admin/inbox" class="nav">📥 الوارد</a>
+      <a href="/admin/chats" class="nav">💬 الدردشات</a>
+      <a href="/admin/coupons" class="nav">🎟️ كوبونات</a>
+      <a href="/admin/knowledge" class="nav">🧠 تغذية البوت</a>
       <button onclick="logout()">تسجيل خروج</button>
     </div>
   </header>
@@ -171,7 +176,32 @@
       const urlPage = new URLSearchParams(location.search).get('page_id');
       if(urlPage){ sel.value = urlPage; }
       renderStats(d.stats);
+      checkNewOrders(d.stats.total.c);   // 🔔 تنبيه الطلبات الجديدة
     }
+
+    // 🔔 تنبيه فوري عند نزول طلب جديد (صوت + إشعار المتصفح)
+    let lastTotal = null;
+    function checkNewOrders(total){
+      if(lastTotal !== null && total > lastTotal){
+        const n = total - lastTotal;
+        beep();
+        if(Notification.permission==='granted'){
+          new Notification('🧀 طلب جديد!', { body:`وصلك ${n} طلب جديد على المنصة`, icon:'' });
+        }
+      }
+      lastTotal = total;
+    }
+    function beep(){
+      try{
+        const ctx=new (window.AudioContext||window.webkitAudioContext)();
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type='sine'; o.frequency.value=880; g.gain.value=0.15;
+        o.start(); o.frequency.setValueAtTime(660, ctx.currentTime+0.15);
+        o.stop(ctx.currentTime+0.3);
+      }catch(e){}
+    }
+    if('Notification' in window && Notification.permission==='default'){ Notification.requestPermission(); }
 
     function renderStats(s){
       document.getElementById('stats').innerHTML = `
@@ -207,6 +237,7 @@
           <td>${o.messenger_url?`<a class="msg" href="${o.messenger_url}" target="_blank">فتح 💬</a>`:''}</td>
           <td>${fmtDate(o.created_at)}</td>
           <td style="white-space:nowrap">
+            <a class="edit" title="فاتورة PDF" href="/admin/invoice/${o.id}" target="_blank" style="text-decoration:none">🧾</a>
             <button class="edit" title="تعديل" onclick="editRow(${o.id})">✏️</button>
             <button class="del" title="حذف" onclick="del(${o.id})">🗑</button>
           </td>`;

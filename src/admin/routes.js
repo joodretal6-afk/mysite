@@ -9,7 +9,9 @@ import path from "node:path";
 import {
   getUser, listOrders, updateOrderStatus, deleteOrder,
   distinctPages, ordersStats, saveOrder, orderExists,
-  getKnowledge, setKnowledge, listChatThreads, getChatMessages, perPageStats, editOrder
+  getKnowledge, setKnowledge, listChatThreads, getChatMessages, perPageStats, editOrder,
+  analyticsData, salesReport, listCustomers, customerOrders,
+  listCoupons, addCoupon, toggleCoupon, deleteCoupon, getOrder
 } from "../db/database.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
 import { PAGES } from "../bot/brain.js";
@@ -54,14 +56,56 @@ adminRouter.get("/inbox", requireAuth, (req, res) => {
 });
 
 // ── صفحات محمية إضافية ──
-adminRouter.get("/pages", requireAuth, (req, res) => {
-  res.sendFile(path.join(publicDir, "pages.html"));
+adminRouter.get("/pages", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "pages.html")));
+adminRouter.get("/knowledge", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "knowledge.html")));
+adminRouter.get("/chats", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "chats.html")));
+adminRouter.get("/analytics", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "analytics.html")));
+adminRouter.get("/customers", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "customers.html")));
+adminRouter.get("/coupons", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "coupons.html")));
+adminRouter.get("/invoice/:id", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "invoice.html")));
+
+// ── API: تحليلات وتقارير ──
+adminRouter.get("/api/analytics", requireAuth, (req, res) => {
+  const { from, to } = req.query;
+  res.json({
+    analytics: analyticsData({
+      from: from ? new Date(from).getTime() : undefined,
+      to: to ? (new Date(to).getTime() + 86400000 - 1) : undefined
+    }),
+    report: salesReport()
+  });
 });
-adminRouter.get("/knowledge", requireAuth, (req, res) => {
-  res.sendFile(path.join(publicDir, "knowledge.html"));
+
+// ── API: ملف الزبائن (CRM) ──
+adminRouter.get("/api/customers", requireAuth, (req, res) => {
+  res.json({ customers: listCustomers({ search: req.query.search || undefined }) });
 });
-adminRouter.get("/chats", requireAuth, (req, res) => {
-  res.sendFile(path.join(publicDir, "chats.html"));
+adminRouter.get("/api/customer", requireAuth, (req, res) => {
+  res.json({ orders: customerOrders(req.query.phone || "") });
+});
+
+// ── API: أوردر واحد (للفاتورة) ──
+adminRouter.get("/api/order/:id", requireAuth, (req, res) => {
+  const o = getOrder(req.params.id);
+  if (!o) return res.status(404).json({ error: "غير موجود" });
+  res.json(o);
+});
+
+// ── API: الكوبونات ──
+adminRouter.get("/api/coupons", requireAuth, (req, res) => res.json({ coupons: listCoupons() }));
+adminRouter.post("/api/coupons", requireAuth, (req, res) => {
+  const { code, type, value } = req.body || {};
+  if (!code || !code.trim()) return res.status(400).json({ error: "اكتب كود الكوبون" });
+  addCoupon(code, type, value);
+  res.json({ ok: true });
+});
+adminRouter.post("/api/coupons/:code/toggle", requireAuth, (req, res) => {
+  toggleCoupon(req.params.code, !!req.body?.active);
+  res.json({ ok: true });
+});
+adminRouter.delete("/api/coupons/:code", requireAuth, (req, res) => {
+  deleteCoupon(req.params.code);
+  res.json({ ok: true });
 });
 
 // ── API: إحصائيات كل صفحة (صفحة الأوردرات المنفصلة) ──

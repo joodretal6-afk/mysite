@@ -83,8 +83,18 @@ db.exec(`
     created_at INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS coupons (
+    code       TEXT PRIMARY KEY,
+    type       TEXT,              -- 'percent' نسبة مئوية / 'fixed' مبلغ ثابت
+    value      REAL,
+    active     INTEGER DEFAULT 1,
+    uses       INTEGER DEFAULT 0,
+    created_at INTEGER
+  );
+
   CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
   CREATE INDEX IF NOT EXISTS idx_orders_page    ON orders(page_id);
+  CREATE INDEX IF NOT EXISTS idx_orders_phone   ON orders(phone);
   CREATE INDEX IF NOT EXISTS idx_msg_conv       ON messages(page_id, sender_id, created_at);
 `);
 
@@ -209,6 +219,10 @@ export function listOrders({ page_id, search, from, to, status, limit = 500, off
 }
 
 // فحص وجود طلب مطابق (لمنع التكرار أثناء الاستخراج الجماعي)
+export function getOrder(id) {
+  return retryDb(() => db.prepare("SELECT * FROM orders WHERE id = ?").get(Number(id)));
+}
+
 export function orderExists(page_id, sender_id, order_string) {
   const row = db.prepare(
     "SELECT id FROM orders WHERE page_id = ? AND sender_id = ? AND order_string = ?"
@@ -346,6 +360,87 @@ export function createUser(username, passwordHash) {
 
 export function countUsers() {
   return db.prepare("SELECT COUNT(*) c FROM users").get().c;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📊 تحليلات المبيعات (توقيت الأردن +3)
+// ═══════════════════════════════════════════════════════════
+export function analyticsData({ from, to } = {}) {
+  const where = [];
+  const params = {};
+  if (from) { where.push("created_at >= @from"); params.from = from; }
+  if (to)   { where.push("created_at <= @to");   params.to = to; }
+  const clause = where.length ? "WHERE " + where.join(" AND ") : "";
+  // نستثني الطلبات الملغاة من الإيرادات
+  const soldClause = (clause ? clause + " AND " : "WHERE ") + "status != 'ملغي'";
+
+  return retryDb(() => ({
+    totals:   db.prepare(`SELECT COUNT(*) c, COALESCE(SUM(total),0) s FROM orders ${soldClause}`).get(params),
+    byStatus: db.prepare(`SELECT status, COUNT(*) c FROM orders ${clause} GROUP BY status`).all(params),
+    byPage:   db.prepare(`SELECT page_name, COUNT(*) c, COALESCE(SUM(total),0) s FROM orders ${soldClause} GROUP BY page_name ORDER BY c DESC`).all(params),
+    byDay:    db.prepare(`SELECT date((created_at/1000)+10800,'unixepoch') d, COUNT(*) c, COALESCE(SUM(total),0) s
+                          FROM orders ${soldClause} GROUP BY d ORDER BY d DESC LIMIT 30`).all(params),
+    byHour:   db.prepare(`SELECT CAST(strftime('%H',(created_at/1000)+10800,'unixepoch') AS INTEGER) h, COUNT(*) c
+                          FROM orders ${clause} GROUP BY h ORDER BY h`).all(params)
+  }));
+}
+
+// تقارير جاهزة (اليوم/الأسبوع/الشهر)
+export function salesReport() {
+  const now = Date.now();
+  const day = 86400000;
+  const q = (fromTs) => retryDb(() => db.prepare(
+    "SELECT COUNT(*) c, COALESCE(SUM(total),0) s FROM orders WHERE status != 'ملغي' AND created_at >= ?"
+  ).get(fromTs));
+  return {
+    today: q(new Date().setHours(0, 0, 0, 0)),
+    week:  q(now - 7 * day),
+    month: q(now - 30 * day),
+    all:   retryDb(() => db.prepare("SELECT COUNT(*) c, COALESCE(SUM(total),0) s FROM orders WHERE status != 'ملغي'").get())
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// 👥 ملف الزبائن (CRM) — تجميع حسب رقم الهاتف
+// ═══════════════════════════════════════════════════════════
+export function listCustomers({ search } = {}) {
+  const s = search ? `%${search}%` : "";
+  const cond = search ? "AND (phone LIKE @s OR area LIKE @s)" : "";
+  return retryDb(() => db.prepare(`
+    SELECT phone, MAX(sender_id) sender_id, MAX(area) area,
+           COUNT(*) orders_count, COALESCE(SUM(total),0) total_spent,
+           MAX(created_at) last_at, MAX(page_name) last_page,
+           MAX(messenger_url) messenger_url
+    FROM orders WHERE phone != '' ${cond}
+    GROUP BY phone ORDER BY orders_count DESC, last_at DESC LIMIT 300
+  `).all({ s }));
+}
+export function customerOrders(phone) {
+  return retryDb(() => db.prepare(
+    "SELECT * FROM orders WHERE phone = ? ORDER BY created_at DESC LIMIT 100"
+  ).all(phone));
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🎟️ الكوبونات وأكواد الخصم
+// ═══════════════════════════════════════════════════════════
+export function listCoupons() {
+  return retryDb(() => db.prepare("SELECT * FROM coupons ORDER BY created_at DESC").all());
+}
+export function addCoupon(code, type, value) {
+  return retryDb(() => db.prepare(
+    "INSERT INTO coupons (code,type,value,active,uses,created_at) VALUES (?,?,?,1,0,?) ON CONFLICT(code) DO UPDATE SET type=excluded.type, value=excluded.value, active=1"
+  ).run(String(code).trim().toUpperCase(), type === "fixed" ? "fixed" : "percent", Number(value) || 0, Date.now()));
+}
+export function toggleCoupon(code, active) {
+  return retryDb(() => db.prepare("UPDATE coupons SET active=? WHERE code=?").run(active ? 1 : 0, String(code).toUpperCase()));
+}
+export function deleteCoupon(code) {
+  return retryDb(() => db.prepare("DELETE FROM coupons WHERE code=?").run(String(code).toUpperCase()));
+}
+export function getActiveCoupon(code) {
+  if (!code) return null;
+  return retryDb(() => db.prepare("SELECT * FROM coupons WHERE code=? AND active=1").get(String(code).trim().toUpperCase()));
 }
 
 // ═══════════════════════════════════════════════════════════
