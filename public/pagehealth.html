@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>فحص الصفحات — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; } header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:900px; margin:0 auto; padding:22px; }
+    .status { border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:14px; font-weight:600; }
+    .status.on { background:#e8f5e9; color:var(--green2); } .status.off { background:#ffebee; color:var(--red); }
+    .card { background:var(--card); border-radius:14px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { padding:12px 13px; text-align:right; border-bottom:1px solid var(--line); }
+    th { background:#f0f4f1; color:var(--green2); }
+    .ok { color:var(--green2); font-weight:700; } .bad { color:var(--red); font-weight:700; }
+    .pill { padding:3px 9px; border-radius:20px; font-size:12px; }
+    .pill.dis { background:#fff3e0; color:#e65100; }
+    .btn { padding:10px 18px; background:var(--green); color:#fff; border:none; border-radius:9px; cursor:pointer; font-family:inherit; font-weight:700; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🩺 فحص صحة الصفحات</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div id="botstatus"></div>
+    <p style="font-size:13px;color:var(--mut);margin-bottom:12px">بنفحص توكن كل صفحة مباشرةً مع فيسبوك. لو صفحة طلعت ❌ يعني توكنها غير صالح أو الصفحة مقيّدة — وهذا سبب عدم الرد.</p>
+    <div class="card">
+      <table><thead><tr><th>الصفحة</th><th>الحالة</th><th>التفاصيل</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="3" style="text-align:center;padding:30px;color:#78909c">⏳ جاري الفحص مع فيسبوك...</td></tr></tbody></table>
+    </div>
+    <div style="margin-top:14px"><button class="btn" onclick="load()">🔄 إعادة الفحص</button></div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    async function load(){
+      document.getElementById('rows').innerHTML='<tr><td colspan="3" style="text-align:center;padding:30px;color:#78909c">⏳ جاري الفحص مع فيسبوك...</td></tr>';
+      const r=await fetch('/admin/api/page-health');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const d=await r.json();
+      const bs=document.getElementById('botstatus');
+      bs.innerHTML = d.botPaused
+        ? '<div class="status off">🛑 البوت موقوف بالكامل حالياً (GLOBAL_PAUSE) — لن يرد على أي صفحة. لتشغيله راجع الإعدادات.</div>'
+        : '<div class="status on">✅ البوت مُفعّل (يرد داخل المحادثة). الوضع الآمن: '+(d.safeMode?'مفعّل':'مطفأ')+'</div>';
+      const tb=document.getElementById('rows'); tb.innerHTML='';
+      (d.pages||[]).forEach(p=>{
+        tb.insertAdjacentHTML('beforeend',`<tr>
+          <td>${esc(p.name)} ${p.disabled?'<span class="pill dis">موقوفة يدوياً</span>':''}<br><small style="color:#90a4ae">${esc(p.id)}</small></td>
+          <td class="${p.ok?'ok':'bad'}">${p.ok?'✅ سليم':'❌ مشكلة'}</td>
+          <td>${esc(p.detail)}${p.code?(' <small style="color:#90a4ae">(كود '+esc(p.code)+')</small>'):''}</td>
+        </tr>`);
+      });
+    }
+    load();
+  </script>
+</body>
+</html>

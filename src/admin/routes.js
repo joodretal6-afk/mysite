@@ -98,6 +98,26 @@ adminRouter.get("/inventory", requireAuth, (req, res) => res.sendFile(path.join(
 adminRouter.get("/handoffs", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "handoffs.html")));
 adminRouter.get("/settings", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "settings.html")));
 adminRouter.get("/prices", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "prices.html")));
+adminRouter.get("/pagehealth", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "pagehealth.html")));
+
+// 🩺 فحص صحة كل صفحة: نتحقق من صلاحية توكن الصفحة مباشرةً مع فيسبوك
+adminRouter.get("/api/page-health", requireAuth, async (req, res) => {
+  const results = [];
+  for (const [id, p] of Object.entries(PAGES)) {
+    const disabled = CONFIG.DISABLED_PAGES.includes(id);
+    const row = { id, name: p.name, disabled, ok: false, detail: "" };
+    if (!p.PAGE_TOKEN) { row.detail = "لا يوجد توكن"; results.push(row); continue; }
+    try {
+      const r = await fetch(`https://graph.facebook.com/${CONFIG.GRAPH_VERSION}/me?fields=id,name&access_token=${encodeURIComponent(p.PAGE_TOKEN)}`,
+        { signal: AbortSignal.timeout(12000) });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.id) { row.ok = true; row.detail = `متصل: ${d.name || d.id}`; }
+      else { row.detail = "خطأ فيسبوك: " + (d?.error?.message || `HTTP ${r.status}`); row.code = d?.error?.code; }
+    } catch (e) { row.detail = "تعذّر الاتصال: " + (e && e.message); }
+    results.push(row);
+  }
+  res.json({ pages: results, botPaused: CONFIG.GLOBAL_PAUSE, safeMode: CONFIG.SAFE_MODE });
+});
 
 // ── API: المنتجات الإضافية (بيع إضافي) ──
 adminRouter.get("/api/addons", requireAuth, (req, res) => res.json({ addons: listAddons() }));
