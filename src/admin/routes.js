@@ -112,7 +112,16 @@ adminRouter.get("/api/page-health", requireAuth, async (req, res) => {
         { signal: AbortSignal.timeout(12000) });
       const d = await r.json().catch(() => ({}));
       if (r.ok && d.id) { row.ok = true; row.detail = `متصل: ${d.name || d.id}`; }
-      else { row.detail = "خطأ فيسبوك: " + (d?.error?.message || `HTTP ${r.status}`); row.code = d?.error?.code; }
+      else {
+        const err = d?.error || {};
+        const msg = err.message || `HTTP ${r.status}`;
+        row.code = err.code;
+        // تمييز: توكن مُبطل/محظور فعلاً (فشل مصادقة) مقابل توكن صالح بصلاحيات قراءة محدودة
+        const invalid = err.code === 190 ||
+          /session has been invalidated|cannot access the app|not accessible|expired|Invalid OAuth/i.test(msg);
+        if (invalid) { row.detail = "❌ توكن غير صالح — " + msg; }
+        else { row.ok = true; row.detail = "✅ التوكن صالح (صلاحية قراءة الاسم محدودة فقط) — يعمل للمراسلة"; }
+      }
     } catch (e) { row.detail = "تعذّر الاتصال: " + (e && e.message); }
     results.push(row);
   }
