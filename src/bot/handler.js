@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import { CONFIG } from "../config.js";
 import { PAGES } from "./brain.js";
-import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } from "./messenger.js";
+import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64, openReplyWindow, closeReplyWindow } from "./messenger.js";
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
@@ -85,7 +85,18 @@ function cartAddedThisTurn(text, pageConfig) {
   return Object.values(kws).some(rx => rx.test(text));
 }
 
+// غلاف يفتح "نافذة الرد" أثناء معالجة رسالة واردة فقط، ويقفلها بعدها دائماً.
+// خارج هذه النافذة، طبقة الإرسال ترفض أي رسالة للزبون (ضمان عدم الإرسال الاستباقي).
 export async function handleEvent(event, env, ctx) {
+  openReplyWindow();
+  try {
+    return await _handleEvent(event, env, ctx);
+  } finally {
+    closeReplyWindow();
+  }
+}
+
+async function _handleEvent(event, env, ctx) {
   if (!event || event.optin) return;                       // كبسة الإشعارات OTN
   if (!event.message || event.message.is_echo) return;
 

@@ -24,7 +24,7 @@ import {
 } from "../db/database.js";
 import fs from "node:fs";
 import { WEB, CONFIG } from "../config.js";
-import { sendText } from "../bot/messenger.js";
+import { sendText, openReplyWindow, closeReplyWindow } from "../bot/messenger.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
 import { PAGES } from "../bot/brain.js";
 import { fetchConversations, fetchMessages, collectConversationsInRange } from "../bot/inbox.js";
@@ -548,7 +548,10 @@ adminRouter.post("/api/handoffs/:key/reply", requireAuth, async (req, res) => {
   const page = PAGES[pageId];
   if (!page?.PAGE_TOKEN || !senderId) return res.status(400).json({ error: "صفحة/زبون غير معروف" });
   try {
-    await sendText(page.PAGE_TOKEN, senderId, text);
+    // رد يدوي من موظف داخل محادثة نشطة — نفتح نافذة الرد لهذا الإرسال فقط
+    openReplyWindow();
+    try { await sendText(page.PAGE_TOKEN, senderId, text); }
+    finally { closeReplyWindow(); }
     logMessage({ page_id: pageId, page_name: page.name, sender_id: senderId, direction: "out", body: "👤 " + text, created_at: Date.now() });
     logActivity(req.user, "رد يدوي", key);
     res.json({ ok: true });
