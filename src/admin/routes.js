@@ -12,10 +12,10 @@ import {
   getKnowledge, setKnowledge, listChatThreads, getChatMessages, perPageStats, editOrder, logMessage,
   analyticsData, salesReport, listCustomers, customerOrders,
   listCoupons, addCoupon, toggleCoupon, deleteCoupon, getOrder,
-  dueForReorder, markReorderSent, listReviews, reviewStats,
+  listReviews, reviewStats,
   listAddons, addAddon, updateAddon, toggleAddon, deleteAddon,
   logActivity, listActivity, setCost, getCosts, deleteCost, profitReport,
-  listUsers, setUserRole, deleteUser, broadcastTargets, addUser,
+  listUsers, setUserRole, deleteUser, addUser,
   listInventory, setInventory, deleteInventory, decrementStock, lowStockList,
   listHandoffs, setHandoffPause, resolveHandoff,
   getSetting, setSetting, isBlocked, listBlocked, addBlock, removeBlock,
@@ -90,10 +90,8 @@ adminRouter.get("/analytics", requireAuth, (req, res) => res.sendFile(path.join(
 adminRouter.get("/customers", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "customers.html")));
 adminRouter.get("/coupons", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "coupons.html")));
 adminRouter.get("/invoice/:id", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "invoice.html")));
-adminRouter.get("/reminders", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "reminders.html")));
 adminRouter.get("/reviews", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "reviews.html")));
 adminRouter.get("/products", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "products.html")));
-adminRouter.get("/broadcast", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "broadcast.html")));
 adminRouter.get("/profit", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "profit.html")));
 adminRouter.get("/team", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "team.html")));
 adminRouter.get("/inventory", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "inventory.html")));
@@ -130,26 +128,7 @@ adminRouter.delete("/api/addons/:id", requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// ── API: تذكير إعادة الطلب ──
-adminRouter.get("/api/due-reorder", requireAuth, (req, res) => {
-  const days = parseInt(req.query.days, 10) || 14;
-  res.json({ days, customers: dueForReorder(days) });
-});
-adminRouter.post("/api/send-reorder", requireAuth, async (req, res) => {
-  if (CONFIG.SAFE_MODE) return res.status(403).json({ error: "معطّل للامتثال لسياسات فيسبوك (إرسال ترويجي خارج نافذة 24 ساعة)" });
-  const { page_id, sender_id, phone, message } = req.body || {};
-  const page = PAGES[page_id];
-  if (!page?.PAGE_TOKEN || !sender_id) return res.status(400).json({ error: "بيانات ناقصة" });
-  const text = (message && message.trim()) ||
-    "يا هلا فيك 🌹 اشتقنالك! جبنتنا الطازة جاهزة، بتحب نجهّزلك طلبك المعتاد؟ 🧀";
-  try {
-    await sendText(page.PAGE_TOKEN, sender_id, text);
-    if (phone) markReorderSent(phone);
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(400).json({ error: "تعذّر الإرسال (قد يكون خارج نافذة 24 ساعة المسموحة من فيسبوك)" });
-  }
-});
+// ⚠️ حُذفت خدمة "تذكير إعادة الطلب" نهائياً (إرسال ترويجي استباقي — شبهة مخالفة لسياسات فيسبوك).
 
 // ── API: التقييمات ──
 adminRouter.get("/api/reviews", requireAuth, (req, res) => {
@@ -458,16 +437,8 @@ adminRouter.post("/api/orders/:id/status", requireAuth, async (req, res) => {
     catch (e) { console.error("stock decrement:", e && e.message); }
   }
 
-  // 🚚 إخطار الزبون تلقائياً عند الشحن/التسليم — معطّل بالوضع الآمن (قد يكون خارج نافذة 24 ساعة)
-  const MSG = { "تم الشحن": "🚚 طلبك بالطريق! رح يوصلك اليوم إن شاء الله. صحتين وعافية 🌹",
-                "تم التسليم": "✅ تم تسليم طلبك، نتمنى ينال رضاك! صحتين وعافية، ومستنيينك دايماً 🌹" };
-  if (!CONFIG.SAFE_MODE && MSG[status]) {
-    try {
-      const o = getOrder(req.params.id);
-      const page = o && PAGES[o.page_id];
-      if (page?.PAGE_TOKEN && o.sender_id) await sendText(page.PAGE_TOKEN, o.sender_id, MSG[status]);
-    } catch (e) { console.error("status notify:", e && e.message); }
-  }
+  // ⚠️ حُذف الإخطار التلقائي للزبون عند تغيير الحالة نهائياً (إرسال استباقي — شبهة مخالفة).
+  // تغيير الحالة الآن داخلي فقط (على اللوحة) بدون أي رسالة للزبون.
   res.json({ ok: true });
 });
 
@@ -484,30 +455,7 @@ adminRouter.delete("/api/orders/:id", requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// ═══════════════════════════════════════════════════════════
-// 📢 حملات تسويقية (Broadcast)
-// ═══════════════════════════════════════════════════════════
-adminRouter.get("/api/broadcast/targets", requireAuth, (req, res) => {
-  res.json({ targets: broadcastTargets() });
-});
-adminRouter.post("/api/broadcast/send", requireAuth, async (req, res) => {
-  if (CONFIG.SAFE_MODE) return res.status(403).json({ error: "الحملات الجماعية معطّلة للامتثال لسياسات فيسبوك (منع الرسائل الترويجية الجماعية غير المطلوبة)" });
-  const text = String(req.body?.text || "").trim();
-  const pageFilter = req.body?.page_id ? String(req.body.page_id) : null;
-  if (!text) return res.status(400).json({ error: "اكتب نص الرسالة" });
-  let targets = broadcastTargets();
-  if (pageFilter) targets = targets.filter(t => String(t.page_id) === pageFilter);
-  let sent = 0, failed = 0;
-  for (const t of targets) {
-    const page = PAGES[t.page_id];
-    if (!page?.PAGE_TOKEN || !t.sender_id) { failed++; continue; }
-    try { await sendText(page.PAGE_TOKEN, t.sender_id, text); sent++; }
-    catch { failed++; }
-    await new Promise(r => setTimeout(r, 120)); // احترام حدود فيسبوك
-  }
-  logActivity(req.user, "حملة تسويقية", `أُرسلت لـ ${sent} زبون (فشل ${failed})`);
-  res.json({ ok: true, sent, failed, total: targets.length });
-});
+// ⚠️ حُذفت خدمة "الحملات التسويقية الجماعية" (Broadcast) نهائياً — أكبر مصدر لحظر الصفحات.
 
 // ═══════════════════════════════════════════════════════════
 // 💰 الأرباح والتكاليف

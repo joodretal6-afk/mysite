@@ -10,7 +10,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { CONFIG, WEB } from "./config.js";
 import { SESSIONS_KV, countUsers, getUser, createUser, ordersStats, migrateFromTurso,
-  dueFollowups, markFollowupSent, salesReport, listOrders, duePostSale, markPostSaleSent } from "./db/database.js";
+  salesReport, listOrders } from "./db/database.js";
 import { handleEvent } from "./bot/handler.js";
 import { adminRouter } from "./admin/routes.js";
 import { PAGES } from "./bot/brain.js";
@@ -67,23 +67,7 @@ function verifyFbSignature(req) {
   } catch { return false; }
 }
 
-// ⏰ المتابعة التلقائية: كل زبون بعد 10 دقائق من آخر رسالة (إن لم يُكمل طلبه)
-async function runFollowups() {
-  if (CONFIG.GLOBAL_PAUSE || CONFIG.SAFE_MODE) return;   // 🛑 موقوف / 🛡️ ممنوع بالوضع الآمن (إرسال استباقي)
-  try {
-    const list = dueFollowups();
-    for (const f of list) {
-      markFollowupSent(f.key);   // علّمها أولاً حتى لا تتكرر
-      if (CONFIG.DISABLED_PAGES.includes(f.page_id)) continue;
-      const page = PAGES[f.page_id];
-      if (!page?.PAGE_TOKEN) continue;
-      await sendText(page.PAGE_TOKEN, f.sender_id,
-        "يا هلا فيك 🌹 شو صار معك؟ ضلّينا مستنيينك. لو حابب تكمّل طلبك بس قلّي شو بتحب ومنجهّزلك ياه 🧀");
-    }
-    if (list.length) console.log(`⏰ تمت متابعة ${list.length} زبون`);
-  } catch (e) { console.error("followup job error:", e && e.message); }
-}
-setInterval(runFollowups, 60 * 1000).unref?.();   // فحص كل دقيقة (التايمر 10 دقائق لكل زبون)
+// ⚠️ حُذفت المتابعة التلقائية "شو صار معك" نهائياً (إرسال استباقي — شبهة مخالفة لسياسات فيسبوك).
 
 // ═══════════════════════════════════════════════════════════
 // 📊 تقرير يومي تلقائي (يُرسل لتيليجرام) + 💾 نسخة احتياطية يومية
@@ -137,26 +121,7 @@ function dailyJobsTick() {
 setInterval(dailyJobsTick, 5 * 60 * 1000).unref?.();   // فحص كل 5 دقائق
 dailyJobsTick();   // نسخة احتياطية فورية عند الإقلاع
 
-// ═══════════════════════════════════════════════════════════
-// 📞 متابعة ما بعد البيع: بعد 3 أيام من التسليم نسأل الزبون عن رأيه
-// ═══════════════════════════════════════════════════════════
-async function runPostSale() {
-  if (CONFIG.GLOBAL_PAUSE || CONFIG.SAFE_MODE) return;   // 🛑 موقوف / 🛡️ ممنوع بالوضع الآمن (خارج نافذة 24 ساعة)
-  try {
-    const list = duePostSale(Number(process.env.POSTSALE_DAYS ?? 3));
-    for (const o of list) {
-      markPostSaleSent(o.id);   // نعلّمها أولاً حتى لا تتكرر
-      if (CONFIG.DISABLED_PAGES.includes(o.page_id)) continue;
-      const page = PAGES[o.page_id];
-      if (!page?.PAGE_TOKEN || !o.sender_id) continue;
-      await sendText(page.PAGE_TOKEN, o.sender_id,
-        "يا هلا فيك 🌹 كيف كانت الجبنة معك؟ نتمنى نالت رضاك. رأيك بيهمنا كتير، وإذا حابب تعيد الطلب بس قلّي 'نفس الطلب السابق' ومنجهّزلك ياه فوراً 🧀");
-    }
-    if (list.length) console.log(`📞 متابعة ما بعد البيع لـ ${list.length} زبون`);
-  } catch (e) { console.error("post-sale job error:", e && e.message); }
-}
-setInterval(runPostSale, 6 * 60 * 60 * 1000).unref?.();   // كل 6 ساعات
-setTimeout(runPostSale, 30 * 1000).unref?.();             // مرة بعد الإقلاع بنصف دقيقة
+// ⚠️ حُذفت متابعة ما بعد البيع نهائياً (إرسال استباقي خارج نافذة 24 ساعة — شبهة مخالفة).
 
 // بيئة متوافقة مع كود الـ Worker الأصلي (env + ctx)
 const env = { SESSIONS_KV };

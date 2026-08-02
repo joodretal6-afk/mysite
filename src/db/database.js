@@ -559,37 +559,7 @@ export function incrementCouponUse(code) {
   return retryDb(() => db.prepare("UPDATE coupons SET uses=uses+1 WHERE code=?").run(String(code).toUpperCase()));
 }
 
-// ═══════════════════════════════════════════════════════════
-// 🔄 متابعة تلقائية للزبائن غير المكتملين (تايمر 10 دقائق لكل زبون)
-// ═══════════════════════════════════════════════════════════
-const FOLLOWUP_DELAY_MS = 10 * 60 * 1000;   // 10 دقائق بعد آخر رسالة
-
-// تشغيل/إعادة ضبط التايمر عند كل رسالة من زبون لم يُكمل (مرة متابعة واحدة فقط)
-export function armFollowup(pageId, senderId) {
-  const key = pageId + "_" + senderId;
-  const due = Date.now() + FOLLOWUP_DELAY_MS;
-  retryDb(() => {
-    const row = db.prepare("SELECT sends, status FROM followups WHERE key = ?").get(key);
-    if (row && (row.sends >= 1 || row.status === "completed")) return;  // تابعناه مسبقاً أو أكمل
-    db.prepare(`INSERT INTO followups (key,page_id,sender_id,due_at,status,sends)
-                VALUES (?,?,?,?, 'pending', 0)
-                ON CONFLICT(key) DO UPDATE SET due_at=excluded.due_at, status='pending'`)
-      .run(key, pageId, senderId, due);
-  });
-}
-// عند اكتمال الطلب: لا تتابعه نهائياً
-export function completeFollowup(pageId, senderId) {
-  retryDb(() => db.prepare("UPDATE followups SET status='completed' WHERE key = ?").run(pageId + "_" + senderId));
-}
-// الزبائن الذين حان وقت متابعتهم
-export function dueFollowups() {
-  return retryDb(() => db.prepare(
-    "SELECT * FROM followups WHERE status='pending' AND due_at <= ?"
-  ).all(Date.now()));
-}
-export function markFollowupSent(key) {
-  retryDb(() => db.prepare("UPDATE followups SET status='sent', sends=sends+1 WHERE key = ?").run(key));
-}
+// ⚠️ حُذفت دوال المتابعة التلقائية (followups) نهائياً — لا إرسال استباقي.
 
 // ═══════════════════════════════════════════════════════════
 // 🎁 برنامج الولاء — عدد الطلبات المكتملة للزبون
@@ -607,22 +577,7 @@ export function customerCompletedCountBySender(senderId) {
   ).get(senderId)).c;
 }
 
-// ═══════════════════════════════════════════════════════════
-// ⏰ تذكير إعادة الطلب — زبائن آخر طلب لهم قديم
-// ═══════════════════════════════════════════════════════════
-export function dueForReorder(days = 14) {
-  const cutoff = Date.now() - days * 86400000;
-  return retryDb(() => db.prepare(
-    `SELECT phone, MAX(sender_id) sender_id, MAX(page_id) page_id, MAX(page_name) page_name,
-            MAX(created_at) last_at, COUNT(*) orders_count, MAX(messenger_url) messenger_url,
-            MAX(reorder_sent) reorder_sent
-     FROM orders WHERE phone != '' AND status != 'ناقص'
-     GROUP BY phone HAVING last_at < ? ORDER BY last_at DESC LIMIT 300`
-  ).all(cutoff));
-}
-export function markReorderSent(phone) {
-  retryDb(() => db.prepare("UPDATE orders SET reorder_sent = 1 WHERE phone = ?").run(phone));
-}
+// ⚠️ حُذفت دوال "تذكير إعادة الطلب" نهائياً — لا إرسال ترويجي استباقي.
 
 // ═══════════════════════════════════════════════════════════
 // ⭐ التقييمات
@@ -876,18 +831,9 @@ export function lastCompletedOrder(senderId) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 📞 متابعة ما بعد البيع + سبب الإلغاء
+// 📝 سبب الإلغاء (تحليل داخلي فقط — لا إرسال)
 // ═══════════════════════════════════════════════════════════
-// طلبات تم تسليمها قبل >= (days) يوم ولم تُرسل لها متابعة بعد
-export function duePostSale(days = 3) {
-  const cutoff = Date.now() - days * 86400000;
-  return retryDb(() => db.prepare(
-    "SELECT * FROM orders WHERE status = 'تم التسليم' AND (postsale_sent IS NULL OR postsale_sent = 0) AND created_at <= ? ORDER BY created_at LIMIT 100"
-  ).all(cutoff));
-}
-export function markPostSaleSent(id) {
-  retryDb(() => db.prepare("UPDATE orders SET postsale_sent = 1 WHERE id = ?").run(Number(id)));
-}
+// ⚠️ حُذفت متابعة ما بعد البيع نهائياً — لا إرسال استباقي.
 export function setCancelReason(id, reason) {
   retryDb(() => db.prepare("UPDATE orders SET cancel_reason = ? WHERE id = ?").run(String(reason || "").slice(0, 200), Number(id)));
 }
@@ -949,16 +895,7 @@ export function deleteUser(username) {
   retryDb(() => db.prepare("DELETE FROM users WHERE username=?").run(String(username)));
 }
 
-// ═══════════════════════════════════════════════════════════
-// 📢 قائمة الزبائن للحملات (لكل زبون: صفحته وsender_id)
-// ═══════════════════════════════════════════════════════════
-export function broadcastTargets() {
-  return retryDb(() => db.prepare(
-    `SELECT sender_id, MAX(page_id) page_id, MAX(page_name) page_name, MAX(phone) phone, MAX(created_at) last_at
-     FROM orders WHERE sender_id != '' AND status != 'ناقص'
-     GROUP BY sender_id ORDER BY last_at DESC LIMIT 1000`
-  ).all());
-}
+// ⚠️ حُذفت دالة قائمة الحملات (broadcastTargets) نهائياً — لا حملات جماعية.
 
 // ═══════════════════════════════════════════════════════════
 // 🚚 نقل البيانات القديمة من Turso إلى القرص المحلي (مرة واحدة)

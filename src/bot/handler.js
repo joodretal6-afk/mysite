@@ -7,7 +7,7 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } f
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
-import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, armFollowup, completeFollowup, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting, lastCompletedOrder, setCancelReason } from "../db/database.js";
+import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting, lastCompletedOrder, setCancelReason } from "../db/database.js";
 
 // إلغاء صريح للطلب (منفصل عن "تعديل/تغيير الرأي")
 const CANCEL_INTENT = /(الغي الطلب|ألغي الطلب|الغاء الطلب|إلغاء الطلب|بطّل الطلب|بطل الطلب|ما بدي الطلب|ما عاد بدي|ما بديش|كنسل|cancel|لا تبعت|لا ترسل|ما بدي اكمل|ما بدي أكمل)/i;
@@ -228,7 +228,6 @@ export async function handleEvent(event, env, ctx) {
     logMessage({ page_id: recipientId, page_name: pageConfig.name, sender_id: senderId, direction: "out", body: ack, created_at: Date.now() });
     memory.history.push({ role: "user", content: userMsg }, { role: "assistant", content: ack });
     memory.history = memory.history.slice(-CONFIG.MAX_HISTORY);
-    try { completeFollowup(recipientId, senderId); } catch {}
     await env.SESSIONS_KV.put(sessionKey, JSON.stringify(memory), { expirationTtl: CONFIG.SESSION_TTL });
     return;
   }
@@ -444,22 +443,7 @@ export async function handleEvent(event, env, ctx) {
     } catch (e) { console.error("cross-sell:", e && e.message); }
   }
 
-  // 🔴 زر الإشعارات (OTN) مباشرة بعد الفاتورة (فقط لو مفعّل + مش بالوضع الآمن)
-  if (justSentInvoice && CONFIG.ENABLE_OTN && !CONFIG.SAFE_MODE) {
-    ctx.waitUntil(graphSend(token, {
-      recipient: { id: senderId },
-      message: {
-        attachment: {
-          type: "template",
-          payload: {
-            template_type: "one_time_notif_req",
-            title: "حاب نبلغك بس تنزل عروضنا الجديدة؟ 🌹",
-            payload: "NEW_OFFERS_OTN"
-          }
-        }
-      }
-    }));
-  }
+  // ⚠️ حُذف زر الإشعارات (OTN) نهائياً — إشعارات استباقية خارج المحادثة (شبهة مخالفة).
 
   memory.lastReply = chunks.join(" ");
 
@@ -475,11 +459,7 @@ export async function handleEvent(event, env, ctx) {
   );
   memory.history = memory.history.slice(-CONFIG.MAX_HISTORY);
 
-  // ⏰ المتابعة التلقائية: لو أكمل الطلب لا تتابعه، وإلا اضبط تايمر 10 دقائق
-  try {
-    if (memory.sent) completeFollowup(recipientId, senderId);
-    else armFollowup(recipientId, senderId);
-  } catch (e) { console.error("followup arm:", e && e.message); }
+  // (أُزيلت جدولة المتابعة التلقائية — لا إرسال استباقي إطلاقاً)
 
   await env.SESSIONS_KV.put(sessionKey, JSON.stringify(memory), { expirationTtl: CONFIG.SESSION_TTL });
 }
