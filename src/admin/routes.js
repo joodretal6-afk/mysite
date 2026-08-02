@@ -19,7 +19,8 @@ import {
   listInventory, setInventory, deleteInventory, decrementStock, lowStockList,
   listHandoffs, setHandoffPause, resolveHandoff,
   getSetting, setSetting, isBlocked, listBlocked, addBlock, removeBlock,
-  listPriceOverrides, setPriceOverride, deletePriceOverride, topProducts
+  listPriceOverrides, setPriceOverride, deletePriceOverride, topProducts,
+  cancelReasonsReport, peakHeatmap
 } from "../db/database.js";
 import fs from "node:fs";
 import { WEB } from "../config.js";
@@ -683,6 +684,30 @@ adminRouter.delete("/api/prices", requireAuth, (req, res) => {
 // ═══════════════════════════════════════════════════════════
 adminRouter.get("/api/top-products", requireAuth, (req, res) => {
   res.json({ products: topProducts(20) });
+});
+
+// 📊 تحليلات إضافية: أسباب الإلغاء + خريطة أوقات الذروة + رحلة الزبون
+adminRouter.get("/api/insights", requireAuth, (req, res) => {
+  let funnel = { conversations: 0, carts: 0, completed: 0 };
+  try {
+    const s = ordersStats();
+    // تقدير رحلة الزبون: كل الطلبات (بدأت سلة) مقابل المكتملة
+    const all = listOrders({ limit: 100000 });
+    const started = all.count;
+    const completed = all.rows.filter(o => o.status !== "ناقص" && o.status !== "ملغي").length;
+    funnel = { started, completed, dropRate: started ? Math.round((1 - completed / started) * 100) : 0 };
+  } catch {}
+  res.json({
+    cancelReasons: cancelReasonsReport(),
+    heatmap: peakHeatmap(),
+    funnel
+  });
+});
+adminRouter.get("/insights", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "insights.html")));
+adminRouter.get("/wholesale-note", requireAuth, (req, res) => res.json({ note: getSetting("wholesale_note", "") }));
+adminRouter.post("/wholesale-note", requireAuth, (req, res) => {
+  setSetting("wholesale_note", String(req.body?.note || "").slice(0, 500));
+  res.json({ ok: true });
 });
 
 // ═══════════════════════════════════════════════════════════

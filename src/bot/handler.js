@@ -7,10 +7,26 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64 } f
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
-import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, armFollowup, completeFollowup, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting } from "../db/database.js";
+import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, armFollowup, completeFollowup, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting, lastCompletedOrder, setCancelReason } from "../db/database.js";
 
 // إلغاء صريح للطلب (منفصل عن "تعديل/تغيير الرأي")
 const CANCEL_INTENT = /(الغي الطلب|ألغي الطلب|الغاء الطلب|إلغاء الطلب|بطّل الطلب|بطل الطلب|ما بدي الطلب|ما عاد بدي|ما بديش|كنسل|cancel|لا تبعت|لا ترسل|ما بدي اكمل|ما بدي أكمل)/i;
+
+// إعادة الطلب السابق بضغطة
+const REPEAT_INTENT = /(نفس الطلب|الطلب السابق|زي المرة|زي كل مرة|عيد طلبي|أعد طلبي|اعد طلبي|نفس اللي طلبت|نفس السابق|كرر الطلب|كرر طلبي|نفس الطلبية|الطلب الي فات|اللي فات|نفس طلبي)/i;
+
+// كشف تاجر الجملة
+const WHOLESALE_INTENT = /(جملة|بالجملة|تاجر|كرتون|كرتونة|كراتين|محل|بقالة|بقالية|سوبر ?ماركت|سوبرماركت|كمية كبيرة|كميات كبيرة|بسعر الجملة|عرض جملة)/i;
+
+// تحويل نص الطلب ("غنم (2 نصية) + شخل (1 نصية)") إلى سلة {صنف: عدد}
+function parseOrderStringToCart(orderString) {
+  const cart = {};
+  for (const part of String(orderString || "").split("+")) {
+    const m = part.match(/(.+?)\s*\((\d+(?:\.\d+)?)/);
+    if (m) { const name = m[1].trim(); const qty = parseFloat(m[2]) || 0; if (name && qty > 0) cart[name] = qty; }
+  }
+  return cart;
+}
 
 // 🕐 هل نحن خارج ساعات العمل؟ (إعداد اختياري من الموقع)
 function offHoursMessage() {
@@ -175,20 +191,36 @@ export async function handleEvent(event, env, ctx) {
     return;
   }
 
+  // 📝 التقاط سبب الإلغاء (لو سألناه بعد إلغاء) — لتحليله لاحقاً
+  if (memory.awaitingCancelReason) {
+    try { setCancelReason(memory.awaitingCancelReason, userMsg); } catch {}
+    memory.awaitingCancelReason = null;
+    const th = "يسلمو على صراحتك 🌹 رح ناخد ملاحظتك بعين الاعتبار. وإذا بيوم غيّرت رأيك، إحنا بخدمتك دايماً.";
+    await sendText(token, senderId, th);
+    memory.history.push({ role: "user", content: userMsg }, { role: "assistant", content: th });
+    memory.history = memory.history.slice(-CONFIG.MAX_HISTORY);
+    await env.SESSIONS_KV.put(sessionKey, JSON.stringify(memory), { expirationTtl: CONFIG.SESSION_TTL });
+    return;
+  }
+
   // 🚫 إلغاء صريح للطلب: نعلّم الطلب "ملغي" ونؤكّد للزبون بوضوح (بدل ما يجادله البوت)
   if (CANCEL_INTENT.test(userMsg)) {
     try {
       if (!memory.orderId) memory.orderId = getRecentOpenOrderId(recipientId, senderId);
       if (memory.orderId) updateOrderStatus(memory.orderId, "ملغي");
     } catch (e) { console.error("cancel order:", e && e.message); }
+    const cancelledId = memory.orderId;
     memory.cart = {};
     memory.sent = false;
     memory.coupon = null;
     memory.orderId = null;
+    if (cancelledId) memory.awaitingCancelReason = cancelledId;   // نسأله عن السبب لتحليله
     const fem = memory.gender === "f";
-    const ack = fem
-      ? "تم إلغاء طلبك 🌹 ولا يهمّك. إذا حابة تطلبي من جديد أو تعدّلي الكمية، أنا بخدمتك وبكل سرور."
-      : "تم إلغاء طلبك 🌹 ولا يهمّك. إذا حابب تطلب من جديد أو تعدّل الكمية، أنا بخدمتك وبكل سرور.";
+    const ask = memory.gender === "f" ? "حابة" : "حابب";
+    const ack = (fem
+      ? "تم إلغاء طلبك 🌹 ولا يهمّك."
+      : "تم إلغاء طلبك 🌹 ولا يهمّك.")
+      + (cancelledId ? " بس عشان نتحسّن، ممكن تقلّي شو السبب؟ (السعر، الوقت، غيّرت رأيك...)" : ` إذا ${ask} تطلب من جديد أنا بخدمتك.`);
     await sendText(token, senderId, ack);
     logMessage({ page_id: recipientId, page_name: pageConfig.name, sender_id: senderId, direction: "out", body: ack, created_at: Date.now() });
     memory.history.push({ role: "user", content: userMsg }, { role: "assistant", content: ack });
@@ -202,6 +234,19 @@ export async function handleEvent(event, env, ctx) {
   if (RESET_INTENT.test(userMsg)) {
     memory.cart = {};
     memory.sent = false;
+  }
+
+  // 🔁 إعادة الطلب السابق بضغطة: نعبّي السلة والعنوان والرقم من آخر طلب مكتمل
+  if (REPEAT_INTENT.test(userMsg) && !memory.sent) {
+    try {
+      const last = lastCompletedOrder(senderId);
+      if (last && last.order_string) {
+        memory.cart = parseOrderStringToCart(last.order_string);
+        if (!memory.area) memory.area = last.area || "";
+        if (!memory.phone) memory.phone = last.phone || "";
+        memory._repeated = true;   // نتخطى استخراج الذكاء هالدور حتى ما يمسح السلة
+      }
+    } catch (e) { console.error("repeat order:", e && e.message); }
   }
 
   // 🙋 كشف حاجة الزبون لتدخّل بشري (غضب / يطلب موظف) → تنبيه فوري + تعليق البوت + رسالة طمأنة
@@ -234,7 +279,8 @@ export async function handleEvent(event, env, ctx) {
   }
 
   // 🧠 استخراج ذكي من كامل المحادثة (يفهم أي صياغة طبيعية ويكمّل النواقص)
-  if (!memory.sent) {
+  // نتخطّاه لو الزبون طلب إعادة طلبه السابق (حتى لا نمسح السلة المُعادة)
+  if (!memory.sent && !memory._repeated) {
     try {
       const convText = [
         ...(memory.history || []).filter(h => h.role === "user").map(h => h.content),
@@ -256,6 +302,28 @@ export async function handleEvent(event, env, ctx) {
       console.error("live AI extract failed:", e && e.message);
     }
   }
+
+  // 🏠 العنوان المحفوظ: زبون قديم عندو أصناف بالسلة بس ناقص عنوان/رقم → نعبّيه من آخر طلب/الـCRM
+  try {
+    const cartHasItems = memory.cart && Object.keys(memory.cart).length > 0;
+    if (cartHasItems && (!memory.area || !memory.phone)) {
+      const last = lastCompletedOrder(senderId);
+      if (!memory.area) memory.area = (crmData && crmData.lastArea) || (last && last.area) || memory.area;
+      if (!memory.phone) memory.phone = (last && last.phone) || (crmData && crmData.phone) || memory.phone;
+    }
+  } catch (e) { console.error("saved address:", e && e.message); }
+
+  // 🏢 كشف تاجر الجملة: كمية كبيرة أو كلمات جملة → تنبيه + ملاحظة (مرة لكل جلسة)
+  try {
+    const totalQty = memory.cart ? Object.values(memory.cart).reduce((a, b) => a + (Number(b) || 0), 0) : 0;
+    if (!memory.wholesaleFlagged && (WHOLESALE_INTENT.test(userMsg) || totalQty >= 6)) {
+      memory.wholesaleFlagged = true;
+      const note = getSetting("wholesale_note") ||
+        "🏢 إذا حابب كميات كبيرة أو بالجملة، عنا أسعار خاصة للتجار! خبّرني وبنرتّبلك عرض مميز.";
+      memory._wholesaleNote = note;
+      ctx.waitUntil(notifyTelegram(`🏢 زبون جملة محتمل — (${pageConfig.name})\n💬 «${userMsg.slice(0, 150)}»\n🔗 https://m.me/${senderId}`));
+    }
+  } catch (e) { console.error("wholesale detect:", e && e.message); }
 
   // 🎟️ كشف كود الخصم من رسالة الزبون (يُطبّق على الحساب)
   if (!memory.coupon) {
@@ -349,6 +417,9 @@ export async function handleEvent(event, env, ctx) {
       if (oh) { reply = oh + "[[SPLIT]]" + reply; memory.offHoursNotified = true; }
     }
   } catch (e) { console.error("off-hours:", e && e.message); }
+
+  // 🏢 ملاحظة الجملة (لو اكتُشف تاجر) بعد الرد
+  if (memory._wholesaleNote) { reply = reply + "[[SPLIT]]" + memory._wholesaleNote; memory._wholesaleNote = null; }
 
   // إرسال الرد (مع دعم تقسيمه لرسالتين عبر [[SPLIT]])
   const chunks = reply.split("[[SPLIT]]").map(s => s.trim()).filter(Boolean);

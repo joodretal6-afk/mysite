@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>رؤى وتحليلات — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; } header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1050px; margin:0 auto; padding:22px; }
+    .card { background:var(--card); border-radius:14px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:18px; }
+    .card h3 { font-size:15px; color:var(--green2); margin-bottom:14px; }
+    .funnel { display:flex; gap:12px; flex-wrap:wrap; }
+    .fc { flex:1; min-width:150px; text-align:center; background:#f6f9f6; border-radius:12px; padding:16px; }
+    .fc .n { font-size:26px; font-weight:800; color:var(--green2); } .fc .l { font-size:13px; color:var(--mut); margin-top:4px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { padding:9px; text-align:right; border-bottom:1px solid var(--line); }
+    .heat { overflow-x:auto; }
+    .heat table { min-width:640px; }
+    .heat td, .heat th { text-align:center; padding:4px; font-size:11px; border:1px solid #eef2ee; }
+    .heat th { color:var(--green2); }
+    .cell { width:26px; height:26px; border-radius:4px; color:#fff; font-size:10px; line-height:26px; }
+    .note textarea { width:100%; padding:11px; border:1.5px solid var(--line); border-radius:9px; font-family:inherit; min-height:70px; }
+    .btn { padding:10px 18px; background:var(--green); color:#fff; border:none; border-radius:9px; cursor:pointer; font-family:inherit; font-weight:700; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🔎 رؤى وتحليلات</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="card">
+      <h3>🧭 رحلة الزبون (Funnel)</h3>
+      <div class="funnel" id="funnel"></div>
+      <p style="font-size:12px;color:var(--mut);margin-top:10px">نسبة التسرّب = الطلبات اللي بدأت وما اكتملت. كل ما قلّت، مبيعاتك أحسن.</p>
+    </div>
+    <div class="card">
+      <h3>🔥 خريطة أوقات الذروة (متى يطلب زبائنك؟)</h3>
+      <div class="heat"><table id="heat"></table></div>
+      <p style="font-size:12px;color:var(--mut);margin-top:10px">💡 كثّف إعلاناتك ومنشوراتك بالأوقات الأغمق — هي وقت الذروة.</p>
+    </div>
+    <div class="card">
+      <h3>❌ أسباب الإلغاء</h3>
+      <table><thead><tr><th>السبب</th><th>عدد المرات</th></tr></thead><tbody id="reasons"></tbody></table>
+    </div>
+    <div class="card note">
+      <h3>🏢 رسالة عرض الجملة (تُرسل تلقائياً لتاجر محتمل)</h3>
+      <textarea id="wnote" placeholder="مثال: عنا أسعار خاصة للتجار والكميات الكبيرة! خبّرنا وبنرتّبلك عرض مميز."></textarea>
+      <button class="btn" onclick="saveNote()">حفظ</button>
+      <span id="wmsg" style="font-size:13px;color:var(--green2);margin-right:8px"></span>
+    </div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    const DAYS=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    function heatColor(v,max){ if(!v) return '#f1f4f1'; const t=v/max; const g=Math.round(200-140*t); return `rgb(${Math.round(46+20*t)},${g},${Math.round(50+10*t)})`; }
+    async function load(){
+      const r=await fetch('/admin/api/insights');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const d=await r.json();
+      // funnel
+      const f=d.funnel||{};
+      document.getElementById('funnel').innerHTML=`
+        <div class="fc"><div class="n">${f.started||0}</div><div class="l">طلبات بدأت</div></div>
+        <div class="fc"><div class="n">${f.completed||0}</div><div class="l">طلبات اكتملت</div></div>
+        <div class="fc"><div class="n">${f.dropRate||0}%</div><div class="l">نسبة التسرّب</div></div>`;
+      // heatmap
+      const grid=d.heatmap||[]; let max=1;
+      grid.forEach(row=>row.forEach(v=>{ if(v>max)max=v; }));
+      let html='<tr><th>اليوم \\ الساعة</th>';
+      for(let h=0;h<24;h++) html+=`<th>${h}</th>`;
+      html+='</tr>';
+      grid.forEach((row,day)=>{
+        html+=`<tr><th>${DAYS[day]}</th>`;
+        row.forEach(v=>{ html+=`<td><div class="cell" style="background:${heatColor(v,max)}">${v||''}</div></td>`; });
+        html+='</tr>';
+      });
+      document.getElementById('heat').innerHTML=html;
+      // reasons
+      const tb=document.getElementById('reasons'); tb.innerHTML='';
+      (d.cancelReasons||[]).forEach(x=>tb.insertAdjacentHTML('beforeend',`<tr><td>${esc(x.reason)}</td><td>${x.count}</td></tr>`));
+      if(!(d.cancelReasons||[]).length) tb.innerHTML='<tr><td colspan="2" style="text-align:center;color:#78909c;padding:16px">ما في إلغاءات مسجّلة بعد</td></tr>';
+    }
+    async function loadNote(){ const r=await fetch('/admin/wholesale-note'); const {note}=await r.json(); document.getElementById('wnote').value=note||''; }
+    async function saveNote(){
+      await fetch('/admin/wholesale-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note:document.getElementById('wnote').value})});
+      document.getElementById('wmsg').textContent='✅ تم الحفظ';
+    }
+    load(); loadNote();
+  </script>
+</body>
+</html>

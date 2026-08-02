@@ -186,7 +186,9 @@ db.exec(`
 for (const col of [
   "ALTER TABLE orders ADD COLUMN followed_up INTEGER DEFAULT 0",   // تمّت متابعة الطلب الناقص
   "ALTER TABLE orders ADD COLUMN reorder_sent INTEGER DEFAULT 0",  // أُرسل تذكير إعادة الطلب
-  "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'admin'"         // دور المستخدم
+  "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'admin'",        // دور المستخدم
+  "ALTER TABLE orders ADD COLUMN postsale_sent INTEGER DEFAULT 0", // أُرسلت متابعة ما بعد البيع
+  "ALTER TABLE orders ADD COLUMN cancel_reason TEXT DEFAULT ''"    // سبب الإلغاء (لتحليله)
 ]) {
   try { db.exec(col); } catch { /* العمود موجود */ }
 }
@@ -865,6 +867,54 @@ export function topProducts(limit = 20) {
 // ═══════════════════════════════════════════════════════════
 // 🎯 تخصيص للزبائن السابقين: أكثر أصنافهم طلباً (للاقتراح الذكي)
 // ═══════════════════════════════════════════════════════════
+// آخر طلب مكتمل للزبون (لإعادته بضغطة) — يرجّع الصف أو null
+export function lastCompletedOrder(senderId) {
+  if (!senderId) return null;
+  return retryDb(() => db.prepare(
+    "SELECT * FROM orders WHERE sender_id = ? AND status != 'ملغي' AND status != 'ناقص' ORDER BY created_at DESC LIMIT 1"
+  ).get(senderId)) || null;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📞 متابعة ما بعد البيع + سبب الإلغاء
+// ═══════════════════════════════════════════════════════════
+// طلبات تم تسليمها قبل >= (days) يوم ولم تُرسل لها متابعة بعد
+export function duePostSale(days = 3) {
+  const cutoff = Date.now() - days * 86400000;
+  return retryDb(() => db.prepare(
+    "SELECT * FROM orders WHERE status = 'تم التسليم' AND (postsale_sent IS NULL OR postsale_sent = 0) AND created_at <= ? ORDER BY created_at LIMIT 100"
+  ).all(cutoff));
+}
+export function markPostSaleSent(id) {
+  retryDb(() => db.prepare("UPDATE orders SET postsale_sent = 1 WHERE id = ?").run(Number(id)));
+}
+export function setCancelReason(id, reason) {
+  retryDb(() => db.prepare("UPDATE orders SET cancel_reason = ? WHERE id = ?").run(String(reason || "").slice(0, 200), Number(id)));
+}
+export function cancelReasonsReport() {
+  const rows = retryDb(() => db.prepare(
+    "SELECT cancel_reason FROM orders WHERE status = 'ملغي' AND cancel_reason != ''"
+  ).all());
+  const counts = {};
+  for (const r of rows) { const k = r.cancel_reason.trim(); if (k) counts[k] = (counts[k] || 0) + 1; }
+  return Object.entries(counts).map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count);
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🔥 خريطة أوقات الذروة (يوم الأسبوع × الساعة) للطلبات المكتملة
+// ═══════════════════════════════════════════════════════════
+export function peakHeatmap() {
+  const rows = retryDb(() => db.prepare(
+    "SELECT created_at FROM orders WHERE status != 'ملغي' AND status != 'ناقص'"
+  ).all());
+  const grid = Array.from({ length: 7 }, () => new Array(24).fill(0));
+  for (const r of rows) {
+    const d = new Date(Number(r.created_at));
+    grid[d.getDay()][d.getHours()]++;
+  }
+  return grid;   // grid[day 0=الأحد..6][hour 0..23]
+}
+
 export function customerHistoryHint(senderId) {
   if (!senderId) return "";
   try {
