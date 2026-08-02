@@ -153,6 +153,9 @@ export async function handleEvent(event, env, ctx) {
     direction: "in", body: userMsg, created_at: Date.now()
   });
 
+  // 🛑 إيقاف عام للبوت (بطلب المالك): نؤرشف الرسالة فقط ولا نرد إطلاقاً
+  if (CONFIG.GLOBAL_PAUSE) return;
+
   // 🙋 لو البوت معلّق لهذا الزبون (تدخّل بشري نشط): نؤرشف الرسالة فقط ولا نرد — الموظف يتولّى
   try {
     if (isBotPaused(recipientId, senderId)) {

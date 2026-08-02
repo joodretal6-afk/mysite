@@ -69,6 +69,7 @@ function verifyFbSignature(req) {
 
 // ⏰ المتابعة التلقائية: كل زبون بعد 10 دقائق من آخر رسالة (إن لم يُكمل طلبه)
 async function runFollowups() {
+  if (CONFIG.GLOBAL_PAUSE) return;   // 🛑 إيقاف عام للبوت
   try {
     const list = dueFollowups();
     for (const f of list) {
@@ -140,6 +141,7 @@ dailyJobsTick();   // نسخة احتياطية فورية عند الإقلاع
 // 📞 متابعة ما بعد البيع: بعد 3 أيام من التسليم نسأل الزبون عن رأيه
 // ═══════════════════════════════════════════════════════════
 async function runPostSale() {
+  if (CONFIG.GLOBAL_PAUSE) return;   // 🛑 إيقاف عام للبوت
   try {
     const list = duePostSale(Number(process.env.POSTSALE_DAYS ?? 3));
     for (const o of list) {
@@ -262,6 +264,7 @@ app.get("/health/diag", (req, res) => {
 });
 
 app.listen(WEB.PORT, () => {
+  if (CONFIG.GLOBAL_PAUSE) console.log("🛑🛑 البوت موقوف بالكامل (بطلب المالك) — لا يرد على أي زبون. اللوحة شغّالة عادي.");
   console.log(`🧀 منصة الأجبان تعمل على المنفذ ${WEB.PORT}`);
   console.log(`   لوحة التحكم:  http://localhost:${WEB.PORT}/admin`);
   console.log(`   الويبهوك:     http://localhost:${WEB.PORT}/webhook`);

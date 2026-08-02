@@ -15,6 +15,11 @@ export const CONFIG = {
   OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o-mini",
   OPENAI_TRANSCRIBE_MODEL: process.env.OPENAI_TRANSCRIBE_MODEL || "whisper-1",
   VERIFY_TOKEN: process.env.VERIFY_TOKEN || "talebbot",
+
+  // 🛑 إيقاف البوت بالكامل (بطلب المالك): لا يرد على أي زبون ولا يبعت متابعات — الرسائل الواردة تُؤرشف فقط.
+  // لإعادة التشغيل: غيّر القيمة الافتراضية إلى false، أو اضبط متغيّر البيئة BOT_PAUSED=false.
+  GLOBAL_PAUSE: process.env.BOT_PAUSED != null ? process.env.BOT_PAUSED === "true" : true,
+
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || "YOUR_TELEGRAM_BOT_TOKEN",
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || "YOUR_TELEGRAM_CHAT_ID",
 

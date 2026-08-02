@@ -46,6 +46,7 @@ async function saveMem(kv, from, mem) {
 
 // معالجة رسالة واتساب واحدة
 export async function handleWhatsAppMessage(msg, contactName, kv) {
+  if (CONFIG.GLOBAL_PAUSE) return;   // 🛑 إيقاف عام للبوت
   const p = waPage();
   if (!p) return;
   const page = p.cfg;
