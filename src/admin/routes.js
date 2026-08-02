@@ -23,7 +23,7 @@ import {
   cancelReasonsReport, peakHeatmap
 } from "../db/database.js";
 import fs from "node:fs";
-import { WEB } from "../config.js";
+import { WEB, CONFIG } from "../config.js";
 import { sendText } from "../bot/messenger.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
 import { PAGES } from "../bot/brain.js";
@@ -136,6 +136,7 @@ adminRouter.get("/api/due-reorder", requireAuth, (req, res) => {
   res.json({ days, customers: dueForReorder(days) });
 });
 adminRouter.post("/api/send-reorder", requireAuth, async (req, res) => {
+  if (CONFIG.SAFE_MODE) return res.status(403).json({ error: "معطّل للامتثال لسياسات فيسبوك (إرسال ترويجي خارج نافذة 24 ساعة)" });
   const { page_id, sender_id, phone, message } = req.body || {};
   const page = PAGES[page_id];
   if (!page?.PAGE_TOKEN || !sender_id) return res.status(400).json({ error: "بيانات ناقصة" });
@@ -457,10 +458,10 @@ adminRouter.post("/api/orders/:id/status", requireAuth, async (req, res) => {
     catch (e) { console.error("stock decrement:", e && e.message); }
   }
 
-  // 🚚 إخطار الزبون تلقائياً عند الشحن/التسليم
+  // 🚚 إخطار الزبون تلقائياً عند الشحن/التسليم — معطّل بالوضع الآمن (قد يكون خارج نافذة 24 ساعة)
   const MSG = { "تم الشحن": "🚚 طلبك بالطريق! رح يوصلك اليوم إن شاء الله. صحتين وعافية 🌹",
                 "تم التسليم": "✅ تم تسليم طلبك، نتمنى ينال رضاك! صحتين وعافية، ومستنيينك دايماً 🌹" };
-  if (MSG[status]) {
+  if (!CONFIG.SAFE_MODE && MSG[status]) {
     try {
       const o = getOrder(req.params.id);
       const page = o && PAGES[o.page_id];
@@ -490,6 +491,7 @@ adminRouter.get("/api/broadcast/targets", requireAuth, (req, res) => {
   res.json({ targets: broadcastTargets() });
 });
 adminRouter.post("/api/broadcast/send", requireAuth, async (req, res) => {
+  if (CONFIG.SAFE_MODE) return res.status(403).json({ error: "الحملات الجماعية معطّلة للامتثال لسياسات فيسبوك (منع الرسائل الترويجية الجماعية غير المطلوبة)" });
   const text = String(req.body?.text || "").trim();
   const pageFilter = req.body?.page_id ? String(req.body.page_id) : null;
   if (!text) return res.status(400).json({ error: "اكتب نص الرسالة" });

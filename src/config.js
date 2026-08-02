@@ -20,6 +20,12 @@ export const CONFIG = {
   // لإعادة التشغيل: غيّر القيمة الافتراضية إلى false، أو اضبط متغيّر البيئة BOT_PAUSED=false.
   GLOBAL_PAUSE: process.env.BOT_PAUSED != null ? process.env.BOT_PAUSED === "true" : true,
 
+  // 🛡️ وضع الامتثال الآمن (مفعّل افتراضياً): يمنع كل إرسال استباقي/جماعي يخالف سياسات فيسبوك.
+  // يُعطّل: الحملات الجماعية، تذكير إعادة الطلب، متابعة ما بعد البيع، المتابعة التلقائية، إشعارات الحالة التلقائية.
+  // يبقى البوت يرد فقط داخل المحادثة النشطة (نافذة 24 ساعة) — وهو المسموح.
+  // لإلغاء الوضع الآمن (غير مستحسن): SAFE_MODE=false بالبيئة.
+  SAFE_MODE: process.env.SAFE_MODE !== "false",
+
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || "YOUR_TELEGRAM_BOT_TOKEN",
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || "YOUR_TELEGRAM_CHAT_ID",
 

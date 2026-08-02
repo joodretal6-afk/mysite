@@ -69,7 +69,7 @@ function verifyFbSignature(req) {
 
 // ⏰ المتابعة التلقائية: كل زبون بعد 10 دقائق من آخر رسالة (إن لم يُكمل طلبه)
 async function runFollowups() {
-  if (CONFIG.GLOBAL_PAUSE) return;   // 🛑 إيقاف عام للبوت
+  if (CONFIG.GLOBAL_PAUSE || CONFIG.SAFE_MODE) return;   // 🛑 موقوف / 🛡️ ممنوع بالوضع الآمن (إرسال استباقي)
   try {
     const list = dueFollowups();
     for (const f of list) {
@@ -141,7 +141,7 @@ dailyJobsTick();   // نسخة احتياطية فورية عند الإقلاع
 // 📞 متابعة ما بعد البيع: بعد 3 أيام من التسليم نسأل الزبون عن رأيه
 // ═══════════════════════════════════════════════════════════
 async function runPostSale() {
-  if (CONFIG.GLOBAL_PAUSE) return;   // 🛑 إيقاف عام للبوت
+  if (CONFIG.GLOBAL_PAUSE || CONFIG.SAFE_MODE) return;   // 🛑 موقوف / 🛡️ ممنوع بالوضع الآمن (خارج نافذة 24 ساعة)
   try {
     const list = duePostSale(Number(process.env.POSTSALE_DAYS ?? 3));
     for (const o of list) {
