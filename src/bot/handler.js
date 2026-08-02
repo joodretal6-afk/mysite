@@ -18,6 +18,16 @@ const REPEAT_INTENT = /(نفس الطلب|الطلب السابق|زي المر�
 // كشف تاجر الجملة
 const WHOLESALE_INTENT = /(جملة|بالجملة|تاجر|كرتون|كرتونة|كراتين|محل|بقالة|بقالية|سوبر ?ماركت|سوبرماركت|كمية كبيرة|كميات كبيرة|بسعر الجملة|عرض جملة)/i;
 
+// هل ذكر الزبون هذا الصنف الإضافي؟ (بالاسم الكامل أو أول كلمة مميّزة منه)
+function addonMentioned(text, addonName) {
+  const nm = String(addonName || "").trim();
+  if (!nm || !text) return false;
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const first = nm.split(/\s+/)[0];
+  try { return new RegExp(`(?:^|\\s)(?:${esc(nm)}|${esc(first)})`, "i").test(text); }
+  catch { return text.includes(nm); }
+}
+
 // تحويل نص الطلب ("غنم (2 نصية) + شخل (1 نصية)") إلى سلة {صنف: عدد}
 function parseOrderStringToCart(orderString) {
   const cart = {};
@@ -119,6 +129,23 @@ async function _handleEvent(event, env, ctx) {
     const ov = priceOverrideMap(recipientId);
     if (ov && Object.keys(ov).length) effConfig = { ...pageConfig, PRICES: { ...pageConfig.PRICES, ...ov } };
   } catch (e) { console.error("price override:", e && e.message); }
+
+  // 🛒 دمج الأصناف الإضافية (addons) كأصناف حقيقية: البوت يعرفها، يبيعها، يحسبها، وتنزل بالأوردر
+  let activeAddons = [];
+  try { activeAddons = getActiveAddons() || []; } catch {}
+  if (activeAddons.length) {
+    const aPrices = {}, aUnits = {};
+    for (const a of activeAddons) {
+      const nm = String(a.name || "").trim();
+      if (!nm) continue;
+      aPrices[nm] = Number(a.price) || 0;
+      aUnits[nm] = /كيلو|كغ|كجم/.test(a.weight || "") ? "كيلو" : (String(a.weight || "").trim() || "قطعة");
+    }
+    effConfig = { ...effConfig,
+      PRICES: { ...effConfig.PRICES, ...aPrices },
+      UNITS: { ...(effConfig.UNITS || {}), ...aUnits }
+    };
+  }
 
   const token = pageConfig.PAGE_TOKEN;
   if (!token) { console.error("No page token for", recipientId); return; }
@@ -249,6 +276,12 @@ async function _handleEvent(event, env, ctx) {
     memory.sent = false;
   }
 
+  // 🛒 إضافة صنف إضافي بعد الفاتورة: لو الزبون طلب صنف إضافي بعد ما طلعت الفاتورة،
+  // نعيد فتح الطلب (بدون مسح السلة) ليُحدَّث ويُصدَّر من جديد شامل الإضافة.
+  if (memory.sent && activeAddons.some(a => addonMentioned(userMsg, a.name))) {
+    memory.sent = false;
+  }
+
   // 🔁 إعادة الطلب السابق بضغطة: نعبّي السلة والعنوان والرقم من آخر طلب مكتمل
   if (REPEAT_INTENT.test(userMsg) && !memory.sent) {
     try {
@@ -288,7 +321,7 @@ async function _handleEvent(event, env, ctx) {
   } catch (e) { console.error("handoff detect:", e && e.message); }
 
   if (!memory.sent && userMsg !== "[رسالة صوتية]") {
-    parseMessage(memory, userMsg, pageConfig);
+    parseMessage(memory, userMsg, effConfig);
   }
 
   // 🧠 استخراج ذكي من كامل المحادثة (يفهم أي صياغة طبيعية ويكمّل النواقص)
@@ -299,7 +332,7 @@ async function _handleEvent(event, env, ctx) {
         ...(memory.history || []).filter(h => h.role === "user").map(h => h.content),
         userMsg
       ].filter(Boolean).join("\n");
-      const ai = await extractOrderWithAI(convText, pageConfig);
+      const ai = await extractOrderWithAI(convText, effConfig);
       if (ai.ok) {
         // نستبدل السلة فقط لو الذكاء لقى طلباً فعلياً (حتى لا نمسح سلة سابقة برسالة سؤال/سلام)
         if (ai.is_order && ai.items.length) {
@@ -413,6 +446,11 @@ async function _handleEvent(event, env, ctx) {
 
   } else {
     let extraKnowledge = getKnowledge(recipientId);
+    // 🛒 نُعلِم البوت بالأصناف الإضافية المتوفّرة حتى لا ينكر وجودها ويقدر يبيعها
+    if (activeAddons.length) {
+      extraKnowledge += "\n\n[أصناف إضافية متوفّرة للبيع فعلاً — لا تنكر وجودها أبداً. اعرضها وبِعها عادي، وإذا طلبها الزبون أضِفها لطلبه بسعرها]:\n" +
+        activeAddons.map(a => `• ${a.name} — ${a.price}د${a.weight ? ` (${a.weight})` : ""}${a.description ? ` — ${a.description}` : ""}`).join("\n");
+    }
     // 🎯 تخصيص للزبون السابق: نحقن أكثر أصنافه طلباً ليقترحها البوت بذكاء
     try { extraKnowledge += customerHistoryHint(senderId); } catch {}
     // 👩 مخاطبة الأنثى بالصيغة الصحيحة إن اكتُشف جنسها
