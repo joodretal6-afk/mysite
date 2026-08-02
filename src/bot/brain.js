@@ -238,7 +238,7 @@ export const PAGES = {
 
   "211000052105556": {
     name: "أجبان غزة",
-    PAGE_TOKEN: "EAARu8DdiVZAwBR4Oua98gmQaS0m2ixZCD0H0fZAfmWPWnCnbp2gcYLBpD1YxuAsOXZBJupqLuB2gIX6uyM8UynYzCWV68T17LmCVyUl4VElCYZCimyEUWZCJD4K6ZBnXs80AWtVchnFZARWd7PmqByuQJP89ZAjoD6ESv5x44ZBkb24mMBcxejmvEMrG2N4o3h1DesabgF",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSLzeUHiMJvd3JZCzvUevTKOjqgHaWK57vXbiokqr0mIqiglrVgqJl0JN7CgGM7z6pDCwEGOwd51D6kiSs6VqAmPzwdsJXLkFWU4JcXnMFtlVge3LpOH0lBTLpJzabxlyL5IRsbSasain6Ucy80EZAqlGCADl27pzGauIpQM5wMgZBvSuFj9rzrz",
     DELIVERY: 0,
     DEFAULT_UNIT: "نصية",
     PRICES: { "غنم": 15, "ملوكية": 15, "مشمولة": 16, "سوبر": 18 },
