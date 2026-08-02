@@ -121,121 +121,6 @@ export const COMMON_KNOWLEDGE = `
 `;
 
 export const PAGES = {
-  "504024302795244": {
-    name: "أجبان جباليا",
-    PAGE_TOKEN: "EAARu8DdiVZAwBQmKBTmTf8Fbz7youEaZAIf39YPeH5xdKqj2jHMgr2WUkiY8zyvGEohfkgsnyVKyJvpyrfAAakayLZA2txDgWbI9vcIaCgobavgL9b1o7OWEjVgLtKjzgTMvk0CPPQrgToybUM2GebnVaBKqZBmd3P7JmsEbaOAz2Xk9A8q2tCZBZBRIfoYKOQTfMR2oUAKAZDZD",
-    DELIVERY: 0,
-    DEFAULT_UNIT: "نصية",
-
-    // 🔴 مفاتيح PRICES لازم تطابق مفاتيح PRODUCT_KEYWORDS حرفياً
-    PRICES: {
-      "غنم": 14,
-      "ماعز": 20,
-      "ملوكية": 18,
-      "اكسترا مكس": 17,
-      "مشمولة": 16,
-      "شخل": 22,
-      "حلوم": 5,
-      "عكاوي": 5,
-      "جبنة حلويات": 5,
-      "لبنة مدحبرة": 8,
-      "لبنة بزيت قلي": 7,
-      "لبنة جامد": 5,
-      "سمن بلدي": 12,
-      "زبدة": 6
-    },
-
-    // الأصناف اللي بتنباع بالكيلو مش بالنصية
-    UNITS: {
-      "حلوم": "كيلو",
-      "عكاوي": "كيلو",
-      "جبنة حلويات": "كيلو",
-      "لبنة مدحبرة": "كيلو",
-      "لبنة بزيت قلي": "كيلو",
-      "لبنة جامد": "كيلو",
-      "سمن بلدي": "كيلو",
-      "زبدة": "كيلو"
-    },
-
-    OFFERS: {},
-
-    PRODUCT_KEYWORDS: {
-      "غنم": /غنم|نعاج|بياض/i,
-      "ماعز": /ماعز|عنز|سمار/i,
-      "ملوكية": /ملوكية/i,
-      "اكسترا مكس": /اكسترا|أكسترا|مكس|خلطة/i,
-      "مشمولة": /مشمولة/i,
-      "شخل": /شخل/i,
-      "حلوم": /حلوم/i,
-      "عكاوي": /عكاوي/i,
-      "جبنة حلويات": /حلويات|بتمط|تمط/i,
-      "لبنة مدحبرة": /مدحبرة/i,
-      "لبنة بزيت قلي": /زيت\s*قلي/i,
-      "لبنة جامد": /لبنة\s*جامد|جامد/i,
-      "سمن بلدي": /سمن/i,
-      "زبدة": /زبدة/i
-    },
-
-    INFO: `📌 4. صفحة (أجبان بيت المونة):
- أهلاً وسهلا. هاد قائمة بأسعار منتجاتنا:
-🌿 أهلاً وسهلاً فيكم 🌿
-
-📦 وزن النصية: 4 كيلو و100 غرام
-
-💰 قائمة الأسعار:
-
-🥛 جبنة غنم ملوكية بالمستكة والمحلب
-17 دينار
-
-🥛 جبنة مشمولة
-18 دينار
-
-🥛 جبنة غنم سادة
-15 دينار
-
-🧈 سمن بلدي
-12 دينار / الكيلو
-
-🧀 جميد كركي
-
-🥣 لبنة مدحبرة بزيت زيتون صافي
-7.50 دينار / الكيلو
-
-🥣 لبنة مدحبرة بزيت نباتي
-6.50 دينار / الكيلو
-
-🥣 لبنة مدحبرة مكس
-7.00 دينار / الكيلو
-
-🥣 لبنة مدحبرة بدون زيت
-5.50 دينار / الكيلو
-
-🥣 لبنة بدون دحبرة
-4.50 دينار / الكيلو
-
-🚚 التوصيل إلى جميع محافظات المملكة:
-2 دينار فقط مهما كانت الكمية.
-
-🌹 لأي استفسار أو طلب، إحنا بالخدمة.
-توصيلنا لجميع محافظات المملكة بـ *2 دينار شو ما كان الطلب لتوصيل مجاني`,
-
-    INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة أجبان جباليا\n\n▪️ الطلب:\n${orderString}\n\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\n\nصحتين وعافية 🌹`
-  },
-
-  "408592892348071": {
-    name: "أجبان فلفل",
-    PAGE_TOKEN: "EAARu8DdiVZAwBROSbnUOU1RYZBfKiV9mX9ngTW1bzFzdzqXQ7WCUKzAscVnP0XI0AhQvZBVAJWZAJu8P2R5zkri44jzFG3Btvk5YcfdPsQINhGZCt5BtiYJrjOR7bQerDg1OeYYnfLjKNEQtdOnOOmQ6jk67FOso407dSebUc6VFKdpWYZBa5paEDPxLZAbTaU3gTlqTHmMXqLbQ5x87hRUG8ouMgZDZD",
-    DELIVERY: 0,
-    DEFAULT_UNIT: "نصية",
-    PRICES: { "غنم": 13, "مشمولة": 13, "ملوكية": 13 },
-    OFFERS: { "غنم": { 2: 24 }, "مشمولة": { 2: 26 }, "ملوكية": { 2: 24 } },
-    PRODUCT_KEYWORDS: { "غنم": /غنم|نعاج/i, "مشمولة": /مشمولة/i, "ملوكية": /ملوكية/i },
-    INFO: "العرض: جبنة الغنم أو الملوكية 13د للنصية، والنصيتين 24د شامل التوصيل. الوزن الصافي 3.200 كيلو.",
-    INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة أجبان فلفل\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
-  },
-
   "211000052105556": {
     name: "أجبان غزة",
     PAGE_TOKEN: "EAARu8DdiVZAwBSLzeUHiMJvd3JZCzvUevTKOjqgHaWK57vXbiokqr0mIqiglrVgqJl0JN7CgGM7z6pDCwEGOwd51D6kiSs6VqAmPzwdsJXLkFWU4JcXnMFtlVge3LpOH0lBTLpJzabxlyL5IRsbSasain6Ucy80EZAqlGCADl27pzGauIpQM5wMgZBvSuFj9rzrz",
@@ -250,7 +135,7 @@ export const PAGES = {
   },
 
   "446086435262675": {
-    name: "اجبان المهيري",
+    name: "الحلال الابيض",
     PAGE_TOKEN: "EAARu8DdiVZAwBSChqZBVGmZCztTRqZAh1rS74JUAxNegTP4nNYP0KKcAOSZCFS4QnVoTXjSsufAo1Jc9ZB3mpMlYtEPM1SOz9qsFZAeIIf6ozael10UCAtt8hZCpP12ZAsZBLZAJf2dvw1aZAwiUXZAXhUZB499SiiZCOColJgZAAEJTTNhJPouji3ZBg4Qq4iiZAUZAqtkcpCZBV4bppQZDZD",
     DELIVERY: 0,
     DEFAULT_UNIT: "نصية",
@@ -259,34 +144,7 @@ export const PAGES = {
     PRODUCT_KEYWORDS: { "غنم": /غنم|نعاج/i, "ملوكية": /ملوكية/i, "مشمولة": /مشمولة|اكسترا|أكسترا|سوبر/i },
     INFO: "الأسعار: غنم ملوكية 12د والعدد 2 بـ 21د، الوزن من 3200 إلى 3300 غرام. الأكسترا سوبر العدد 2 بـ 24د.",
     INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة اجبان المهيري\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
-  },
-
-  "581763931676463": {
-    name: "اجبان لبان",
-    PAGE_TOKEN: "EAARu8DdiVZAwBRDT7JHZA6sjtX0EaA6dHvnm6OYknuh67904D9H4WmlOx6yWVztiLhl86xTVZAspbgARFeeaZCdDf2v58ZAK3xzni8x7YxJjVZC1QAnjBlZBjMJfQlcW3c3BDqR0EWcjZAkNLZAmmfad07u1ZCYwxgTDrpYZCU9VWVr3TLfiSbcoZAFVGBA6YCNYZChd0fbT8EuOZB0ZCbcuZBXOnsmuok5frQZDZD",
-    DELIVERY: 0,
-    DEFAULT_UNIT: "كيلو",
-    QTY_MODE: "kilo",   // 🔴 هون "4 كيلو" = 4 كيلو فعلياً مش نصية وحدة
-    PRICES: { "ملوكية": 3, "مشمولة": 3.5, "طرية": 2.75 },
-    OFFERS: {},
-    PRODUCT_KEYWORDS: { "ملوكية": /ملوكية/i, "مشمولة": /مشمولة|غنم/i, "طرية": /طرية|طري/i },
-    INFO: "الأسعار بالكيلو: ملوكية 3د، مشمولة 3.5د، الجبنة الطرية 2.75د. التوصيل مجاني. مع كل طلبية هدية محلب ومستكة.",
-    INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة اجبان لبان\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
-  },
-
-  "238105796054998": {
-    name: "اجبان العيلة",
-    PAGE_TOKEN: "EAARu8DdiVZAwBRJXmnAzbxjvLnkIOmmoh7S3NLVoK3tHgbNzFehuEUHojRrUVmZCw8ZB8SEwEWhMxiSFhhGQFWdPkKsx3x8sdUZCTXDAzE9IZAWwFxDWvoPZA5ZBTL5ZCoDsFg4umCMbzVSv8F4vRMdmBdQAT6tVhKWqkZCz3fnFN0TZBm3jkpXwWAZAgQ6XXyGyxfmDwDPhjzM3FXrVCjJO2ua1ZBJr",
-    DELIVERY: 0,
-    DEFAULT_UNIT: "نصية",
-    PRICES: { "غنم": 14, "مشمولة": 15 },
-    OFFERS: { "غنم": { 2: 26 }, "مشمولة": { 2: 28 } },
-    PRODUCT_KEYWORDS: { "غنم": /غنم|نعاج/i, "مشمولة": /مشمولة/i },
-    INFO: "الأسعار: غنم 14د والنصيتين 26د، مشمولة 15د والنصيتين 28د مع الخصم. الأسعار شاملة التوصيل.",
-    INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة اجبان العيلة\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
+      `✅ فاتورة الحلال الابيض\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
   },
 
   "907535882452054": {
@@ -300,31 +158,5 @@ export const PAGES = {
     INFO: "جبنة غنم بلدية 15د، جبنة الشخل 17د، جبنة ماعز 20د. كلها منتجات منزلية أصلية على التواصي فقط. الوزن 4 كيلو صافي (4200 غرام). التوصيل مجاناً. للطلبات 0779175042.",
     INVOICE_TEMPLATE: (orderString, p, a, phone) =>
       `✅ فاتورة اجبان المعتمد\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
-  },
-
-  "697462573453000": {
-    name: "أجبان بيت المونة",
-    PAGE_TOKEN: "EAARu8DdiVZAwBSOydz3fxVsKpQSNgOZBWBAI2cx7kiqIhNTgcKHaI0tw9SJaFIiV6eDRh1DswFZBghWZANTV0mNyFGbdOHVgsUAcYreDYR4A5DEFDmgKRfiqqjeyygWIueIwefwuu4mvk2QbqDE5OpMN8Mn1eud8oLS8OQdjcC0UAdmhCrcu0xNwfaZBGgs1Ag5ihkAZDZD",
-    DELIVERY: 2,
-    DEFAULT_UNIT: "نصية",
-    PRICES: { "غنم": 15, "مشمولة": 18 },
-    OFFERS: { "غنم": { 2: 30 }, "مشمولة": { 2: 36 } },
-    PRODUCT_KEYWORDS: { "غنم": /غنم|نعاج/i, "مشمولة": /مشمولة/i },
-    INFO: "الأسعار: غنم 15د، مشمولة 18د. التوصيل 2 دينار.",
-    INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة أجبان بيت المونة\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
-  },
-
-  "1097322276797532": {
-    name: "اجبان المهيري",
-    PAGE_TOKEN: "EAARu8DdiVZAwBRZBkI55PSiHcwRQpe48ZAdhvanDChHmkmZCeZBFPa9RPQodlMYFPeJm50jiZCMKldcVgOYCUYjtp00VpfASWRfhWexNZAycmiVdpDOuejXQCBZCbuL4DNmrZChZBV74np6RJZBbY68cFJ7m0sOstP3CtXjdKJSxGjD8lFDemjAOEwotE5xUzYasLN3LzHLGgZDZD",
-    DELIVERY: 0,
-    DEFAULT_UNIT: "نصية",
-    PRICES: { "ملوكية": 12, "غنم": 12, "مشمولة": 13 },
-    OFFERS: { "ملوكية": { 2: 21 }, "غنم": { 2: 21 }, "مشمولة": { 2: 24 } },
-    PRODUCT_KEYWORDS: { "غنم": /غنم|نعاج/i, "ملوكية": /ملوكية/i, "مشمولة": /مشمولة|اكسترا|أكسترا|سوبر/i },
-    INFO: "الأسعار: غنم ملوكية 12د والعدد 2 بـ 21د، الوزن من 3200 إلى 3300 غرام. الأكسترا سوبر العدد 2 بـ 24د.",
-    INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة اجبان المهيري\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
   }
 };
