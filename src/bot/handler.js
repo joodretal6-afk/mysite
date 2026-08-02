@@ -444,8 +444,8 @@ export async function handleEvent(event, env, ctx) {
     } catch (e) { console.error("cross-sell:", e && e.message); }
   }
 
-  // 🔴 زر الإشعارات (OTN) مباشرة بعد الفاتورة (فقط لو مفعّل وعندك الصلاحية)
-  if (justSentInvoice && CONFIG.ENABLE_OTN) {
+  // 🔴 زر الإشعارات (OTN) مباشرة بعد الفاتورة (فقط لو مفعّل + مش بالوضع الآمن)
+  if (justSentInvoice && CONFIG.ENABLE_OTN && !CONFIG.SAFE_MODE) {
     ctx.waitUntil(graphSend(token, {
       recipient: { id: senderId },
       message: {
