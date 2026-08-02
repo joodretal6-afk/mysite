@@ -250,16 +250,16 @@ export const PAGES = {
   },
 
   "446086435262675": {
-    name: "الحلال الابيض",
-    PAGE_TOKEN: "EAARu8DdiVZAwBRLBUW1kXBIL0LcY599OVjUp76dMe4NiLFy00Xj6of2ZBJ3TX3f8tjVqz56wlWjBZAbPIm0MKHZCaunAlZBwIncM8YwOBBdFcZBlwv6ZA6PDTX9KIKxxAJ5SZAFbzuaCEuTQrgkA1XFKORZC9VXIp2rivZBJrMBIV2MnKFl69idQyOAGrkR2gRKZAn5xBc5P2C7Bb24NdMPg8Qed8GnBwZDZD",
+    name: "اجبان المهيري",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSChqZBVGmZCztTRqZAh1rS74JUAxNegTP4nNYP0KKcAOSZCFS4QnVoTXjSsufAo1Jc9ZB3mpMlYtEPM1SOz9qsFZAeIIf6ozael10UCAtt8hZCpP12ZAsZBLZAJf2dvw1aZAwiUXZAXhUZB499SiiZCOColJgZAAEJTTNhJPouji3ZBg4Qq4iiZAUZAqtkcpCZBV4bppQZDZD",
     DELIVERY: 0,
     DEFAULT_UNIT: "نصية",
-    PRICES: { "غنم": 14, "مشمولة": 15, "ملوكية": 15 },
-    OFFERS: { "غنم": { 2: 27 }, "مشمولة": { 2: 30 }, "ملوكية": { 2: 30 } },
-    PRODUCT_KEYWORDS: { "غنم": /غنم|نعاج/i, "مشمولة": /مشمولة/i, "ملوكية": /ملوكية|مكس/i },
-    INFO: "الأسعار: غنم 14د، مشمولة 15د، ملوكية 15د. التوصيل مجاني.",
+    PRICES: { "ملوكية": 12, "غنم": 12, "مشمولة": 13 },
+    OFFERS: { "ملوكية": { 2: 21 }, "غنم": { 2: 21 }, "مشمولة": { 2: 24 } },
+    PRODUCT_KEYWORDS: { "غنم": /غنم|نعاج/i, "ملوكية": /ملوكية/i, "مشمولة": /مشمولة|اكسترا|أكسترا|سوبر/i },
+    INFO: "الأسعار: غنم ملوكية 12د والعدد 2 بـ 21د، الوزن من 3200 إلى 3300 غرام. الأكسترا سوبر العدد 2 بـ 24د.",
     INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة الحلال الابيض\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
+      `✅ فاتورة اجبان المهيري\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
   },
 
   "581763931676463": {
