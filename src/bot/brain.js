@@ -158,5 +158,18 @@ export const PAGES = {
     INFO: "جبنة غنم بلدية 15د، جبنة الشخل 17د، جبنة ماعز 20د. كلها منتجات منزلية أصلية على التواصي فقط. الوزن 4 كيلو صافي (4200 غرام). التوصيل مجاناً. للطلبات 0779175042.",
     INVOICE_TEMPLATE: (orderString, p, a, phone) =>
       `✅ فاتورة اجبان المعتمد\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
+  },
+
+  "1097322276797532": {
+    name: "اجبان المهيري",
+    PAGE_TOKEN: "EAARu8DdiVZAwBRZBkI55PSiHcwRQpe48ZAdhvanDChHmkmZCeZBFPa9RPQodlMYFPeJm50jiZCMKldcVgOYCUYjtp00VpfASWRfhWexNZAycmiVdpDOuejXQCBZCbuL4DNmrZChZBV74np6RJZBbY68cFJ7m0sOstP3CtXjdKJSxGjD8lFDemjAOEwotE5xUzYasLN3LzHLGgZDZD",
+    DELIVERY: 0,
+    DEFAULT_UNIT: "نصية",
+    PRICES: { "ملوكية": 12, "غنم": 12, "مشمولة": 13 },
+    OFFERS: { "ملوكية": { 2: 21 }, "غنم": { 2: 21 }, "مشمولة": { 2: 24 } },
+    PRODUCT_KEYWORDS: { "غنم": /غنم|نعاج/i, "ملوكية": /ملوكية/i, "مشمولة": /مشمولة|اكسترا|أكسترا|سوبر/i },
+    INFO: "الأسعار: غنم ملوكية 12د والعدد 2 بـ 21د، الوزن من 3200 إلى 3300 غرام. الأكسترا سوبر العدد 2 بـ 24د.",
+    INVOICE_TEMPLATE: (orderString, p, a, phone) =>
+      `✅ فاتورة اجبان المهيري\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
   }
 };
