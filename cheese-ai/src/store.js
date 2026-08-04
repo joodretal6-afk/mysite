@@ -7,7 +7,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "..", "data");
+// على القرص الدائم (/data على Render) لو متوفّر، وإلا محلياً — حتى لا تضيع الطلبات مع كل نشر
+const DATA_DIR = process.env.CHEESE_DATA_DIR
+  || (fs.existsSync("/data") ? "/data/cheese" : path.join(__dirname, "..", "data"));
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function file(name) { return path.join(DATA_DIR, name + ".json"); }
@@ -139,7 +141,8 @@ const DEFAULT_SETTINGS = {
   hours: "متوفرون للطلب من 9 صباحاً حتى 10 مساءً.",
   phone: "",
   extraKnowledge: "",                 // أي معلومات إضافية تكتبها الإدارة
-  adminPass: process.env.ADMIN_PASS || "admin123"
+  // كلمة سر خاصة بشيخ الجبنة (منفصلة عن البوت الأساسي حتى لو ركّبناهم بنفس السيرفر)
+  adminPass: process.env.CHEESE_ADMIN_PASS || "admin123"
 };
 
 // ── واجهة القراءة/الكتابة ──

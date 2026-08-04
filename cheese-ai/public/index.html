@@ -40,7 +40,7 @@
   <header>
     <div class="logo">🧀</div>
     <div><h1 id="brand">شيخ الجبنة</h1><div class="sub" id="tagline">خبير الأجبان النابلسية</div></div>
-    <a href="/admin">لوحة الإدارة</a>
+    <a href="admin">لوحة الإدارة</a>
   </header>
   <div class="chat" id="chat"><div class="wrap" id="wrap"></div></div>
   <div class="composer">
@@ -50,6 +50,7 @@
     </div>
   </div>
   <script>
+    const BASE=location.pathname.replace(/\/(index\.html)?$/,'');   // '' مستقلاً أو '/cheese' مُركّباً
     const wrap=document.getElementById('wrap'), chat=document.getElementById('chat'), input=document.getElementById('input');
     let messages=[], busy=false;
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -74,7 +75,7 @@
       addMsg('user',text); messages.push({role:'user',content:text});
       const typing=addTyping();
       try{
-        const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages})});
+        const r=await fetch(BASE+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages})});
         const d=await r.json();
         typing.remove();
         addMsg('assistant',d.reply); messages.push({role:'assistant',content:d.reply});
@@ -83,7 +84,7 @@
       busy=false; document.getElementById('sendBtn').disabled=false; input.focus();
     }
     async function init(){
-      try{ const b=await (await fetch('/api/brand')).json();
+      try{ const b=await (await fetch(BASE+'/api/brand')).json();
         document.getElementById('brand').textContent=b.brand||'شيخ الجبنة';
         document.getElementById('tagline').textContent=b.tagline||'';
         document.title=(b.brand||'شيخ الجبنة')+' 🧀';

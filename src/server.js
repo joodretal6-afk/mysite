@@ -206,6 +206,18 @@ app.post("/whatsapp", async (req, res) => {
 // ═══════════════════════════════════════════════════════════
 app.use("/admin", adminRouter);
 
+// ═══════════════════════════════════════════════════════════
+// 🧀 قسم مستقل: شيخ الجبنة (Cheese AI) — مُركّب تحت /cheese
+// معزول تماماً عن البوت الأساسي (راوتاته وبياناته الخاصة).
+// ═══════════════════════════════════════════════════════════
+try {
+  const { default: cheeseApp } = await import("../cheese-ai/src/server.js");
+  app.use("/cheese", cheeseApp);
+  console.log("🧀 قسم شيخ الجبنة مُركّب على /cheese");
+} catch (e) {
+  console.error("⚠️ تعذّر تركيب قسم شيخ الجبنة (لا يؤثر على البوت الأساسي):", e && e.message);
+}
+
 // ملفات PWA (تُخدَم من الجذر حتى يعمل Service Worker على كامل الموقع)
 const pwaDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
 app.get("/sw.js", (req, res) => res.sendFile(path.join(pwaDir, "sw.js")));

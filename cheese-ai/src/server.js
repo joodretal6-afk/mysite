@@ -6,7 +6,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import crypto from "node:crypto";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { store, nextId } from "./store.js";
 import { chat, extractOrder } from "./ai.js";
 
@@ -167,8 +167,14 @@ app.get("/", (req, res) => res.sendFile(path.join(publicDir, "index.html")));
 app.get("/admin", (req, res) => res.sendFile(path.join(publicDir, "admin.html")));
 app.get("/health", (req, res) => res.json({ ok: true }));
 
-app.listen(PORT, () => {
-  console.log(`🧀 شيخ الجبنة يعمل على المنفذ ${PORT}`);
-  console.log(`   الدردشة:  http://localhost:${PORT}/`);
-  console.log(`   الإدارة:  http://localhost:${PORT}/admin`);
-});
+// يعمل مستقلاً لو شُغّل مباشرةً (npm start)، ويُركَّب كـ sub-app لو استُورد في سيرفر آخر.
+const runDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (runDirectly) {
+  app.listen(PORT, () => {
+    console.log(`🧀 شيخ الجبنة يعمل على المنفذ ${PORT}`);
+    console.log(`   الدردشة:  http://localhost:${PORT}/`);
+    console.log(`   الإدارة:  http://localhost:${PORT}/admin`);
+  });
+}
+
+export default app;

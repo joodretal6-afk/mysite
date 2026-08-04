@@ -53,7 +53,7 @@
     <header>
       <h1>🧀 لوحة إدارة شيخ الجبنة</h1>
       <div>
-        <a href="/" target="_blank">💬 الدردشة</a>
+        <a href="./" target="_blank">💬 الدردشة</a>
         <button onclick="logout()">خروج</button>
       </div>
     </header>
@@ -153,15 +153,16 @@
   <script>
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     const $=id=>document.getElementById(id);
-    async function api(u,opt){ const r=await fetch(u,opt); if(r.status===401){ show('login'); throw new Error('auth'); } return r; }
+    const BASE=location.pathname.replace(/\/admin\/?$/,'');   // '' مستقلاً أو '/cheese' مُركّباً
+    async function api(u,opt){ const r=await fetch(BASE+u,opt); if(r.status===401){ show('login'); throw new Error('auth'); } return r; }
     function show(v){ $('loginView').classList.toggle('hide',v!=='login'); $('adminView').classList.toggle('hide',v==='login'); }
     function tab(t){ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
       ['products','prices','faqs','orders','settings'].forEach(p=>$('p-'+p).classList.toggle('hide',p!==t));
       if(t==='products'||t==='prices') loadProducts(); if(t==='faqs') loadFaqs(); if(t==='orders') loadOrders(); if(t==='settings') loadSettings(); }
 
-    async function login(){ const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('pass').value})});
+    async function login(){ const r=await fetch(BASE+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('pass').value})});
       if(r.ok){ show('admin'); tab('products'); } else { $('loginMsg').textContent='كلمة السر غير صحيحة'; } }
-    async function logout(){ await fetch('/api/logout',{method:'POST'}); show('login'); }
+    async function logout(){ await fetch(BASE+'/api/logout',{method:'POST'}); show('login'); }
 
     // منتجات + أسعار
     let PRODUCTS=[];
@@ -217,7 +218,7 @@
       const r=await api('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       if(r.ok){ $('smsg').textContent='✅ تم الحفظ'; $('sadminPass').value=''; loadSettings(); } }
 
-    (async ()=>{ const {authed}=await (await fetch('/api/auth')).json(); if(authed){ show('admin'); tab('products'); } else show('login'); })();
+    (async ()=>{ const {authed}=await (await fetch(BASE+'/api/auth')).json(); if(authed){ show('admin'); tab('products'); } else show('login'); })();
   </script>
 </body>
 </html>
