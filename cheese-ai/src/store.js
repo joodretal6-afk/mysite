@@ -130,9 +130,10 @@ const DEFAULT_SETTINGS = {
   brand: "شيخ الجبنة",
   tagline: "خبير الأجبان النابلسية 🧀",
   // مزوّد الذكاء ومفتاحه (يُضبط من صفحة الإعدادات)
-  provider: "gemini",                 // gemini | openai
+  provider: "gemini",                 // gemini | openai | custom (أي مزوّد OpenAI-compatible مثل Groq/Ollama)
   apiKey: "",                         // 🔑 حط مفتاحك هنا
-  model: "gemini-flash-latest",       // gemini: gemini-flash-latest | openai: gpt-4o-mini
+  model: "gemini-flash-latest",       // gemini: gemini-flash-latest | groq: llama-3.3-70b-versatile | openai: gpt-4o-mini
+  baseUrl: "",                        // رابط المزوّد المفتوح (مثال Groq: https://api.groq.com/openai/v1 ، Ollama: http://IP:11434/v1)
   // معلومات المتجر (تدخل بمعرفة البوت)
   delivery: "التوصيل مجاني لكل محافظات المملكة، والوصول خلال يوم إلى يومين.",
   weight: "النصية 4 كيلو صافي.",

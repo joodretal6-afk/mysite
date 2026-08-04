@@ -150,7 +150,7 @@ app.get("/api/settings", requireAuth, (req, res) => {
 app.post("/api/settings", requireAuth, (req, res) => {
   const b = req.body || {};
   const patch = {};
-  for (const k of ["brand", "tagline", "provider", "model", "delivery", "weight", "salt", "storage", "hours", "phone", "extraKnowledge"]) {
+  for (const k of ["brand", "tagline", "provider", "model", "baseUrl", "delivery", "weight", "salt", "storage", "hours", "phone", "extraKnowledge"]) {
     if (b[k] != null) patch[k] = String(b[k]).slice(0, 4000);
   }
   // المفتاح: نحدّثه فقط لو أرسل قيمة جديدة فعلية (مش الحاجب ••••)

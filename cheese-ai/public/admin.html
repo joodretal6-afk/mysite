@@ -121,11 +121,19 @@
         <div class="card">
           <h3>🔑 مفتاح الذكاء (API)</h3>
           <label>مزوّد الذكاء</label>
-          <select id="sprovider"><option value="gemini">Gemini (جوجل)</option><option value="openai">OpenAI (ChatGPT)</option></select>
-          <label>مفتاح API</label>
+          <select id="sprovider" onchange="toggleBase()">
+            <option value="gemini">Gemini (جوجل)</option>
+            <option value="openai">OpenAI (ChatGPT)</option>
+            <option value="custom">نموذج مفتوح / سيرفرك (Groq · Ollama · OpenAI-compatible)</option>
+          </select>
+          <div id="baseWrap" style="display:none">
+            <label>رابط المزوّد (Base URL)</label>
+            <input id="sbaseUrl" placeholder="Groq: https://api.groq.com/openai/v1 — Ollama: http://IP:11434/v1">
+          </div>
+          <label>مفتاح API <small style="color:#90a4ae">(اتركه فارغاً مع Ollama المحلي)</small></label>
           <input id="sapiKey" placeholder="الصق مفتاحك هنا (يبقى محفوظاً)">
           <label>اسم الموديل</label>
-          <input id="smodel" placeholder="gemini-flash-latest أو gpt-4o-mini">
+          <input id="smodel" placeholder="gemini-flash-latest · llama-3.3-70b-versatile · qwen2.5">
           <button class="btn" style="margin-top:12px" onclick="saveSettings()">حفظ</button>
           <div class="msg" id="smsg"></div>
         </div>
@@ -207,11 +215,12 @@
     async function delOrder(id){ if(!confirm('حذف الطلب؟'))return; await api('/api/orders/'+id,{method:'DELETE'}); loadOrders(); }
 
     // إعدادات
+    function toggleBase(){ $('baseWrap').style.display=$('sprovider').value==='custom'?'block':'none'; }
     async function loadSettings(){ const {settings:s}=await (await api('/api/settings')).json();
-      $('sprovider').value=s.provider||'gemini'; $('sapiKey').value=s.apiKey||''; $('smodel').value=s.model||'';
+      $('sprovider').value=s.provider||'gemini'; $('sapiKey').value=s.apiKey||''; $('smodel').value=s.model||''; $('sbaseUrl').value=s.baseUrl||''; toggleBase();
       $('sbrand').value=s.brand||''; $('stagline').value=s.tagline||''; $('sweight').value=s.weight||''; $('ssalt').value=s.salt||'';
       $('sstorage').value=s.storage||''; $('sdelivery').value=s.delivery||''; $('shours').value=s.hours||''; $('sphone').value=s.phone||''; $('sextra').value=s.extraKnowledge||''; }
-    async function saveSettings(){ const body={ provider:$('sprovider').value, model:$('smodel').value, brand:$('sbrand').value, tagline:$('stagline').value,
+    async function saveSettings(){ const body={ provider:$('sprovider').value, model:$('smodel').value, baseUrl:$('sbaseUrl').value, brand:$('sbrand').value, tagline:$('stagline').value,
         weight:$('sweight').value, salt:$('ssalt').value, storage:$('sstorage').value, delivery:$('sdelivery').value, hours:$('shours').value, phone:$('sphone').value, extraKnowledge:$('sextra').value };
       const key=$('sapiKey').value; if(key && !key.includes('••••')) body.apiKey=key;
       const ap=$('sadminPass').value; if(ap) body.adminPass=ap;

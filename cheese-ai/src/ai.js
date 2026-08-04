@@ -134,7 +134,9 @@ function systemPrompt(store) {
 // 🔑 يحسم المفتاح الفعّال: من الإعدادات أولاً، وإلا من مفتاح البوت الأساسي (نفس البيئة).
 // هيك شيخ الجبنة بيشتغل تلقائياً بنفس مفتاح Gemini تبع بوتك بدون ما تلصق شي.
 export function resolveKey(s) {
-  if (s.apiKey) return { provider: s.provider || "gemini", apiKey: s.apiKey, model: s.model };
+  // مزوّد مفتوح (Groq/Ollama/سيرفرك): بعض السيرفرات المحلية (Ollama) ما بتحتاج مفتاح
+  if (s.provider === "custom" && s.baseUrl) return { provider: "custom", apiKey: s.apiKey || "ollama", model: s.model, baseUrl: s.baseUrl };
+  if (s.apiKey) return { provider: s.provider || "gemini", apiKey: s.apiKey, model: s.model, baseUrl: s.baseUrl };
   const envGem = process.env.GEMINI_API_KEY;
   if (envGem && !envGem.includes("YOUR"))
     return { provider: "gemini", apiKey: envGem, model: s.model || "gemini-flash-latest" };
@@ -151,9 +153,9 @@ export async function chat(store, history) {
   const eff = { ...s, ...key };
   const sys = systemPrompt(store);
   try {
-    const text = eff.provider === "openai"
-      ? await callOpenAI(eff, sys, history)
-      : await callGemini(eff, sys, history);
+    const text = eff.provider === "gemini"
+      ? await callGemini(eff, sys, history)
+      : await callOpenAI(eff, sys, history);   // openai + custom (Groq/Ollama) عبر واجهة OpenAI-compatible
     return { reply: (text || "").replace(/\*\*/g, "").trim() || "يا هلا فيك 🌹 شو بتحب أجهّزلك؟" };
   } catch (e) {
     console.error("chat error:", e && e.message);
@@ -182,16 +184,18 @@ async function callGemini(s, sys, history) {
   return (d?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("");
 }
 
+// يعمل مع OpenAI و Groq و Ollama وأي مزوّد OpenAI-compatible (حسب baseUrl)
 async function callOpenAI(s, sys, history) {
+  const base = (s.baseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
   const messages = [{ role: "system", content: sys },
     ...history.map(h => ({ role: h.role === "assistant" ? "assistant" : "user", content: h.content }))];
-  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+  const r = await fetch(`${base}/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.apiKey}` },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.apiKey || "x"}` },
     body: JSON.stringify({ model: s.model, messages, temperature: 0.7, max_tokens: 600 }),
-    signal: AbortSignal.timeout(30000)
+    signal: AbortSignal.timeout(60000)
   });
-  if (!r.ok) throw new Error(`OpenAI ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  if (!r.ok) throw new Error(`${r.status}: ${(await r.text()).slice(0, 200)}`);
   const d = await r.json();
   return d?.choices?.[0]?.message?.content || "";
 }
@@ -215,11 +219,12 @@ export async function extractOrder(store, history) {
 ${convo.slice(0, 5000)}`;
   try {
     let raw = "";
-    if (s.provider === "openai") {
-      const r = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.apiKey}` },
-        body: JSON.stringify({ model: s.model, messages: [{ role: "user", content: prompt }], temperature: 0, response_format: { type: "json_object" } }),
-        signal: AbortSignal.timeout(20000)
+    if (s.provider !== "gemini") {
+      const base = (s.baseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
+      const r = await fetch(`${base}/chat/completions`, {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.apiKey || "x"}` },
+        body: JSON.stringify({ model: s.model, messages: [{ role: "user", content: prompt }], temperature: 0 }),
+        signal: AbortSignal.timeout(30000)
       });
       if (!r.ok) return null;
       raw = (await r.json())?.choices?.[0]?.message?.content || "";
