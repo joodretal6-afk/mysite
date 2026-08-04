@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>شيخ الجبنة 🧀</title>
+  <style>
+    :root { --bg:#f7f7f8; --panel:#fff; --user:#2e7d32; --bot:#f1f3f4; --line:#e6e9ec; --txt:#1f2933; --mut:#8a94a0; --green:#2e7d32; }
+    * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+    html,body { height:100%; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:var(--txt); display:flex; flex-direction:column; height:100dvh; }
+    header { background:var(--panel); border-bottom:1px solid var(--line); padding:12px 18px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:5; }
+    .logo { width:40px; height:40px; border-radius:12px; background:var(--green); display:flex; align-items:center; justify-content:center; font-size:22px; }
+    header h1 { font-size:17px; } header .sub { font-size:12px; color:var(--mut); }
+    header a { margin-inline-start:auto; font-size:12px; color:var(--mut); text-decoration:none; background:#eef1f0; padding:7px 12px; border-radius:8px; }
+    .chat { flex:1; overflow-y:auto; padding:20px 14px; }
+    .wrap { max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:14px; }
+    .msg { display:flex; gap:10px; align-items:flex-end; }
+    .msg.me { flex-direction:row-reverse; }
+    .avatar { width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:16px; background:#e8f0e9; }
+    .bubble { padding:11px 15px; border-radius:16px; font-size:15px; line-height:1.7; max-width:78%; white-space:pre-wrap; word-wrap:break-word; }
+    .msg.bot .bubble { background:var(--bot); border-bottom-right-radius:5px; }
+    .msg.me .bubble { background:var(--user); color:#fff; border-bottom-left-radius:5px; }
+    .ordertag { align-self:center; background:#e8f5e9; color:var(--green); font-size:13px; font-weight:700; padding:8px 16px; border-radius:20px; }
+    .typing .bubble { color:var(--mut); }
+    .dots span { display:inline-block; width:6px; height:6px; margin:0 1px; background:var(--mut); border-radius:50%; animation:b 1.2s infinite; }
+    .dots span:nth-child(2){animation-delay:.2s;} .dots span:nth-child(3){animation-delay:.4s;}
+    @keyframes b { 0%,60%,100%{opacity:.3;transform:translateY(0);} 30%{opacity:1;transform:translateY(-4px);} }
+    .composer { background:var(--panel); border-top:1px solid var(--line); padding:12px 14px; }
+    .cbox { max-width:760px; margin:0 auto; display:flex; gap:10px; align-items:flex-end; background:#fff; border:1.5px solid var(--line); border-radius:22px; padding:6px 8px 6px 6px; }
+    .cbox textarea { flex:1; border:none; outline:none; resize:none; font-family:inherit; font-size:15px; padding:8px 10px; max-height:120px; background:transparent; }
+    .send { width:40px; height:40px; border:none; border-radius:50%; background:var(--green); color:#fff; font-size:18px; cursor:pointer; flex-shrink:0; }
+    .send:disabled { opacity:.4; }
+    .banner { max-width:760px; margin:0 auto 10px; background:#fff8e1; color:#8d6e00; font-size:13px; padding:10px 14px; border-radius:10px; text-align:center; }
+    .chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:6px; }
+    .chip { background:#eef1f0; border:none; border-radius:16px; padding:8px 14px; font-size:13px; font-family:inherit; cursor:pointer; color:#37474f; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">🧀</div>
+    <div><h1 id="brand">شيخ الجبنة</h1><div class="sub" id="tagline">خبير الأجبان النابلسية</div></div>
+    <a href="/admin">لوحة الإدارة</a>
+  </header>
+  <div class="chat" id="chat"><div class="wrap" id="wrap"></div></div>
+  <div class="composer">
+    <div class="cbox">
+      <textarea id="input" rows="1" placeholder="اكتب رسالتك... 🧀" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"></textarea>
+      <button class="send" id="sendBtn" onclick="send()">➤</button>
+    </div>
+  </div>
+  <script>
+    const wrap=document.getElementById('wrap'), chat=document.getElementById('chat'), input=document.getElementById('input');
+    let messages=[], busy=false;
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function scroll(){ chat.scrollTop=chat.scrollHeight; }
+    function addMsg(role,text){
+      const me=role==='user';
+      const el=document.createElement('div'); el.className='msg '+(me?'me':'bot');
+      el.innerHTML=`<div class="avatar">${me?'🙂':'🧀'}</div><div class="bubble">${esc(text)}</div>`;
+      wrap.appendChild(el); scroll(); return el;
+    }
+    function addTyping(){ const el=document.createElement('div'); el.className='msg bot typing';
+      el.innerHTML=`<div class="avatar">🧀</div><div class="bubble dots"><span></span><span></span><span></span></div>`;
+      wrap.appendChild(el); scroll(); return el; }
+    function addOrderTag(id){ const el=document.createElement('div'); el.className='ordertag'; el.textContent='✅ تم اعتماد طلبك رقم #'+id+' — رح نجهّزه فوراً 🌹'; wrap.appendChild(el); scroll(); }
+    input.addEventListener('input',()=>{ input.style.height='auto'; input.style.height=Math.min(120,input.scrollHeight)+'px'; });
+    async function send(txt){
+      const text=(txt!=null?txt:input.value).trim();
+      if(!text||busy) return;
+      busy=true; document.getElementById('sendBtn').disabled=true;
+      input.value=''; input.style.height='auto';
+      document.querySelectorAll('.chips').forEach(c=>c.remove());
+      addMsg('user',text); messages.push({role:'user',content:text});
+      const typing=addTyping();
+      try{
+        const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages})});
+        const d=await r.json();
+        typing.remove();
+        addMsg('assistant',d.reply); messages.push({role:'assistant',content:d.reply});
+        if(d.order) addOrderTag(d.order.id);
+      }catch(e){ typing.remove(); addMsg('assistant','🙏 صار خطأ بالاتصال، جرّب كمان مرة.'); }
+      busy=false; document.getElementById('sendBtn').disabled=false; input.focus();
+    }
+    async function init(){
+      try{ const b=await (await fetch('/api/brand')).json();
+        document.getElementById('brand').textContent=b.brand||'شيخ الجبنة';
+        document.getElementById('tagline').textContent=b.tagline||'';
+        document.title=(b.brand||'شيخ الجبنة')+' 🧀';
+        if(!b.ready){ const bn=document.createElement('div'); bn.className='banner'; bn.textContent='⚠️ لسا ما تم ضبط مفتاح الذكاء — افتح لوحة الإدارة ← الإعدادات.'; wrap.appendChild(bn); }
+      }catch{}
+      const greet=addMsg('assistant','يا هلا فيك، نوّرت! 🌹 أنا بخدمتك — شو بتحب من الأجبان اليوم؟ 🧀');
+      const chips=document.createElement('div'); chips.className='chips';
+      ['شو أنواع الجبنة عندك؟','قديش سعر النصية غنم؟','قديش وزن النصية؟','بدي أطلب'].forEach(q=>{
+        const b=document.createElement('button'); b.className='chip'; b.textContent=q; b.onclick=()=>send(q); chips.appendChild(b);
+      });
+      wrap.appendChild(chips); scroll();
+    }
+    init();
+  </script>
+</body>
+</html>
