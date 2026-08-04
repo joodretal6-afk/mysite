@@ -131,15 +131,29 @@ function systemPrompt(store) {
   return PERSONA.replace(/\{BRAND\}/g, s.brand || "شيخ الجبنة") + "\n\n" + buildKnowledge(store);
 }
 
-// ── الرد على الزبون (يختار المزوّد حسب الإعدادات) ──
+// 🔑 يحسم المفتاح الفعّال: من الإعدادات أولاً، وإلا من مفتاح البوت الأساسي (نفس البيئة).
+// هيك شيخ الجبنة بيشتغل تلقائياً بنفس مفتاح Gemini تبع بوتك بدون ما تلصق شي.
+export function resolveKey(s) {
+  if (s.apiKey) return { provider: s.provider || "gemini", apiKey: s.apiKey, model: s.model };
+  const envGem = process.env.GEMINI_API_KEY;
+  if (envGem && !envGem.includes("YOUR"))
+    return { provider: "gemini", apiKey: envGem, model: s.model || "gemini-flash-latest" };
+  const envOa = process.env.OPENAI_API_KEY;
+  if (envOa) return { provider: "openai", apiKey: envOa, model: (s.model && s.provider === "openai") ? s.model : "gpt-4o-mini" };
+  return null;
+}
+
+// ── الرد على الزبون (يختار المزوّد حسب الإعدادات ثم مفتاح البوت الأساسي) ──
 export async function chat(store, history) {
   const s = store.settings();
-  if (!s.apiKey) return { error: "لم يُضبط مفتاح API بعد. افتح لوحة الإدارة ← الإعدادات وأدخل مفتاحك." };
+  const key = resolveKey(s);
+  if (!key) return { error: "لم يُضبط مفتاح ذكاء بعد. افتح لوحة الإدارة ← الإعدادات وأدخل مفتاحك (أو اضبط GEMINI_API_KEY على السيرفر)." };
+  const eff = { ...s, ...key };
   const sys = systemPrompt(store);
   try {
-    const text = s.provider === "openai"
-      ? await callOpenAI(s, sys, history)
-      : await callGemini(s, sys, history);
+    const text = eff.provider === "openai"
+      ? await callOpenAI(eff, sys, history)
+      : await callGemini(eff, sys, history);
     return { reply: (text || "").replace(/\*\*/g, "").trim() || "يا هلا فيك 🌹 شو بتحب أجهّزلك؟" };
   } catch (e) {
     console.error("chat error:", e && e.message);
@@ -184,8 +198,10 @@ async function callOpenAI(s, sys, history) {
 
 // ── استخراج الطلب من المحادثة (يحفظ الأوردر عند اكتماله) ──
 export async function extractOrder(store, history) {
-  const s = store.settings();
-  if (!s.apiKey) return null;
+  const s0 = store.settings();
+  const key = resolveKey(s0);
+  if (!key) return null;
+  const s = { ...s0, ...key };
   const products = store.products();
   const names = products.map(p => p.name).join(" | ");
   const convo = history.map(h => `${h.role === "assistant" ? "البوت" : "الزبون"}: ${h.content}`).join("\n");

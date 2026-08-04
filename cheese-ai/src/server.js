@@ -68,7 +68,7 @@ app.post("/api/chat", async (req, res) => {
 // معلومات العلامة التجارية للواجهة
 app.get("/api/brand", (req, res) => {
   const s = store.settings();
-  res.json({ brand: s.brand, tagline: s.tagline, ready: Boolean(s.apiKey) });
+  res.json({ brand: s.brand, tagline: s.tagline, ready: Boolean(resolveKey(s)) });
 });
 
 // ═══════════════════════════════════════════════════════════
