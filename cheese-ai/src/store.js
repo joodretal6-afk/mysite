@@ -130,10 +130,10 @@ const DEFAULT_SETTINGS = {
   brand: "شيخ الجبنة",
   tagline: "خبير الأجبان النابلسية 🧀",
   // مزوّد الذكاء ومفتاحه (يُضبط من صفحة الإعدادات)
-  provider: "gemini",                 // gemini | openai | custom (أي مزوّد OpenAI-compatible مثل Groq/Ollama)
-  apiKey: "",                         // 🔑 حط مفتاحك هنا
-  model: "gemini-flash-latest",       // gemini: gemini-flash-latest | groq: llama-3.3-70b-versatile | openai: gpt-4o-mini
-  baseUrl: "",                        // رابط المزوّد المفتوح (مثال Groq: https://api.groq.com/openai/v1 ، Ollama: http://IP:11434/v1)
+  provider: "custom",                 // نموذج مفتوح (Groq) افتراضياً — مجاني، مش جوجل/OpenAI
+  apiKey: "",                         // 🔑 فارغ = يستخدم مفتاح Groq المدمج بالمحرك تلقائياً
+  model: "llama-3.3-70b-versatile",   // نموذج Llama المفتوح على Groq
+  baseUrl: "https://api.groq.com/openai/v1",   // رابط Groq (أو Ollama: http://IP:11434/v1)
   // معلومات المتجر (تدخل بمعرفة البوت)
   delivery: "التوصيل مجاني لكل محافظات المملكة، والوصول خلال يوم إلى يومين.",
   weight: "النصية 4 كيلو صافي.",
@@ -154,7 +154,16 @@ export const store = {
   saveFaqs: (f) => write("faqs", f),
   orders: () => read("orders", []),
   saveOrders: (o) => write("orders", o),
-  settings: () => ({ ...DEFAULT_SETTINGS, ...(read("settings", null) || {}) }),
+  settings: () => {
+    const s = { ...DEFAULT_SETTINGS, ...(read("settings", null) || {}) };
+    // إصلاح تلقائي: لو رابط المزوّد انحط بالغلط في خانة الموديل
+    if (typeof s.model === "string" && s.model.includes("://")) {
+      if (!s.baseUrl) s.baseUrl = s.model;
+      s.model = "llama-3.3-70b-versatile";
+      s.provider = "custom";
+    }
+    return s;
+  },
   saveSettings: (s) => write("settings", { ...store.settings(), ...s }),
 };
 

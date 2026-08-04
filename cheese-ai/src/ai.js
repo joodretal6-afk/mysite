@@ -133,9 +133,20 @@ function systemPrompt(store) {
 
 // 🔑 يحسم المفتاح الفعّال: من الإعدادات أولاً، وإلا من مفتاح البوت الأساسي (نفس البيئة).
 // هيك شيخ الجبنة بيشتغل تلقائياً بنفس مفتاح Gemini تبع بوتك بدون ما تلصق شي.
+// 🧀 إعداد Groq (نموذج مفتوح Llama، مجاني، شغّال 24/7، مش جوجل/OpenAI).
+// المفتاح لا يُخزَّن بالكود إطلاقاً — يُقرأ من متغيّر البيئة GROQ_API_KEY أو من إعدادات اللوحة (يبقى خاصاً).
+const GROQ_KEY = process.env.GROQ_API_KEY || "";
+const GROQ_BASE = "https://api.groq.com/openai/v1";
+const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+
 export function resolveKey(s) {
-  // مزوّد مفتوح (Groq/Ollama/سيرفرك): بعض السيرفرات المحلية (Ollama) ما بتحتاج مفتاح
-  if (s.provider === "custom" && s.baseUrl) return { provider: "custom", apiKey: s.apiKey || "ollama", model: s.model, baseUrl: s.baseUrl };
+  // سيرفرك الخاص (Ollama/vLLM): إذا الأدمن ضبط رابطاً غير Groq، نحترمه (نموذجك أنت)
+  if (s.provider === "custom" && s.baseUrl && !/groq\.com/i.test(s.baseUrl))
+    return { provider: "custom", apiKey: s.apiKey || GROQ_KEY || "ollama", model: s.model || GROQ_MODEL, baseUrl: s.baseUrl };
+  // مفتاح Groq من البيئة (لو ضُبط على السيرفر) — أولوية، بلا حاجة لأي إدخال
+  if (GROQ_KEY) return { provider: "custom", apiKey: GROQ_KEY, model: (s.model && !s.model.includes("://")) ? s.model : GROQ_MODEL, baseUrl: GROQ_BASE };
+  // وإلا: المفتاح المحفوظ من اللوحة (يبقى خاصاً بملف البيانات، مش بالكود)
+  if (s.provider === "custom" && s.baseUrl) return { provider: "custom", apiKey: s.apiKey || "ollama", model: s.model || GROQ_MODEL, baseUrl: s.baseUrl };
   if (s.apiKey) return { provider: s.provider || "gemini", apiKey: s.apiKey, model: s.model, baseUrl: s.baseUrl };
   const envGem = process.env.GEMINI_API_KEY;
   if (envGem && !envGem.includes("YOUR"))
