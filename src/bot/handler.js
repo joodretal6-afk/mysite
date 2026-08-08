@@ -130,9 +130,9 @@ async function _handleEvent(event, env, ctx) {
     if (ov && Object.keys(ov).length) effConfig = { ...pageConfig, PRICES: { ...pageConfig.PRICES, ...ov } };
   } catch (e) { console.error("price override:", e && e.message); }
 
-  // 🛒 دمج الأصناف الإضافية (addons) كأصناف حقيقية: البوت يعرفها، يبيعها، يحسبها، وتنزل بالأوردر
+  // 🛒 دمج الأصناف الإضافية (addons) — للجبنة فقط. الصفحات ذات المعرفة الخاصة (SYSTEM) مستثناة تماماً.
   let activeAddons = [];
-  try { activeAddons = getActiveAddons() || []; } catch {}
+  try { if (!pageConfig.SYSTEM) activeAddons = getActiveAddons() || []; } catch {}
   if (activeAddons.length) {
     const aPrices = {}, aUnits = {};
     for (const a of activeAddons) {
@@ -478,8 +478,8 @@ async function _handleEvent(event, env, ctx) {
     await sendText(token, senderId, chunk);
   }
 
-  // 🛒 بيع إضافي: بعد اكتمال الطلب، اعرض الأصناف الإضافية (موحّدة لكل الصفحات)
-  if (justSentInvoice) {
+  // 🛒 بيع إضافي: بعد اكتمال الطلب (للجبنة فقط — الصفحات ذات المعرفة الخاصة مستثناة)
+  if (justSentInvoice && !pageConfig.SYSTEM) {
     try {
       const addons = getActiveAddons();
       if (addons.length) {
