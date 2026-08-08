@@ -45,7 +45,7 @@ export async function extractOrderWithAI(conversationText, pageConfig) {
   }
 
   const prompt =
-`أنت محلّل طلبات دقيق لبائع أجبان أردني. استخرج الطلب من محادثة الزبون التالية.
+`أنت محلّل طلبات دقيق لمتجر أردني (${pageConfig.name}). استخرج الطلب من محادثة الزبون التالية.
 الأصناف المتاحة في هذه الصفحة فقط (لا تخترع غيرها): ${allowed.join(" ، ")}.
 
 ${ADDRESS_EXPERT}
@@ -157,7 +157,8 @@ async function askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmDat
     : "";
 
   const nextTask = buildNextTask(memory);
-  const systemInst = `${COMMON_KNOWLEDGE}\n\n${ADDRESS_EXPERT}\n\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
+  const baseKnowledge = pageConfig.SYSTEM || COMMON_KNOWLEDGE;
+  const systemInst = `${baseKnowledge}\n\n${ADDRESS_EXPERT}\n\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
 
   const messages = [{ role: "system", content: systemInst }];
   (history || []).forEach(h => {

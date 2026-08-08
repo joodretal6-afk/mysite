@@ -38,7 +38,9 @@ export async function askGemini(history, userMsg, audioPart, pageConfig, memory,
     : "";
 
   const nextTask = buildNextTask(memory);
-  const systemInst = `${COMMON_KNOWLEDGE}\n\n${ADDRESS_EXPERT}\n\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
+  // معرفة خاصة بالصفحة (SYSTEM) تتجاوز معرفة الجبنة العامة — لصفحات بمجال مختلف (مثل مواد التنظيف)
+  const baseKnowledge = pageConfig.SYSTEM || COMMON_KNOWLEDGE;
+  const systemInst = `${baseKnowledge}\n\n${ADDRESS_EXPERT}\n\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
 
   const contents = (history || []).map(h => ({
     role: h.role === "assistant" ? "model" : "user",
