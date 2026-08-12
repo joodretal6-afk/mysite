@@ -123,7 +123,7 @@ export const COMMON_KNOWLEDGE = `
 export const PAGES = {
   "211000052105556": {
     name: "أجبان غزة",
-    PAGE_TOKEN: "EAARu8DdiVZAwBSLzeUHiMJvd3JZCzvUevTKOjqgHaWK57vXbiokqr0mIqiglrVgqJl0JN7CgGM7z6pDCwEGOwd51D6kiSs6VqAmPzwdsJXLkFWU4JcXnMFtlVge3LpOH0lBTLpJzabxlyL5IRsbSasain6Ucy80EZAqlGCADl27pzGauIpQM5wMgZBvSuFj9rzrz",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSHip72oH1W0szUKvWOtLXQGTZAMmyVse2dAIQ23bEzWi8QX4lvzvR4IJ9cXdOcz1YjDvg1rWJrEnfEALbl8eqnhlSz9lH858r0ZALENTgFEWVO6eJWV1tziDZAsnKXFA8NQ63TDZCjLRIevZBYrV6B8tQb7pDvj0s3upyCfrDIFYXcOhOZBjpGtuJs",
     DELIVERY: 0,
     DEFAULT_UNIT: "نصية",
     PRICES: { "غنم": 15, "ملوكية": 15, "مشمولة": 16, "سوبر": 18 },
@@ -149,7 +149,7 @@ export const PAGES = {
 
   "907535882452054": {
     name: "اجبان المعتمد",
-    PAGE_TOKEN: "EAARu8DdiVZAwBSLut2WWlt8gUyow7tXy8clC9vGZBzhQc9DYbSUQvaenZBQRhGCyP7fSMYAUHTZCu0JQ9cfIHgE4xKLZCICLb3gbohbg41xkSP3fmB8GyzBcaTepTrqvjk2rWbazeZAYrjxQBF7ssO5QgKEYuZAMlfv0KgSLyZBJDPq2OXhnyUHgAZBvGu9P6yHAw41WhuQZDZD",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSDozCCd2g5IVZCd4W5xyPmeg2iCL2VfhvVwO4Fsia8dDkZAYCNA62MaMT7lxq9lAWhZA6f72FD62oTtMrOTgBcFrUcDuE1wN2Bv72lKwei4L3w4jjPkZAYGtKOkP2y17gD7OUZBRWy1b8nhIPvKGOIGv9loye3TCIRWEZBwHfeEHS6NPQBguP1dt1pGwZDZD",
     DELIVERY: 0,
     DEFAULT_UNIT: "نصية",
     PRICES: { "غنم": 15, "شخل": 17, "ماعز": 20 },
@@ -162,7 +162,7 @@ export const PAGES = {
 
   "1097322276797532": {
     name: "اجبان المهيري",
-    PAGE_TOKEN: "EAARu8DdiVZAwBSK68Horm81kUanj9VRFrY9iy8eNRtzpEZANTjQ0ceWzuXaZCgT4wqy64OXzCkdHieLLlq4ZAOcPjfWMGN8LTcXEnU08fO2r4OLrFIKQjRwv09mQfWQL7eMwAA2ojQsIo8IDPBZBooam4zaFgE0GAVfoAi5adwVyjbBP21ZAyZC4B3ulxunsaU0utrJizUqRTeOrcroZBXyJzgZDZD",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSP9jEMlsWj7C0SUghGGlfW0EAZB1d9JoY4FZAkNzQXwT562WntZCq2RZBDjldl8s7LPOfudWCUetWZBvKbb9N4dLbtQNKlnCbAeDQrInXsOQU27uMv2LujMa8xaStwJ8dJw40mxpr7ozZCNaoa2bb52wq3RRbny6ZCUwY5ljmHvLDDdSy0Ga0IiK9wZBMQZDZD",
     DELIVERY: 0,
     DEFAULT_UNIT: "نصية",
     PRICES: { "ملوكية": 12, "غنم": 12, "مشمولة": 13 },
@@ -176,7 +176,7 @@ export const PAGES = {
   // 🧼 صفحة مواد التنظيف (ريفان) — معرفة خاصة (SYSTEM) مستقلة عن الجبنة
   "618622274665182": {
     name: "ريفان لمواد التنظيف",
-    PAGE_TOKEN: "EAARu8DdiVZAwBSBrSxjfvrZBrIF5UnzuFxxYeSSiZBcE4rC7vCG3DlViBInoudSUwPRJZBmGnDTW0tmnEst0oyN1gz4bMO8qvA3lIfa12azA7mQEMr9DhyXx3D2kWPv1iRjSSTr5hDJihPB7i27t7WVy6d4qUPbe5bYaPu67w0d2V9XFAxdcTlqYw4OEIZC7ZAH0CiYOo70taypGhnIHsEggZDZD",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSOLuZALwOEf7Hv3Ea8dD3HeYRQAAS46LOePodiMFaP1fHSOOEMH9z5YeZCgxXL3IxXpSQhQZAuJUSf4upNaaJTBasyHVCXj06PuCVlAYXB7kG4UigAZAg4lt5Ffgp6CtKVPgndaT2regdyo4f6xFZBjSiSOAWjFdoDjOuGkaIp5zk75yW0s0rzhLUkAZDZD",
     DELIVERY: 2,
     DEFAULT_UNIT: "عبوة",
     PRICES: { "جل غسيل ريفان": 10 },
