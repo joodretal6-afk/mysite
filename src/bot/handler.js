@@ -472,25 +472,23 @@ async function _handleEvent(event, env, ctx) {
   // 🏢 ملاحظة الجملة (لو اكتُشف تاجر) بعد الرد
   if (memory._wholesaleNote) { reply = reply + "[[SPLIT]]" + memory._wholesaleNote; memory._wholesaleNote = null; }
 
-  // إرسال الرد (مع دعم تقسيمه لرسالتين عبر [[SPLIT]])
+  // 🔴 رسالة واحدة فقط لكل رد: أي [[SPLIT]] يُدمج في رسالة وحدة (سؤال = جواب واحد)
   const chunks = reply.split("[[SPLIT]]").map(s => s.trim()).filter(Boolean);
-  for (const chunk of chunks) {
-    await sendText(token, senderId, chunk);
-  }
+  let single = chunks.join("\n\n");
 
-  // 🛒 بيع إضافي: بعد اكتمال الطلب (للجبنة فقط — الصفحات ذات المعرفة الخاصة مستثناة)
+  // 🛒 بيع إضافي: يُدمج بنفس رسالة الفاتورة (مش رسالة ثانية) — للجبنة فقط
   if (justSentInvoice && !pageConfig.SYSTEM) {
     try {
       const addons = getActiveAddons();
       if (addons.length) {
         const lines = addons.map(a =>
-          `• ${a.name} — ${a.price}د${a.weight ? ` (${a.weight})` : ""}${a.description ? ` — ${a.description}` : ""}`
-        ).join("\n");
-        await sendText(token, senderId,
-          `🌟 وقبل ما نجهّز طلبك، عنا كمان أصناف بتحب تضيفها؟\n\n${lines}\n\nإذا حاب شي، بس قلّي شو بتضيف ونزيده على طلبك 🌹`);
+          `• ${a.name} — ${a.price}د${a.weight ? ` (${a.weight})` : ""}`).join("\n");
+        single += `\n\n🌟 وعنا كمان لو حاب تضيف:\n${lines}\nبس قلّي وبزيده على طلبك 🌹`;
       }
     } catch (e) { console.error("cross-sell:", e && e.message); }
   }
+
+  if (single) await sendText(token, senderId, single);
 
   // ⚠️ حُذف زر الإشعارات (OTN) نهائياً — إشعارات استباقية خارج المحادثة (شبهة مخالفة).
 
