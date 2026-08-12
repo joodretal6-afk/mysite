@@ -455,7 +455,7 @@ async function _handleEvent(event, env, ctx) {
     try { extraKnowledge += customerHistoryHint(senderId); } catch {}
     // 👩 مخاطبة الأنثى بالصيغة الصحيحة إن اكتُشف جنسها
     if (memory.gender === "f") {
-      extraKnowledge += "\n\n[هام جداً] الزبونة أنثى — خاطبها دائماً بصيغة المؤنث (حياكي الله، تفضلي، يا هلا فيكي، أهلين فيكي، حبيبتي/أختي الكريمة، شو حابة، بدك تطلبي) ولا تستخدم أبداً (يا أخوي، يا غالي، يا شيخ، يا زعيم، حابب، بدك). كوني لطيفة ومحترمة.";
+      extraKnowledge += "\n\n[هام جداً] الزبونة أنثى — خاطبها دائماً بصيغة المؤنث (حياكي الله، تفضلي، يا هلا فيكي، شو حابة، بدك تطلبي) ولا تستخدم أبداً صيغ المذكر (يا أخوي، يا غالي، يا شيخ، يا زعيم، حابب). وإذا كان لهذه الصفحة أسلوب نداء خاص بها (مثل «يا بنتي» عند أم نزار) فالتزم به هو.";
     }
     reply = await askAI(memory.history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
     memory.invalidPhoneProvided = false;   // بعد ما ننبّه الزبون منصفّر الفلاغ
