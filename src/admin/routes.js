@@ -20,8 +20,10 @@ import {
   listHandoffs, setHandoffPause, resolveHandoff,
   getSetting, setSetting, isBlocked, listBlocked, addBlock, removeBlock,
   listPriceOverrides, setPriceOverride, deletePriceOverride, topProducts,
-  cancelReasonsReport, peakHeatmap
+  cancelReasonsReport, peakHeatmap,
+  addGoal, listGoalsWithProgress, setGoalStatus, deleteGoal
 } from "../db/database.js";
+import { askAdvisor } from "../bot/advisor.js";
 import fs from "node:fs";
 import { WEB, CONFIG } from "../config.js";
 import { sendText, openReplyWindow, closeReplyWindow } from "../bot/messenger.js";
@@ -99,6 +101,43 @@ adminRouter.get("/handoffs", requireAuth, (req, res) => res.sendFile(path.join(p
 adminRouter.get("/settings", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "settings.html")));
 adminRouter.get("/prices", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "prices.html")));
 adminRouter.get("/pagehealth", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "pagehealth.html")));
+adminRouter.get("/advisor", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "advisor.html")));
+
+// ═══════════════════════════════════════════════════════════
+// 🧠 مستشار المبيعات (دردشة على بيانات الشغل الحقيقية) + 🎯 الأهداف
+// ═══════════════════════════════════════════════════════════
+adminRouter.post("/api/advisor", requireAuth, async (req, res) => {
+  const history = Array.isArray(req.body?.messages) ? req.body.messages
+    .filter(m => m && m.content && (m.role === "user" || m.role === "assistant")) : [];
+  if (!history.length) return res.status(400).json({ error: "اكتب رسالتك" });
+  try {
+    const out = await askAdvisor(history);
+    if (out.createdGoals?.length) {
+      for (const g of out.createdGoals) logActivity(req.user, "هدف جديد (المستشار)", `${g.title} — ${g.target}`);
+    }
+    res.json(out);
+  } catch (e) {
+    console.error("advisor:", e && e.message);
+    res.status(500).json({ error: "تعذّر الاتصال بالمستشار: " + (e && e.message) });
+  }
+});
+adminRouter.get("/api/goals", requireAuth, (req, res) => res.json({ goals: listGoalsWithProgress() }));
+adminRouter.post("/api/goals", requireAuth, (req, res) => {
+  const { title, target, metric, days, plan } = req.body || {};
+  if (!title || !Number(target)) return res.status(400).json({ error: "العنوان والقيمة مطلوبان" });
+  const d = Math.max(1, Number(days) || 30);
+  const id = addGoal({ title, target, metric, to_at: Date.now() + d * 86400000, plan });
+  logActivity(req.user, "هدف جديد", `${title} — ${target}`);
+  res.json({ ok: true, id });
+});
+adminRouter.post("/api/goals/:id/status", requireAuth, (req, res) => {
+  setGoalStatus(req.params.id, String(req.body?.status || "نشط"));
+  res.json({ ok: true });
+});
+adminRouter.delete("/api/goals/:id", requireAuth, (req, res) => {
+  deleteGoal(req.params.id);
+  res.json({ ok: true });
+});
 
 // 🩺 فحص صحة كل صفحة: نتحقق من صلاحية توكن الصفحة مباشرةً مع فيسبوك
 adminRouter.get("/api/page-health", requireAuth, async (req, res) => {

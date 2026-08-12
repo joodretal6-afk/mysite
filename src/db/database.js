@@ -152,6 +152,18 @@ db.exec(`
     PRIMARY KEY (page_id, product)
   );
 
+  CREATE TABLE IF NOT EXISTS goals (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    title      TEXT,               -- عنوان الهدف (مثال: مبيعات 100 ألف)
+    target     REAL,               -- القيمة المستهدفة بالدينار
+    metric     TEXT DEFAULT 'revenue',  -- revenue (مبيعات) | orders (عدد طلبات)
+    from_at    INTEGER,            -- بداية الفترة
+    to_at      INTEGER,            -- نهاية الفترة
+    status     TEXT DEFAULT 'نشط', -- نشط / مكتمل / ملغي
+    plan       TEXT DEFAULT '',    -- خطة/ملاحظات المستشار (المطلوب لتحقيقه)
+    created_at INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS handoffs (
     session_key TEXT PRIMARY KEY,  -- page_id + '_' + sender_id (طلب تدخّل واحد مفتوح لكل زبون)
     page_id     TEXT,
@@ -705,6 +717,36 @@ export function decrementStock(orderString) {
 }
 export function lowStockList() {
   return retryDb(() => db.prepare("SELECT product, stock, low FROM inventory WHERE stock <= low ORDER BY stock").all());
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🎯 أهداف المبيعات (يُنشئها المستشار أو الأدمن) مع حساب تقدّم حيّ
+// ═══════════════════════════════════════════════════════════
+export function addGoal({ title, target, metric = "revenue", from_at, to_at, plan = "" }) {
+  const dayStart = new Date().setHours(0, 0, 0, 0);   // يبدأ العدّ من بداية اليوم (طلبات اليوم تنحسب)
+  const info = retryDb(() => db.prepare(
+    "INSERT INTO goals (title,target,metric,from_at,to_at,status,plan,created_at) VALUES (?,?,?,?,?,'نشط',?,?)"
+  ).run(String(title || "").slice(0, 200), Number(target) || 0, metric === "orders" ? "orders" : "revenue",
+        Number(from_at) || dayStart, Number(to_at) || Date.now() + 30 * 86400000, String(plan || "").slice(0, 2000), Date.now()));
+  return Number(info.lastInsertRowid);
+}
+export function listGoalsWithProgress() {
+  const goals = retryDb(() => db.prepare("SELECT * FROM goals ORDER BY created_at DESC LIMIT 100").all());
+  return goals.map(g => {
+    const row = retryDb(() => db.prepare(
+      "SELECT COUNT(*) c, COALESCE(SUM(total),0) s FROM orders WHERE status != 'ملغي' AND status != 'ناقص' AND created_at >= ? AND created_at <= ?"
+    ).get(Number(g.from_at), Number(g.to_at)));
+    const current = g.metric === "orders" ? Number(row.c) : Number(row.s);
+    const pct = g.target > 0 ? Math.min(100, Math.round(current / g.target * 100)) : 0;
+    return { ...g, current: Math.round(current * 100) / 100, pct,
+      daysLeft: Math.max(0, Math.ceil((Number(g.to_at) - Date.now()) / 86400000)) };
+  });
+}
+export function setGoalStatus(id, status) {
+  retryDb(() => db.prepare("UPDATE goals SET status=? WHERE id=?").run(String(status).slice(0, 20), Number(id)));
+}
+export function deleteGoal(id) {
+  retryDb(() => db.prepare("DELETE FROM goals WHERE id=?").run(Number(id)));
 }
 
 // ═══════════════════════════════════════════════════════════
