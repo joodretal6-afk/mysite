@@ -22,6 +22,8 @@
     .msg.bot .bub { background:#fff; border:1px solid var(--line); border-bottom-right-radius:5px; }
     .msg.me .bub { background:var(--green); color:#fff; border-bottom-left-radius:5px; }
     .stag { align-self:center; background:#e8f5e9; color:var(--green2); font-size:13px; font-weight:700; padding:8px 16px; border-radius:20px; }
+    .steps { align-self:stretch; max-width:85%; background:#f5f7f9; border:1px dashed var(--line); border-radius:12px; padding:9px 13px; font-size:12px; color:var(--mut); line-height:1.9; }
+    .steps b { color:#455a64; }
     .typing .bub { color:var(--mut); }
     .composer { background:var(--card); border-top:1px solid var(--line); padding:11px 14px; }
     .cbox { max-width:840px; margin:0 auto; display:flex; gap:9px; align-items:flex-end; background:#fff; border:1.5px solid var(--line); border-radius:20px; padding:5px 7px 5px 5px; }
@@ -106,6 +108,12 @@
         t.remove();
         if(d.error){ addMsg('assistant','🙏 '+d.error); }
         else{
+          if(d.steps&&d.steps.length){
+            const st=document.createElement('div'); st.className='steps';
+            st.innerHTML='<b>🕵️ عمليات البحث الفعلية اللي نفّذها:</b><br>'+d.steps.map(s=>
+              (s.type==='search'?'🔍 بحث: ':'📄 قرأ صفحة: ')+esc(s.q.slice(0,90))).join('<br>');
+            cwrap.appendChild(st);
+          }
           addMsg('assistant',d.reply); messages.push({role:'assistant',content:d.reply});
           (d.createdStudies||[]).forEach(s=>{
             const el=document.createElement('div'); el.className='stag';
@@ -141,6 +149,7 @@
           <a class="lnk mp" target="_blank" href="https://www.facebook.com/marketplace/amman/search?query=${qa}">🏪 ماركت بليس عمّان</a>
           <a class="lnk sup" target="_blank" href="https://www.aliexpress.com/wholesale?SearchText=${qe}">🛒 AliExpress</a>
           <a class="lnk sup" target="_blank" href="https://www.alibaba.com/trade/search?SearchText=${qe}">🏭 Alibaba (جملة)</a>
+          ${(d.sources||[]).slice(0,4).map((u,j)=>`<a class="lnk fb" target="_blank" href="${esc(u)}">🔗 مصدر ${j+1}</a>`).join('')}
         </div>`;
         return `<div class="study">
           <div class="t"><span class="name">${esc(s.product)}</span>

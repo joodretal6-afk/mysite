@@ -1,45 +1,46 @@
 // ═══════════════════════════════════════════════════════════
-// 🔎 دراسة السوق (Taleb Product Hunter 🇯🇴)
-// خبير اكتشاف منتجات رابحة للسوق الأردني — يتعلم من مبيعاتك ونتائج تجاربك.
-// يعمل على نفس مفتاح/كود Gemini. الأهداف: Opportunity Score + بطاقة قرار كاملة.
+// 🔎 دراسة السوق (Taleb Product Hunter 🇯🇴) — باحث حقيقي
+// وكيل بحث فعلي: يبحث بالويب، يفتح الصفحات، يقرأها، ويبني الدراسة
+// من مصادر حقيقية بروابطها. يتعلم من مبيعاتك ونتائج تجاربك.
 // ═══════════════════════════════════════════════════════════
 import { CONFIG } from "../config.js";
-import { salesReport, topProducts, peakHeatmap, cancelReasonsReport,
-         studyOutcomes, addStudy } from "../db/database.js";
+import { salesReport, topProducts, cancelReasonsReport, studyOutcomes, addStudy } from "../db/database.js";
+import { webSearch, fetchPage } from "./webtools.js";
 
-const HUNTER_PERSONA = `أنت "صيّاد المنتجات" — خبير أردني محترف باكتشاف المنتجات الرابحة للتجارة الإلكترونية (بيع عبر فيسبوك/إنستغرام مع دفع عند الاستلام) في الأردن.
-خبرتك: تحليل الطلب بالسوق الأردني، اقتصاديات المنتج (جملة/بيع/هامش)، قابلية الإعلان بالفيديو، المنافسة المحلية، وسهولة الشحن.
+const MAX_STEPS = 7;   // أقصى عدد عمليات بحث/فتح صفحات لكل سؤال
 
-━━ معايير المنتج الرابح بالأردن (اعتمدها بالتقييم) ━━
-- هامش ربح ×2.5 على الأقل بعد التوصيل (توصيل تقريبي 2-3 دنانير).
-- سعر بيع مثالي 10-30 دينار (فوقها بتقل الاندفاعية بالدفع عند الاستلام).
-- بدون مقاسات/ألوان معقدة (يقلل الإرجاع)، وزن خفيف، غير قابل للكسر.
-- يحل مشكلة واضحة أو فيه عامل إبهار "قبل/بعد" يصلح لفيديو 15-30 ثانية.
-- متوفر بالجملة (محلياً من تجار الجملة بعمان/سوق البخارية/الصين عبر الشحن).
-- انتبه للمواسم الأردنية: رمضان، الأعياد، المدارس، الشتاء/الصيف، الزراعة المنزلية.
+const HUNTER_PERSONA = `أنت "صيّاد المنتجات" — باحث سوق أردني محترف لاكتشاف المنتجات الرابحة (بيع عبر فيسبوك/إنستغرام بالدفع عند الاستلام في الأردن).
+
+━━ 🌐 أدوات البحث الحقيقية (استخدمها إلزامياً قبل أي دراسة) ━━
+معك أداتان تنفذهما المنصة فعلياً وترجع لك نتائجها الحقيقية:
+1) للبحث بالويب اكتب سطراً منفصلاً: [[SEARCH:عبارة البحث]]
+2) لفتح صفحة وقراءة نصها اكتب: [[FETCH:الرابط]]
+- أرسل أمراً واحداً فقط ثم توقف تماماً وانتظر النتيجة (لا تكمل الرد بعد الأمر).
+- ابحث بالعربي (للسوق المحلي: فيسبوك، أسعار الأردن) وبالإنجليزي (للترندات العالمية والموردين).
+- أمثلة بحث ذكية: "site:facebook.com {المنتج} الأردن" ، "{product} trending dropshipping 2026" ، "{product} aliexpress price" ، "{المنتج} سعر الأردن".
+- افتح 2-3 صفحات مهمة من النتائج لقراءة التفاصيل الفعلية (أسعار، تقييمات، مواصفات).
+- ممنوع تأليف أرقام: كل سعر أو معلومة سوقية لازم تكون من نتيجة بحث فعلية أو مصرّحاً أنها تقدير خبرة.
+- بعد ما تجمع معلومات كافية (3-6 عمليات)، اكتب الدراسة النهائية مع ذكر المصادر (الروابط) اللي اعتمدت عليها.
+
+━━ معايير المنتج الرابح بالأردن ━━
+هامش ×2.5 بعد التوصيل (2-3د) | سعر بيع 10-30د للدفع عند الاستلام | بدون مقاسات | وزن خفيف | مشكلة واضحة أو إبهار "قبل/بعد" لفيديو قصير | متوفر جملة | راعِ المواسم الأردنية.
 
 ━━ Opportunity Score (من 100) ━━
-احسبه من: الهامش (25) + قابلية الفيديو والإبهار (20) + وضوح المشكلة/الحاجة (15) + المنافسة المحلية (15) + سهولة الشحن وقلة الإرجاع (15) + الموسمية والتوقيت (10). كن صارماً: 90+ نادر جداً.
+الهامش (25) + قابلية الفيديو (20) + وضوح الحاجة (15) + المنافسة (15) + سهولة الشحن (15) + الموسمية (10). كن صارماً: 90+ نادر.
 
-━━ حفظ الدراسات (مهم) ━━
-عند تقديم دراسة منتج كاملة (أو قائمة منتجات)، أنهِ ردك بسطر لكل منتج بهذه الصيغة بالضبط (JSON صالح بسطر واحد):
-[[STUDY:{"product":"اسم المنتج","score":88,"wholesale":5.5,"sell":14.9,"category":"سيارات","data":{"why":"لماذا اخترناه بسطرين","audience":"الجمهور المستهدف","videos":["فكرة فيديو 1","فكرة 2","فكرة 3"],"angles":["زاوية إعلانية 1","زاوية 2","زاوية 3"],"suppliers":"أين تجده بالجملة","risks":"أهم المخاطر","economics":"جملة 5.5 + توصيل 2.5 = 8 | بيع 14.9 | هامش 6.9","keywords_ar":"كلمات البحث بالعربي عن المنتج","keywords_en":"english search keywords for sourcing"}}]]
-- keywords_ar: أفضل كلمات يبحث فيها عن إعلانات المنتج بالعربي (كما يكتبها المعلنون الأردنيون).
-- keywords_en: كلمات إنجليزية دقيقة للبحث عن المنتج عند الموردين (AliExpress/Alibaba).
-- لا تضع السطر إلا لدراسة فعلية مكتملة. الأسعار تقديرية واقعية للسوق الأردني وصرّح أنها تقديرية.
+━━ حفظ الدراسة (بعد اكتمال البحث فقط) ━━
+أنهِ الدراسة النهائية بسطر لكل منتج (JSON صالح بسطر واحد):
+[[STUDY:{"product":"الاسم","score":88,"wholesale":5.5,"sell":14.9,"category":"سيارات","data":{"why":"لماذا (من نتائج البحث)","audience":"الجمهور","videos":["فكرة1","فكرة2","فكرة3"],"angles":["زاوية1","زاوية2","زاوية3"],"suppliers":"الموردون (من البحث)","risks":"المخاطر","economics":"جملة+توصيل مقابل بيع وهامش","keywords_ar":"كلمات بحث عربية","keywords_en":"english sourcing keywords","sources":["رابط1","رابط2"]}}]]
 
 ━━ أسلوبك ━━
-لهجة أردنية مهنية مختصرة. أرقام وجداول قصيرة، بلا حشو. كن صريحاً بالمخاطر — قرار خاطئ بيكلف صاحب المشروع فلوس حقيقية. إذا منتج ضعيف قلها بوضوح وليش.
-━━ حدودك ━━
-لا تدّعي أنك تشاهد إعلانات فيسبوك حيّة أو أرقام منافسين دقيقة — تقديراتك مبنية على خبرة السوق + بيانات المشروع الحقيقية المعطاة لك. نبّه دائماً أن الجملة تحتاج تأكيد من المورّد.`;
+لهجة أردنية مهنية مختصرة، أرقام من المصادر، صريح بالمخاطر. إذا فيسبوك حجب صفحة (تسجيل دخول) قلها بصراحة واعتمد على المصادر المفتوحة.`;
 
-// سياق التعلم: بيانات مشروعه الحقيقية + نتائج تجاربه السابقة
 export function buildMarketContext() {
   const parts = [];
   try {
     const r = salesReport();
     const avg = r.month.c > 0 ? Math.round(r.month.s / r.month.c * 10) / 10 : 0;
-    parts.push(`📊 مشروعه الحالي: ${r.month.c} طلب آخر 30 يوم بمتوسط ${avg}د للطلب (بيع أجبان بلدية + مواد تنظيف عبر بوت ماسنجر ودفع عند الاستلام، توصيل لكل الأردن).`);
+    parts.push(`📊 مشروعه: ${r.month.c} طلب آخر 30 يوم بمتوسط ${avg}د (أجبان + تنظيف، ماسنجر، دفع عند الاستلام، الأردن).`);
   } catch {}
   try {
     const tp = topProducts(5);
@@ -51,15 +52,13 @@ export function buildMarketContext() {
   } catch {}
   try {
     const out = studyOutcomes();
-    const win = out.filter(s => s.status === "رابح"), lose = out.filter(s => s.status === "فاشل"), trying = out.filter(s => s.status === "تجربة");
-    if (win.length) parts.push("✅ منتجات جرّبها ونجحت (ابحث عن أنماط مشابهة!): " + win.map(s => `${s.product} (بيع ${s.sell}د، ${s.category})`).join("، "));
-    if (lose.length) parts.push("🛑 منتجات جرّبها وفشلت (تجنّب أنماطها): " + lose.map(s => `${s.product} (${s.category})`).join("، "));
-    if (trying.length) parts.push("🧪 قيد التجربة حالياً: " + trying.map(s => s.product).join("، "));
+    const win = out.filter(s => s.status === "رابح"), lose = out.filter(s => s.status === "فاشل");
+    if (win.length) parts.push("✅ نجح عنده (رشّح المشابه): " + win.map(s => `${s.product} (${s.sell}د، ${s.category})`).join("، "));
+    if (lose.length) parts.push("🛑 فشل عنده (تجنّب المشابه): " + lose.map(s => `${s.product} (${s.category})`).join("، "));
   } catch {}
-  return parts.length ? parts.join("\n") : "لا توجد بيانات تجارب سابقة بعد — ابدأ بالتوصيات العامة للسوق الأردني.";
+  return parts.length ? parts.join("\n") : "لا بيانات تجارب بعد.";
 }
 
-// استخراج وحفظ الدراسات من رد الذكاء
 export function extractAndSaveStudies(reply) {
   const created = [];
   const re = /\[\[STUDY:(\{[\s\S]*?\})\]\]/g;
@@ -75,12 +74,7 @@ export function extractAndSaveStudies(reply) {
   return { clean: reply.replace(re, "").trim(), created };
 }
 
-export async function askMarket(history) {
-  const sys = HUNTER_PERSONA + "\n\n━━ بيانات مشروعه الحقيقية (تعلّم منها ورشّح ما يشبه نجاحاته) ━━\n" + buildMarketContext();
-  const contents = (history || []).slice(-20).map(h => ({
-    role: h.role === "assistant" ? "model" : "user",
-    parts: [{ text: String(h.content || "").slice(0, 4000) }]
-  }));
+async function callGemini(sys, contents) {
   const resp = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.MODEL_NAME}:generateContent?key=${CONFIG.GEMINI_API_KEY}`,
     {
@@ -89,14 +83,67 @@ export async function askMarket(history) {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: sys }] },
         contents,
-        generationConfig: { temperature: 0.6, maxOutputTokens: 2000 }
+        generationConfig: { temperature: 0.5, maxOutputTokens: 2200 }
       }),
       signal: AbortSignal.timeout(60000)
     }
   );
   if (!resp.ok) throw new Error(`Gemini ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
   const d = await resp.json();
-  const raw = (d?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").replace(/\*\*/g, "").trim();
-  const { clean, created } = extractAndSaveStudies(raw);
-  return { reply: clean || "خبّرني شو بدك تدرس اليوم.", createdStudies: created };
+  return (d?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").replace(/\*\*/g, "").trim();
+}
+
+// 🕵️ حلقة الوكيل الباحث: يبحث → يقرأ → يبحث... → دراسة نهائية بمصادر
+export async function askMarket(history, onStep) {
+  const sys = HUNTER_PERSONA + "\n\n━━ بيانات مشروعه (تعلّم منها) ━━\n" + buildMarketContext();
+  const contents = (history || []).slice(-16).map(h => ({
+    role: h.role === "assistant" ? "model" : "user",
+    parts: [{ text: String(h.content || "").slice(0, 4000) }]
+  }));
+
+  const steps = [];   // سجل عمليات البحث الفعلية (يُعرض للمستخدم)
+  for (let i = 0; i < MAX_STEPS; i++) {
+    const text = await callGemini(sys, contents);
+    const search = text.match(/\[\[SEARCH:([\s\S]*?)\]\]/);
+    const fetchM = text.match(/\[\[FETCH:([\s\S]*?)\]\]/);
+
+    if (!search && !fetchM) {
+      // دراسة نهائية
+      const { clean, created } = extractAndSaveStudies(text);
+      return { reply: clean || "خبّرني شو بدك أدرس.", createdStudies: created, steps };
+    }
+
+    // تنفيذ الأداة الفعلية
+    let toolResult = "";
+    try {
+      if (search) {
+        const q = search[1].trim().slice(0, 200);
+        steps.push({ type: "search", q });
+        if (onStep) onStep({ type: "search", q });
+        const res = await webSearch(q, 8);
+        toolResult = res.length
+          ? "[نتائج البحث الحقيقية عن: " + q + "]\n" + res.map((r, j) => `${j + 1}. ${r.title}\n   ${r.url}\n   ${r.snippet}`).join("\n")
+          : "[لا نتائج لهذا البحث — جرّب صياغة أخرى]";
+      } else {
+        const url = fetchM[1].trim().slice(0, 500);
+        steps.push({ type: "fetch", q: url });
+        if (onStep) onStep({ type: "fetch", q: url });
+        const p = await fetchPage(url);
+        toolResult = p.status >= 400 || !p.text
+          ? `[تعذّر قراءة الصفحة (HTTP ${p.status}) — ${url} — جرّب مصدراً آخر]`
+          : `[محتوى الصفحة الحقيقي: ${p.title || url}]\n${p.text}`;
+      }
+    } catch (e) {
+      toolResult = "[فشل تنفيذ الأداة: " + (e && e.message) + " — جرّب طريقة أخرى]";
+    }
+
+    contents.push({ role: "model", parts: [{ text }] });
+    contents.push({ role: "user", parts: [{ text: toolResult + "\n\n(تابع بحثك أو اكتب الدراسة النهائية إن اكتفيت)" }] });
+  }
+
+  // وصلنا الحد: نطلب الخلاصة النهائية
+  contents.push({ role: "user", parts: [{ text: "وصلت حد عمليات البحث. اكتب الآن الدراسة النهائية من المعلومات التي جمعتها، مع المصادر." }] });
+  const finalText = await callGemini(sys, contents);
+  const { clean, created } = extractAndSaveStudies(finalText);
+  return { reply: clean, createdStudies: created, steps };
 }
