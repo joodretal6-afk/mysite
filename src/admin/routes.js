@@ -22,9 +22,11 @@ import {
   listPriceOverrides, setPriceOverride, deletePriceOverride, topProducts,
   cancelReasonsReport, peakHeatmap,
   addGoal, listGoalsWithProgress, setGoalStatus, deleteGoal,
-  setPageToken, getPageTokenOverrides, deletePageToken
+  setPageToken, getPageTokenOverrides, deletePageToken,
+  listStudies, setStudyStatus, deleteStudy
 } from "../db/database.js";
 import { askAdvisor } from "../bot/advisor.js";
+import { askMarket } from "../bot/market.js";
 import fs from "node:fs";
 import { WEB, CONFIG } from "../config.js";
 import { sendText, openReplyWindow, closeReplyWindow } from "../bot/messenger.js";
@@ -103,6 +105,36 @@ adminRouter.get("/settings", requireAuth, (req, res) => res.sendFile(path.join(p
 adminRouter.get("/prices", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "prices.html")));
 adminRouter.get("/pagehealth", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "pagehealth.html")));
 adminRouter.get("/advisor", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "advisor.html")));
+adminRouter.get("/market", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "market.html")));
+
+// ═══════════════════════════════════════════════════════════
+// 🔎 دراسة السوق (Product Hunter)
+// ═══════════════════════════════════════════════════════════
+adminRouter.post("/api/market", requireAuth, async (req, res) => {
+  const history = Array.isArray(req.body?.messages) ? req.body.messages
+    .filter(m => m && m.content && (m.role === "user" || m.role === "assistant")) : [];
+  if (!history.length) return res.status(400).json({ error: "اكتب رسالتك" });
+  try {
+    const out = await askMarket(history);
+    if (out.createdStudies?.length) {
+      for (const s of out.createdStudies) logActivity(req.user, "دراسة منتج", `${s.product} (${s.score}/100)`);
+    }
+    res.json(out);
+  } catch (e) {
+    console.error("market:", e && e.message);
+    res.status(500).json({ error: "تعذّر الاتصال بمحرك دراسة السوق: " + (e && e.message) });
+  }
+});
+adminRouter.get("/api/market/studies", requireAuth, (req, res) => res.json({ studies: listStudies() }));
+adminRouter.post("/api/market/studies/:id/status", requireAuth, (req, res) => {
+  setStudyStatus(req.params.id, String(req.body?.status || ""));
+  logActivity(req.user, "حالة منتج", `#${req.params.id} → ${req.body?.status}`);
+  res.json({ ok: true });
+});
+adminRouter.delete("/api/market/studies/:id", requireAuth, (req, res) => {
+  deleteStudy(req.params.id);
+  res.json({ ok: true });
+});
 
 // ═══════════════════════════════════════════════════════════
 // 🧠 مستشار المبيعات (دردشة على بيانات الشغل الحقيقية) + 🎯 الأهداف

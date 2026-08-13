@@ -152,6 +152,18 @@ db.exec(`
     PRIMARY KEY (page_id, product)
   );
 
+  CREATE TABLE IF NOT EXISTS market_studies (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    product    TEXT,               -- اسم المنتج
+    score      INTEGER DEFAULT 0,  -- Opportunity Score /100
+    wholesale  REAL DEFAULT 0,     -- سعر الجملة التقريبي
+    sell       REAL DEFAULT 0,     -- سعر البيع المقترح
+    category   TEXT DEFAULT '',    -- الفئة (سيارات/منزل/...)
+    status     TEXT DEFAULT 'مرشح', -- مرشح / تجربة / رابح / فاشل
+    data       TEXT DEFAULT '',    -- البطاقة الكاملة (JSON: لماذا، جمهور، فيديوهات، زوايا، مخاطر...)
+    created_at INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS page_tokens (
     page_id    TEXT PRIMARY KEY,   -- معرّف الصفحة
     token      TEXT,               -- توكن الصفحة (يتجاوز توكن الكود)
@@ -723,6 +735,37 @@ export function decrementStock(orderString) {
 }
 export function lowStockList() {
   return retryDb(() => db.prepare("SELECT product, stock, low FROM inventory WHERE stock <= low ORDER BY stock").all());
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🔎 دراسات السوق (Product Hunter) — خط أنابيب المنتجات مع التعلم من النتائج
+// ═══════════════════════════════════════════════════════════
+export function addStudy(s) {
+  const info = retryDb(() => db.prepare(
+    "INSERT INTO market_studies (product,score,wholesale,sell,category,status,data,created_at) VALUES (?,?,?,?,?,'مرشح',?,?)"
+  ).run(String(s.product || "").slice(0, 150), Math.min(100, Number(s.score) || 0),
+        Number(s.wholesale) || 0, Number(s.sell) || 0, String(s.category || "").slice(0, 60),
+        JSON.stringify(s.data || {}).slice(0, 8000), Date.now()));
+  return Number(info.lastInsertRowid);
+}
+export function listStudies() {
+  return retryDb(() => db.prepare("SELECT * FROM market_studies ORDER BY created_at DESC LIMIT 200").all())
+    .map(r => { try { r.data = JSON.parse(r.data || "{}"); } catch { r.data = {}; } return r; });
+}
+export function setStudyStatus(id, status) {
+  const allowed = ["مرشح", "تجربة", "رابح", "فاشل"];
+  if (!allowed.includes(status)) return;
+  retryDb(() => db.prepare("UPDATE market_studies SET status=? WHERE id=?").run(status, Number(id)));
+}
+export function deleteStudy(id) {
+  retryDb(() => db.prepare("DELETE FROM market_studies WHERE id=?").run(Number(id)));
+}
+// ملخص نتائج التجارب (للتعلم): المنتجات الرابحة والفاشلة وأنماطها
+export function studyOutcomes() {
+  const rows = retryDb(() => db.prepare(
+    "SELECT product, score, wholesale, sell, category, status FROM market_studies WHERE status IN ('رابح','فاشل','تجربة') ORDER BY created_at DESC LIMIT 60"
+  ).all());
+  return rows;
 }
 
 // ═══════════════════════════════════════════════════════════
