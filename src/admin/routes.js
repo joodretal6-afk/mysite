@@ -21,7 +21,8 @@ import {
   getSetting, setSetting, isBlocked, listBlocked, addBlock, removeBlock,
   listPriceOverrides, setPriceOverride, deletePriceOverride, topProducts,
   cancelReasonsReport, peakHeatmap,
-  addGoal, listGoalsWithProgress, setGoalStatus, deleteGoal
+  addGoal, listGoalsWithProgress, setGoalStatus, deleteGoal,
+  setPageToken, getPageTokenOverrides, deletePageToken
 } from "../db/database.js";
 import { askAdvisor } from "../bot/advisor.js";
 import fs from "node:fs";
@@ -137,6 +138,54 @@ adminRouter.post("/api/goals/:id/status", requireAuth, (req, res) => {
 adminRouter.delete("/api/goals/:id", requireAuth, (req, res) => {
   deleteGoal(req.params.id);
   res.json({ ok: true });
+});
+
+// 🔑 إدارة توكنات الصفحات من الموقع: فحص مع فيسبوك → حفظ → تفعيل فوري → اشتراك ويبهوك
+async function verifyPageToken(token) {
+  try {
+    const r = await fetch(`https://graph.facebook.com/${CONFIG.GRAPH_VERSION}/me/messages?access_token=${encodeURIComponent(token)}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient: { id: "100000000000001" }, messaging_type: "RESPONSE", message: { text: "t" } }),
+      signal: AbortSignal.timeout(20000)
+    });
+    const d = await r.json().catch(() => ({}));
+    const e = d.error || {};
+    if (e.code === 100 && /cannot send messages to this id/i.test(e.message || "")) return { ok: true };
+    return { ok: false, reason: e.message || `HTTP ${r.status}` };
+  } catch (err) { return { ok: false, reason: err && err.message }; }
+}
+adminRouter.get("/api/page-tokens", requireAuth, (req, res) => {
+  const overrides = {};
+  for (const o of getPageTokenOverrides()) overrides[o.page_id] = o.updated_at;
+  res.json({
+    pages: Object.entries(PAGES).map(([id, p]) => ({
+      id, name: p.name,
+      tokenTail: p.PAGE_TOKEN ? "…" + p.PAGE_TOKEN.slice(-8) : "",
+      savedFromSite: Boolean(overrides[id]),
+      savedAt: overrides[id] || null
+    }))
+  });
+});
+adminRouter.post("/api/page-tokens", requireAuth, async (req, res) => {
+  const pageId = String(req.body?.page_id || "").trim();
+  const token = String(req.body?.token || "").trim();
+  if (!pageId || !token) return res.status(400).json({ error: "معرّف الصفحة والتوكن مطلوبان" });
+  if (!PAGES[pageId]) return res.status(400).json({ error: "الصفحة غير معرّفة بالنظام. المعرّفات المتاحة: " + Object.keys(PAGES).join("، ") });
+  // 1) فحص التوكن مع فيسبوك
+  const v = await verifyPageToken(token);
+  if (!v.ok) return res.status(400).json({ error: "التوكن مرفوض من فيسبوك: " + v.reason });
+  // 2) حفظ دائم + تفعيل فوري بالذاكرة (بدون إعادة تشغيل)
+  setPageToken(pageId, token);
+  PAGES[pageId].PAGE_TOKEN = token;
+  // 3) اشتراك الويبهوك تلقائياً
+  let webhook = false;
+  try {
+    const s = await fetch(`https://graph.facebook.com/${CONFIG.GRAPH_VERSION}/me/subscribed_apps?subscribed_fields=messages,messaging_postbacks,messaging_optins&access_token=${encodeURIComponent(token)}`,
+      { method: "POST", signal: AbortSignal.timeout(20000) });
+    webhook = Boolean((await s.json().catch(() => ({}))).success);
+  } catch {}
+  logActivity(req.user, "تحديث توكن صفحة", PAGES[pageId].name);
+  res.json({ ok: true, name: PAGES[pageId].name, webhook });
 });
 
 // 🩺 فحص صحة كل صفحة: نتحقق من صلاحية توكن الصفحة مباشرةً مع فيسبوك

@@ -17,6 +17,19 @@ import { PAGES } from "./bot/brain.js";
 import { sendText, notifyTelegram } from "./bot/messenger.js";
 import { whatsappEnabled, handleWhatsAppMessage } from "./bot/whatsapp.js";
 
+// 🔑 تطبيق توكنات الصفحات المحفوظة من الموقع (تتجاوز توكنات الكود) عند الإقلاع
+(async function applySavedTokens() {
+  try {
+    const { getPageTokenOverrides } = await import("./db/database.js");
+    for (const row of getPageTokenOverrides()) {
+      if (PAGES[row.page_id] && row.token) {
+        PAGES[row.page_id].PAGE_TOKEN = row.token;
+        console.log(`🔑 توكن محفوظ من الموقع مُطبّق لصفحة: ${PAGES[row.page_id].name}`);
+      }
+    }
+  } catch (e) { console.error("applySavedTokens:", e && e.message); }
+})();
+
 // 🛡️ حماية من توقّف السيرفر بسبب تقطّع شبكة Turso اللحظي (نسجّل الخطأ ونكمّل)
 process.on("uncaughtException", e => console.error("⚠️ uncaughtException:", e && e.message));
 process.on("unhandledRejection", e => console.error("⚠️ unhandledRejection:", e && (e.message || e)));

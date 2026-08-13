@@ -152,6 +152,12 @@ db.exec(`
     PRIMARY KEY (page_id, product)
   );
 
+  CREATE TABLE IF NOT EXISTS page_tokens (
+    page_id    TEXT PRIMARY KEY,   -- معرّف الصفحة
+    token      TEXT,               -- توكن الصفحة (يتجاوز توكن الكود)
+    updated_at INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS goals (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     title      TEXT,               -- عنوان الهدف (مثال: مبيعات 100 ألف)
@@ -717,6 +723,22 @@ export function decrementStock(orderString) {
 }
 export function lowStockList() {
   return retryDb(() => db.prepare("SELECT product, stock, low FROM inventory WHERE stock <= low ORDER BY stock").all());
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🔑 توكنات الصفحات المُدارة من الموقع (تتجاوز توكنات الكود)
+// ═══════════════════════════════════════════════════════════
+export function setPageToken(pageId, token) {
+  retryDb(() => db.prepare(
+    "INSERT INTO page_tokens (page_id,token,updated_at) VALUES (?,?,?) ON CONFLICT(page_id) DO UPDATE SET token=excluded.token, updated_at=excluded.updated_at"
+  ).run(String(pageId).trim(), String(token).trim(), Date.now()));
+}
+export function getPageTokenOverrides() {
+  try { return retryDb(() => db.prepare("SELECT page_id, token, updated_at FROM page_tokens").all()); }
+  catch { return []; }
+}
+export function deletePageToken(pageId) {
+  retryDb(() => db.prepare("DELETE FROM page_tokens WHERE page_id=?").run(String(pageId)));
 }
 
 // ═══════════════════════════════════════════════════════════
