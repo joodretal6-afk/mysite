@@ -26,7 +26,8 @@ import {
   listStudies, setStudyStatus, deleteStudy
 } from "../db/database.js";
 import { askAdvisor } from "../bot/advisor.js";
-import { askMarket } from "../bot/market.js";
+import { askMarket, runCouncil, priceScenarios, generateWinnerDNA, findMeMoney } from "../bot/market.js";
+import { getStudy, updateStudyData, studiesToday } from "../db/database.js";
 import fs from "node:fs";
 import { WEB, CONFIG } from "../config.js";
 import { sendText, openReplyWindow, closeReplyWindow } from "../bot/messenger.js";
@@ -134,6 +135,62 @@ adminRouter.post("/api/market/studies/:id/status", requireAuth, (req, res) => {
 adminRouter.delete("/api/market/studies/:id", requireAuth, (req, res) => {
   deleteStudy(req.params.id);
   res.json({ ok: true });
+});
+
+// 🏛️ عقد مجلس المستشارين على دراسة موجودة (أو منتج نصي)
+adminRouter.post("/api/market/council", requireAuth, async (req, res) => {
+  try {
+    let brief = String(req.body?.brief || "").trim();
+    const id = req.body?.id ? Number(req.body.id) : null;
+    if (id) {
+      const s = getStudy(id);
+      if (!s) return res.status(404).json({ error: "الدراسة غير موجودة" });
+      brief = `المنتج: ${s.product}\nالفئة: ${s.category}\nجملة: ${s.wholesale}د | بيع: ${s.sell}د\n${s.data?.why || ""}\n${s.data?.economics || ""}`;
+    }
+    if (!brief) return res.status(400).json({ error: "حدّد المنتج" });
+    const council = await runCouncil(brief);
+    if (id) updateStudyData(id, { council });
+    logActivity(req.user, "مجلس المستشارين", (id ? `دراسة #${id}` : brief.slice(0, 40)) + ` → ${council.decision || council.finalScore}`);
+    res.json(council);
+  } catch (e) { res.status(500).json({ error: "تعذّر عقد المجلس: " + (e && e.message) }); }
+});
+
+// 💵 محرك التسعير (نموذج تقديري)
+adminRouter.post("/api/market/pricing", requireAuth, (req, res) => {
+  res.json(priceScenarios(req.body || {}));
+});
+
+// 🧬 توليد/عرض Winner DNA
+adminRouter.post("/api/market/dna", requireAuth, async (req, res) => {
+  try { res.json(await generateWinnerDNA()); }
+  catch (e) { res.status(500).json({ error: e && e.message }); }
+});
+adminRouter.get("/api/market/dna", requireAuth, (req, res) => {
+  res.json({ dna: getSetting("winner_dna", "") });
+});
+
+// 💰 FIND ME MONEY — البايبلاين الكامل
+adminRouter.post("/api/market/findmoney", requireAuth, async (req, res) => {
+  try {
+    const out = await findMeMoney();
+    if (out.finalists?.length) logActivity(req.user, "FIND ME MONEY", out.finalists.map(f => `${f.product} (${f.score})`).join("، "));
+    res.json(out);
+  } catch (e) { res.status(500).json({ error: "تعذّر تشغيل البايبلاين: " + (e && e.message) }); }
+});
+
+// 📊 شريط قيادة اليوم
+adminRouter.get("/api/market/today", requireAuth, (req, res) => {
+  const st = studiesToday();
+  const rep = salesReport();
+  const studies = listStudies();
+  res.json({
+    discoveredToday: Number(st.c) || 0,
+    hotToday: Number(st.hot) || 0,
+    winners: studies.filter(s => s.status === "رابح").length,
+    testing: studies.filter(s => s.status === "تجربة").length,
+    salesToday: Math.round(Number(rep.today.s) || 0),
+    ordersToday: Number(rep.today.c) || 0
+  });
 });
 
 // ═══════════════════════════════════════════════════════════

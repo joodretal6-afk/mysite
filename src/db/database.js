@@ -752,6 +752,25 @@ export function listStudies() {
   return retryDb(() => db.prepare("SELECT * FROM market_studies ORDER BY created_at DESC LIMIT 200").all())
     .map(r => { try { r.data = JSON.parse(r.data || "{}"); } catch { r.data = {}; } return r; });
 }
+export function getStudy(id) {
+  const r = retryDb(() => db.prepare("SELECT * FROM market_studies WHERE id=?").get(Number(id)));
+  if (r) { try { r.data = JSON.parse(r.data || "{}"); } catch { r.data = {}; } }
+  return r || null;
+}
+export function updateStudyData(id, patch) {
+  const s = getStudy(id);
+  if (!s) return false;
+  const data = { ...(s.data || {}), ...patch };
+  retryDb(() => db.prepare("UPDATE market_studies SET data=? WHERE id=?")
+    .run(JSON.stringify(data).slice(0, 16000), Number(id)));
+  return true;
+}
+export function studiesToday() {
+  const dayStart = new Date().setHours(0, 0, 0, 0);
+  return retryDb(() => db.prepare(
+    "SELECT COUNT(*) c, SUM(CASE WHEN score>=80 THEN 1 ELSE 0 END) hot FROM market_studies WHERE created_at >= ?"
+  ).get(dayStart));
+}
 export function setStudyStatus(id, status) {
   const allowed = ["مرشح", "تجربة", "رابح", "فاشل"];
   if (!allowed.includes(status)) return;

@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>👑 إدارة الزبائن CRM — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1200px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; -webkit-overflow-scrolling:touch; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .panel { display:none; }
+    .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.7; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    input, textarea, select { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; }
+    input:focus, textarea:focus { outline:none; border-color:var(--green); }
+    textarea { width:100%; min-height:70px; resize:vertical; }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:hover { background:var(--green2); }
+    .btn.gray { background:#eceff1; color:#37474f; }
+    .btn.red { background:#c62828; }
+    .btn.sm { padding:5px 10px; font-size:12px; border-radius:8px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:10px 12px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    tr:hover { background:#fafcfa; }
+    .empty { text-align:center; padding:36px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .l { font-size:11.5px; color:var(--mut); margin-top:3px; }
+    .chip { display:inline-flex; align-items:center; gap:6px; background:#e8f5e9; color:var(--green2); border:1px solid #c8e6c9; padding:4px 11px; border-radius:14px; font-size:12.5px; font-weight:700; margin:3px 2px; }
+    .chip button { border:none; background:none; color:#c62828; cursor:pointer; font-size:13px; font-weight:800; padding:0; }
+    .chip.click { cursor:pointer; }
+    .chip.click:hover { background:#c8e6c9; }
+    .badge { font-size:11px; padding:2px 9px; border-radius:12px; font-weight:700; }
+    .spent { font-weight:700; color:var(--green2); }
+    .warn { color:#c62828; font-weight:700; }
+    .note-item { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+    .note-item .meta { font-size:11.5px; color:var(--mut); margin-top:5px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    #toast { position:fixed; bottom:18px; right:50%; transform:translateX(50%); background:#263238; color:#fff; padding:11px 20px; border-radius:10px; font-size:13.5px; display:none; z-index:50; max-width:90vw; }
+    @media (max-width:600px){ .wrap{padding:10px} .card{padding:12px} th,td{padding:8px 9px} }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>👑 إدارة الزبائن CRM</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+
+  <div class="wrap">
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-t="t360">👤 ملف 360</button>
+      <button class="tab" data-t="ttags">🏷️ الوسوم</button>
+      <button class="tab" data-t="tnotes">📝 الملاحظات</button>
+      <button class="tab" data-t="tpoints">⭐ نقاط الولاء</button>
+      <button class="tab" data-t="ttop">🏆 أفضل الزبائن</button>
+      <button class="tab" data-t="tchurn">⏳ معرّضون للفقدان</button>
+      <button class="tab" data-t="trisky">⚠️ زبائن خطرون</button>
+      <button class="tab" data-t="taddr">📒 دفتر العناوين</button>
+      <button class="tab" data-t="tclv">📈 CLV الشهري</button>
+      <button class="tab" data-t="texport">📥 تصدير CSV</button>
+    </div>
+
+    <!-- (1) ملف زبون 360 -->
+    <div class="panel active" id="t360">
+      <div class="card">
+        <h2>👤 ملف الزبون 360°</h2>
+        <div class="hint">اكتب رقم هاتف الزبون لعرض كل شيء عنه: الطلبات، الصرف، النقاط، الوسوم، الملاحظات، والعناوين.</div>
+        <div class="row">
+          <input id="p360" placeholder="📞 رقم الهاتف..." style="flex:1;min-width:180px">
+          <button class="btn" onclick="load360()">عرض الملف</button>
+        </div>
+        <div id="sug360" style="margin-top:8px"></div>
+      </div>
+      <div id="out360"><div class="card"><div class="empty">🔍 ابحث برقم الهاتف لعرض ملف الزبون الكامل</div></div></div>
+    </div>
+
+    <!-- (2) الوسوم -->
+    <div class="panel" id="ttags">
+      <div class="card">
+        <h2>🏷️ وسوم الزبائن</h2>
+        <div class="hint">صنّف زبائنك بوسوم مثل: VIP، جملة، موسمي... ثم اضغط أي وسم لعرض زبائنه.</div>
+        <div class="row">
+          <input id="tagPhone" placeholder="📞 رقم الهاتف" style="min-width:160px">
+          <input id="tagName" placeholder="🏷️ الوسم (مثال: VIP)" style="min-width:140px">
+          <button class="btn" onclick="addTag()">➕ إضافة</button>
+          <button class="btn red" onclick="removeTag()">🗑️ حذف الوسم</button>
+        </div>
+        <div style="margin-top:8px">
+          <span class="hint">اقتراحات:</span>
+          <span class="chip click" onclick="qtag('VIP')">VIP</span>
+          <span class="chip click" onclick="qtag('جملة')">جملة</span>
+          <span class="chip click" onclick="qtag('موسمي')">موسمي</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>كل الوسوم</h2>
+        <div id="tagsAll"><div class="empty">لا توجد وسوم بعد — أضف أول وسم من الأعلى 🏷️</div></div>
+      </div>
+      <div class="card" id="tagFilterCard" style="display:none">
+        <h2 id="tagFilterTitle"></h2>
+        <div class="tbl-scroll"><table><thead><tr><th>الهاتف</th><th>عدد الطلبات</th><th>إجمالي الصرف</th><th>آخر طلب</th><th></th></tr></thead><tbody id="tagFilterRows"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- (3) الملاحظات -->
+    <div class="panel" id="tnotes">
+      <div class="card">
+        <h2>📝 ملاحظات الزبون</h2>
+        <div class="hint">دوّن أي شيء مهم عن الزبون: تفضيلاته، موعد تواصله المفضّل، اتفاقات خاصة...</div>
+        <div class="row" style="margin-bottom:8px">
+          <input id="notePhone" placeholder="📞 رقم الهاتف" style="flex:1;min-width:160px">
+          <button class="btn gray" onclick="loadNotes()">عرض الملاحظات</button>
+        </div>
+        <textarea id="noteText" placeholder="✍️ اكتب ملاحظة جديدة..."></textarea>
+        <div style="margin-top:8px"><button class="btn" onclick="addNote()">➕ إضافة الملاحظة</button></div>
+      </div>
+      <div class="card"><h2 id="notesTitle">الملاحظات</h2><div id="notesList"><div class="empty">اكتب رقم الهاتف واضغط "عرض الملاحظات" 📝</div></div></div>
+    </div>
+
+    <!-- (4) نقاط الولاء -->
+    <div class="panel" id="tpoints">
+      <div class="card">
+        <h2>⭐ نقاط الولاء</h2>
+        <div class="hint">نقطة واحدة عن كل دينار من الطلبات المكتملة (تُحسب تلقائياً)، ويمكنك التعديل يدوياً بالإضافة أو الخصم.</div>
+        <div class="row">
+          <input id="adjPhone" placeholder="📞 رقم الهاتف" style="min-width:150px">
+          <input id="adjDelta" type="number" placeholder="± النقاط (مثال: 50 أو -20)" style="min-width:170px">
+          <input id="adjReason" placeholder="سبب التعديل" style="flex:1;min-width:140px">
+          <button class="btn" onclick="adjustPoints()">💾 تعديل النقاط</button>
+          <button class="btn gray" onclick="loadPointsOf()">عرض رصيد الرقم</button>
+        </div>
+        <div id="pointsOne" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <h2>🏅 أعلى 100 رصيد نقاط</h2>
+        <div class="tbl-scroll"><table><thead><tr><th>#</th><th>الهاتف</th><th>نقاط مكتسبة</th><th>تعديلات يدوية</th><th>الرصيد</th><th></th></tr></thead><tbody id="pointsRows"></tbody></table></div>
+        <div class="empty" id="pointsEmpty" style="display:none">لا توجد نقاط بعد — تُحسب من الطلبات المكتملة ⭐</div>
+      </div>
+    </div>
+
+    <!-- (5) أفضل الزبائن -->
+    <div class="panel" id="ttop">
+      <div class="card">
+        <h2>🏆 أفضل 50 زبون بالقيمة الإجمالية</h2>
+        <div class="hint">مرتّبون حسب إجمالي الصرف على الطلبات المكتملة.</div>
+        <div class="tbl-scroll"><table><thead><tr><th>#</th><th>الهاتف</th><th>طلبات مكتملة</th><th>إجمالي الصرف</th><th>متوسط الطلب</th><th>آخر طلب</th><th></th></tr></thead><tbody id="topRows"></tbody></table></div>
+        <div class="empty" id="topEmpty" style="display:none">لا يوجد زبائن مكتملون بعد 🏆</div>
+      </div>
+    </div>
+
+    <!-- (6) معرّضون للفقدان -->
+    <div class="panel" id="tchurn">
+      <div class="card">
+        <h2>⏳ زبائن معرّضون للفقدان</h2>
+        <div class="hint">زبائن أوفياء (طلبان مكتملان أو أكثر) لكن آخر طلب لهم أقدم من 30 يوماً — قائمة للعرض والمتابعة اليدوية فقط، بدون أي إرسال تلقائي.</div>
+        <div class="tbl-scroll"><table><thead><tr><th>الهاتف</th><th>طلبات مكتملة</th><th>إجمالي الصرف</th><th>آخر طلب</th><th>غائب منذ</th><th></th></tr></thead><tbody id="churnRows"></tbody></table></div>
+        <div class="empty" id="churnEmpty" style="display:none">🎉 ممتاز! لا يوجد زبائن أوفياء غائبون حالياً</div>
+      </div>
+    </div>
+
+    <!-- (7) زبائن خطرون -->
+    <div class="panel" id="trisky">
+      <div class="card">
+        <h2>⚠️ زبائن خطرون (كثيرو الإلغاء)</h2>
+        <div class="hint">زبائن ألغوا 50% أو أكثر من طلباتهم (مع طلبين على الأقل) — انتبه قبل تجهيز طلباتهم القادمة.</div>
+        <div class="tbl-scroll"><table><thead><tr><th>الهاتف</th><th>إجمالي الطلبات</th><th>الملغاة</th><th>نسبة الإلغاء</th><th>آخر طلب</th><th></th></tr></thead><tbody id="riskyRows"></tbody></table></div>
+        <div class="empty" id="riskyEmpty" style="display:none">🎉 لا يوجد زبائن كثيرو إلغاء حالياً</div>
+      </div>
+    </div>
+
+    <!-- (8) دفتر العناوين -->
+    <div class="panel" id="taddr">
+      <div class="card">
+        <h2>📒 دفتر عناوين الزبائن</h2>
+        <div class="hint">كل العناوين المميزة التي استخدمها كل رقم هاتف — مفيد للتوصيل ومعرفة مناطق الزبون.</div>
+        <div class="row" style="margin-bottom:10px">
+          <input id="addrPhone" placeholder="📞 فلترة برقم هاتف (اختياري)" style="flex:1;min-width:180px">
+          <button class="btn" onclick="loadAddresses()">عرض</button>
+          <button class="btn gray" onclick="document.getElementById('addrPhone').value='';loadAddresses()">الكل</button>
+        </div>
+        <div class="tbl-scroll"><table><thead><tr><th>الهاتف</th><th>العنوان</th><th>مرات الاستخدام</th><th>آخر استخدام</th></tr></thead><tbody id="addrRows"></tbody></table></div>
+        <div class="empty" id="addrEmpty" style="display:none">لا توجد عناوين مسجّلة بعد 📒</div>
+      </div>
+    </div>
+
+    <!-- (9) CLV -->
+    <div class="panel" id="tclv">
+      <div class="card">
+        <h2>📈 القيمة الشهرية للزبون (CLV بسيط)</h2>
+        <div class="hint">متوسط صرف الزبون شهرياً منذ أول طلب مكتمل له — كلما زاد الرقم زادت قيمة الزبون على المدى الطويل.</div>
+        <div class="tbl-scroll"><table><thead><tr><th>#</th><th>الهاتف</th><th>متوسط شهري</th><th>إجمالي الصرف</th><th>أشهر النشاط</th><th>طلبات مكتملة</th><th></th></tr></thead><tbody id="clvRows"></tbody></table></div>
+        <div class="empty" id="clvEmpty" style="display:none">لا توجد بيانات كافية لحساب CLV بعد 📈</div>
+      </div>
+    </div>
+
+    <!-- (10) تصدير CSV -->
+    <div class="panel" id="texport">
+      <div class="card">
+        <h2>📥 تصدير الزبائن إلى Excel (CSV)</h2>
+        <div class="hint">
+          يصدّر ملف CSV بترميز UTF-8 مع BOM ليفتح بالعربي صحيحاً في Excel مباشرة.<br>
+          الأعمدة: الهاتف، عدد الطلبات، المكتملة، الملغاة، إجمالي الصرف، متوسط الطلب، أول/آخر طلب، آخر منطقة، الوسوم.
+        </div>
+        <button class="btn" onclick="exportCsv()">⬇️ تنزيل ملف الزبائن CSV</button>
+        <div id="expMsg" class="hint" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    var API = "/admin/f-api/crm";
+
+    function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+    function fmtD(t){ return t ? new Date(+t).toLocaleDateString("ar-EG") : "—"; }
+    function money(v){ return (Math.round((+v||0)*100)/100).toLocaleString("en-US") + "د"; }
+    function toast(msg, bad){
+      var t = document.getElementById("toast");
+      t.textContent = msg; t.style.background = bad ? "#c62828" : "#2e7d32"; t.style.display = "block";
+      clearTimeout(t._h); t._h = setTimeout(function(){ t.style.display = "none"; }, 3000);
+    }
+    function stBadge(s){
+      var colors = {"جديد":["#e3f2fd","#1565c0"],"ناقص":["#eceff1","#607d8b"],"تم التواصل":["#fff3e0","#e65100"],"تم الشحن":["#ede7f6","#5e35b1"],"تم التسليم":["#e8f5e9","#1b5e20"],"ملغي":["#ffebee","#c62828"]};
+      var c = colors[s] || ["#eceff1","#37474f"];
+      return '<span class="badge" style="background:'+c[0]+';color:'+c[1]+'">'+esc(s||"—")+'</span>';
+    }
+    function goBtn(phone){ return '<button class="btn gray sm" onclick="open360(\''+esc(String(phone)).replace(/'/g,"\\'")+'\')">👤 الملف</button>'; }
+
+    async function api(path, opts){
+      var r;
+      try { r = await fetch(API + path, opts); }
+      catch(e){ toast("تعذّر الاتصال بالخادم", true); throw e; }
+      if (r.status === 401) { location.href = "/admin/login"; throw new Error("401"); }
+      var data = null;
+      try { data = await r.json(); } catch(e){ data = null; }
+      if (!r.ok) { var msg = (data && data.error) || "حدث خطأ غير متوقع"; toast(msg, true); throw new Error(msg); }
+      return data;
+    }
+    function post(body){ return { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) }; }
+
+    // ── التبويبات ──
+    var loaded = {};
+    var loaders = { ttags: loadTagsAll, tpoints: loadPointsTop, ttop: loadTop, tchurn: loadChurn, trisky: loadRisky, taddr: loadAddresses, tclv: loadClv };
+    document.getElementById("tabs").addEventListener("click", function(ev){
+      var b = ev.target.closest(".tab"); if (!b) return;
+      document.querySelectorAll(".tab").forEach(function(x){ x.classList.toggle("active", x === b); });
+      document.querySelectorAll(".panel").forEach(function(p){ p.classList.toggle("active", p.id === b.dataset.t); });
+      var fn = loaders[b.dataset.t];
+      if (fn && !loaded[b.dataset.t]) { loaded[b.dataset.t] = 1; fn(); }
+    });
+    function switchTab(id){ var b = document.querySelector('.tab[data-t="'+id+'"]'); if (b) b.click(); }
+
+    // ═══════════ (1) ملف 360 ═══════════
+    function open360(phone){
+      switchTab("t360");
+      document.getElementById("p360").value = phone;
+      load360();
+    }
+    async function load360(){
+      var phone = document.getElementById("p360").value.trim();
+      var out = document.getElementById("out360");
+      if (!phone) { toast("اكتب رقم الهاتف أولاً", true); return; }
+      out.innerHTML = '<div class="card"><div class="empty">⏳ جارٍ التحميل...</div></div>';
+      var d;
+      try { d = await api("/customer?phone=" + encodeURIComponent(phone)); }
+      catch(e){ out.innerHTML = '<div class="card"><div class="empty">😕 لا يوجد زبون بهذا الرقم</div></div>'; return; }
+      var s = d.stats, pts = d.points;
+      var html = '<div class="grid">'
+        + '<div class="sc"><div class="n">'+money(s.total_spent)+'</div><div class="l">إجمالي الصرف</div></div>'
+        + '<div class="sc"><div class="n">'+s.orders_count+'</div><div class="l">كل الطلبات ('+s.done_count+' مكتمل)</div></div>'
+        + '<div class="sc"><div class="n">'+money(s.avg_order)+'</div><div class="l">متوسط الطلب</div></div>'
+        + '<div class="sc"><div class="n">⭐ '+pts.balance+'</div><div class="l">رصيد النقاط</div></div>'
+        + '<div class="sc"><div class="n">'+money(s.clv_monthly)+'</div><div class="l">CLV شهري</div></div>'
+        + '<div class="sc"><div class="n">'+fmtD(s.last_at)+'</div><div class="l">آخر طلب</div></div>'
+        + '</div>';
+
+      html += '<div class="card"><h2>🏷️ الوسوم</h2><div id="chips360">';
+      if (d.tags.length) d.tags.forEach(function(t){ html += '<span class="chip">'+esc(t)+'<button title="حذف" onclick="rmTag360(\''+esc(phone).replace(/'/g,"\\'")+'\',\''+esc(t).replace(/'/g,"\\'")+'\')">✕</button></span>'; });
+      else html += '<span class="hint">لا وسوم بعد</span>';
+      html += '</div><div class="row" style="margin-top:8px"><input id="newTag360" placeholder="وسم جديد..." style="min-width:130px"><button class="btn sm" onclick="addTag360(\''+esc(phone).replace(/'/g,"\\'")+'\')">➕ إضافة وسم</button></div></div>';
+
+      html += '<div class="card"><h2>📝 الملاحظات ('+d.notes.length+')</h2>';
+      if (d.notes.length) d.notes.forEach(function(n){ html += '<div class="note-item">'+esc(n.note)+'<div class="meta">🕐 '+fmtD(n.created_at)+'</div></div>'; });
+      else html += '<div class="hint">لا ملاحظات — أضفها من تبويب الملاحظات</div>';
+      html += '<div class="row" style="margin-top:6px"><input id="newNote360" placeholder="ملاحظة سريعة..." style="flex:1;min-width:150px"><button class="btn sm" onclick="addNote360(\''+esc(phone).replace(/'/g,"\\'")+'\')">➕ حفظ</button></div></div>';
+
+      html += '<div class="card"><h2>📒 عناوينه ('+d.addresses.length+')</h2>';
+      if (d.addresses.length) { d.addresses.forEach(function(a){ html += '<span class="chip">📍 '+esc(a.area)+' ('+a.uses+')</span>'; }); }
+      else html += '<div class="hint">لا عناوين مسجّلة</div>';
+      html += '</div>';
+
+      html += '<div class="card"><h2>🧾 الطلبات ('+d.orders.length+')</h2><div class="tbl-scroll"><table><thead><tr><th>#</th><th>الطلب</th><th>المبلغ</th><th>المنطقة</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>';
+      d.orders.forEach(function(o){
+        html += '<tr><td>'+o.id+'</td><td>'+esc((o.order_string||"").slice(0,60))+'</td><td class="spent">'+money(o.total)+'</td><td>'+esc((o.area||"").slice(0,30))+'</td><td>'+stBadge(o.status)+(o.status==="ملغي"&&o.cancel_reason?' <span class="hint">('+esc(o.cancel_reason)+')</span>':'')+'</td><td>'+fmtD(o.created_at)+'</td></tr>';
+      });
+      html += '</tbody></table></div></div>';
+      out.innerHTML = html;
+    }
+    async function addTag360(phone){
+      var tag = document.getElementById("newTag360").value.trim();
+      if (!tag) { toast("اكتب الوسم أولاً", true); return; }
+      await api("/tags/add", post({ phone: phone, tag: tag }));
+      toast("تمت إضافة الوسم ✅"); loaded.ttags = 0; load360();
+    }
+    async function rmTag360(phone, tag){
+      await api("/tags/remove", post({ phone: phone, tag: tag }));
+      toast("تم حذف الوسم"); loaded.ttags = 0; load360();
+    }
+    async function addNote360(phone){
+      var note = document.getElementById("newNote360").value.trim();
+      if (!note) { toast("اكتب الملاحظة أولاً", true); return; }
+      await api("/notes/add", post({ phone: phone, note: note }));
+      toast("تم حفظ الملاحظة ✅"); load360();
+    }
+    // اقتراحات سريعة عند فتح الصفحة: آخر الزبائن
+    (async function(){
+      try {
+        var d = await api("/customers");
+        var box = document.getElementById("sug360");
+        if (!d.customers.length) return;
+        var h = '<span class="hint">آخر الزبائن: </span>';
+        d.customers.slice(0, 8).forEach(function(c){
+          h += '<span class="chip click" onclick="open360(\''+esc(String(c.phone)).replace(/'/g,"\\'")+'\')">📞 '+esc(c.phone)+'</span>';
+        });
+        box.innerHTML = h;
+      } catch(e){ /* تجاهل */ }
+    })();
+
+    // ═══════════ (2) الوسوم ═══════════
+    function qtag(t){ document.getElementById("tagName").value = t; }
+    async function loadTagsAll(){
+      var d = await api("/tags/all");
+      var box = document.getElementById("tagsAll");
+      if (!d.tags.length) { box.innerHTML = '<div class="empty">لا توجد وسوم بعد — أضف أول وسم من الأعلى 🏷️</div>'; return; }
+      var h = "";
+      d.tags.forEach(function(t){ h += '<span class="chip click" onclick="filterTag(\''+esc(t.tag).replace(/'/g,"\\'")+'\')">'+esc(t.tag)+' <b>('+t.customers+')</b></span>'; });
+      box.innerHTML = h;
+    }
+    async function addTag(){
+      var phone = document.getElementById("tagPhone").value.trim();
+      var tag = document.getElementById("tagName").value.trim();
+      if (!phone || !tag) { toast("اكتب الهاتف والوسم", true); return; }
+      await api("/tags/add", post({ phone: phone, tag: tag }));
+      toast("تمت إضافة الوسم ✅"); loadTagsAll();
+    }
+    async function removeTag(){
+      var phone = document.getElementById("tagPhone").value.trim();
+      var tag = document.getElementById("tagName").value.trim();
+      if (!phone || !tag) { toast("اكتب الهاتف والوسم", true); return; }
+      await api("/tags/remove", post({ phone: phone, tag: tag }));
+      toast("تم حذف الوسم"); loadTagsAll();
+      var card = document.getElementById("tagFilterCard");
+      if (card.style.display !== "none" && card.dataset.tag) filterTag(card.dataset.tag);
+    }
+    async function filterTag(tag){
+      var d = await api("/tags/filter?tag=" + encodeURIComponent(tag));
+      var card = document.getElementById("tagFilterCard");
+      card.style.display = "block"; card.dataset.tag = tag;
+      document.getElementById("tagFilterTitle").textContent = "زبائن الوسم: " + tag + " (" + d.customers.length + ")";
+      var tb = document.getElementById("tagFilterRows"); tb.innerHTML = "";
+      if (!d.customers.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">لا زبائن بهذا الوسم</td></tr>'; return; }
+      d.customers.forEach(function(c){
+        tb.insertAdjacentHTML("beforeend", "<tr><td>📞 "+esc(c.phone)+"</td><td>"+c.orders_count+"</td><td class='spent'>"+money(c.total_spent)+"</td><td>"+fmtD(c.last_at)+"</td><td>"+goBtn(c.phone)+"</td></tr>");
+      });
+    }
+
+    // ═══════════ (3) الملاحظات ═══════════
+    async function loadNotes(){
+      var phone = document.getElementById("notePhone").value.trim();
+      if (!phone) { toast("اكتب رقم الهاتف", true); return; }
+      var d = await api("/notes?phone=" + encodeURIComponent(phone));
+      document.getElementById("notesTitle").textContent = "ملاحظات " + phone + " (" + d.notes.length + ")";
+      var box = document.getElementById("notesList");
+      if (!d.notes.length) { box.innerHTML = '<div class="empty">لا ملاحظات لهذا الزبون بعد — أضف أول ملاحظة ✍️</div>'; return; }
+      var h = "";
+      d.notes.forEach(function(n){
+        h += '<div class="note-item">'+esc(n.note)+'<div class="meta">🕐 '+fmtD(n.created_at)
+          + ' <button class="btn gray sm" onclick="editNote('+n.id+',this)">✏️ تعديل</button>'
+          + ' <button class="btn red sm" onclick="delNote('+n.id+')">🗑️ حذف</button></div></div>';
+      });
+      box.innerHTML = h;
+    }
+    async function addNote(){
+      var phone = document.getElementById("notePhone").value.trim();
+      var note = document.getElementById("noteText").value.trim();
+      if (!phone || !note) { toast("اكتب الهاتف ونص الملاحظة", true); return; }
+      await api("/notes/add", post({ phone: phone, note: note }));
+      document.getElementById("noteText").value = "";
+      toast("تم حفظ الملاحظة ✅"); loadNotes();
+    }
+    async function editNote(id, btn){
+      var cur = btn.closest(".note-item").firstChild.textContent || "";
+      var txt = prompt("عدّل الملاحظة:", cur.trim());
+      if (txt == null || !txt.trim()) return;
+      await api("/notes/update", post({ id: id, note: txt.trim() }));
+      toast("تم التعديل ✅"); loadNotes();
+    }
+    async function delNote(id){
+      if (!confirm("حذف هذه الملاحظة؟")) return;
+      await api("/notes/delete", post({ id: id }));
+      toast("تم الحذف"); loadNotes();
+    }
+
+    // ═══════════ (4) نقاط الولاء ═══════════
+    async function loadPointsTop(){
+      var d = await api("/points/top");
+      var tb = document.getElementById("pointsRows"), empty = document.getElementById("pointsEmpty");
+      tb.innerHTML = "";
+      if (!d.customers.length) { empty.style.display = "block"; return; }
+      empty.style.display = "none";
+      d.customers.forEach(function(c, i){
+        var medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1);
+        tb.insertAdjacentHTML("beforeend", "<tr><td>"+medal+"</td><td>📞 "+esc(c.phone)+"</td><td>"+c.earned+"</td><td>"+(c.adjusted>0?"+":"")+c.adjusted+"</td><td class='spent'>⭐ "+c.balance+"</td><td>"+goBtn(c.phone)+"</td></tr>");
+      });
+    }
+    async function adjustPoints(){
+      var phone = document.getElementById("adjPhone").value.trim();
+      var delta = document.getElementById("adjDelta").value.trim();
+      var reason = document.getElementById("adjReason").value.trim();
+      if (!phone || !delta || !reason) { toast("املأ الهاتف والنقاط والسبب", true); return; }
+      var d = await api("/points/adjust", post({ phone: phone, delta: delta, reason: reason }));
+      toast("تم التعديل ✅ الرصيد الجديد: " + d.balance);
+      document.getElementById("adjDelta").value = ""; document.getElementById("adjReason").value = "";
+      loadPointsTop(); loadPointsOf();
+    }
+    async function loadPointsOf(){
+      var phone = document.getElementById("adjPhone").value.trim();
+      if (!phone) { toast("اكتب رقم الهاتف", true); return; }
+      var d = await api("/points?phone=" + encodeURIComponent(phone));
+      var h = '<div class="grid">'
+        + '<div class="sc"><div class="n">'+d.earned+'</div><div class="l">مكتسبة من الطلبات</div></div>'
+        + '<div class="sc"><div class="n">'+(d.adjusted>0?"+":"")+d.adjusted+'</div><div class="l">تعديلات يدوية</div></div>'
+        + '<div class="sc"><div class="n">⭐ '+d.balance+'</div><div class="l">الرصيد النهائي</div></div></div>';
+      if (d.adjustments.length) {
+        h += '<div class="tbl-scroll"><table><thead><tr><th>التعديل</th><th>السبب</th><th>التاريخ</th></tr></thead><tbody>';
+        d.adjustments.forEach(function(a){ h += "<tr><td class='"+(a.delta<0?"warn":"spent")+"'>"+(a.delta>0?"+":"")+a.delta+"</td><td>"+esc(a.reason||"—")+"</td><td>"+fmtD(a.created_at)+"</td></tr>"; });
+        h += "</tbody></table></div>";
+      }
+      document.getElementById("pointsOne").innerHTML = h;
+    }
+
+    // ═══════════ (5) أفضل الزبائن ═══════════
+    async function loadTop(){
+      var d = await api("/top-customers");
+      var tb = document.getElementById("topRows"), empty = document.getElementById("topEmpty");
+      tb.innerHTML = "";
+      if (!d.customers.length) { empty.style.display = "block"; return; }
+      empty.style.display = "none";
+      d.customers.forEach(function(c, i){
+        var medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1);
+        tb.insertAdjacentHTML("beforeend", "<tr><td>"+medal+"</td><td>📞 "+esc(c.phone)+"</td><td>"+c.done_count+"</td><td class='spent'>"+money(c.total_spent)+"</td><td>"+money(c.avg_order)+"</td><td>"+fmtD(c.last_at)+"</td><td>"+goBtn(c.phone)+"</td></tr>");
+      });
+    }
+
+    // ═══════════ (6) معرّضون للفقدان ═══════════
+    async function loadChurn(){
+      var d = await api("/churn");
+      var tb = document.getElementById("churnRows"), empty = document.getElementById("churnEmpty");
+      tb.innerHTML = "";
+      if (!d.customers.length) { empty.style.display = "block"; return; }
+      empty.style.display = "none";
+      d.customers.forEach(function(c){
+        tb.insertAdjacentHTML("beforeend", "<tr><td>📞 "+esc(c.phone)+"</td><td>"+c.done_count+"</td><td class='spent'>"+money(c.total_spent)+"</td><td>"+fmtD(c.last_at)+"</td><td class='warn'>"+c.days_since+" يوم ⏳</td><td>"+goBtn(c.phone)+"</td></tr>");
+      });
+    }
+
+    // ═══════════ (7) زبائن خطرون ═══════════
+    async function loadRisky(){
+      var d = await api("/risky");
+      var tb = document.getElementById("riskyRows"), empty = document.getElementById("riskyEmpty");
+      tb.innerHTML = "";
+      if (!d.customers.length) { empty.style.display = "block"; return; }
+      empty.style.display = "none";
+      d.customers.forEach(function(c){
+        tb.insertAdjacentHTML("beforeend", "<tr><td>📞 "+esc(c.phone)+"</td><td>"+c.orders_count+"</td><td>"+c.cancelled_count+"</td><td class='warn'>"+c.cancel_rate+"% ⚠️</td><td>"+fmtD(c.last_at)+"</td><td>"+goBtn(c.phone)+"</td></tr>");
+      });
+    }
+
+    // ═══════════ (8) دفتر العناوين ═══════════
+    async function loadAddresses(){
+      var phone = document.getElementById("addrPhone").value.trim();
+      var d = await api("/addresses" + (phone ? "?phone=" + encodeURIComponent(phone) : ""));
+      var tb = document.getElementById("addrRows"), empty = document.getElementById("addrEmpty");
+      tb.innerHTML = "";
+      if (!d.addresses.length) { empty.style.display = "block"; return; }
+      empty.style.display = "none";
+      d.addresses.forEach(function(a){
+        tb.insertAdjacentHTML("beforeend", "<tr><td>📞 "+esc(a.phone||phone)+"</td><td>📍 "+esc(a.area)+"</td><td>"+a.uses+"</td><td>"+fmtD(a.last_at)+"</td></tr>");
+      });
+    }
+
+    // ═══════════ (9) CLV ═══════════
+    async function loadClv(){
+      var d = await api("/clv");
+      var tb = document.getElementById("clvRows"), empty = document.getElementById("clvEmpty");
+      tb.innerHTML = "";
+      if (!d.customers.length) { empty.style.display = "block"; return; }
+      empty.style.display = "none";
+      d.customers.forEach(function(c, i){
+        tb.insertAdjacentHTML("beforeend", "<tr><td>"+(i+1)+"</td><td>📞 "+esc(c.phone)+"</td><td class='spent'>"+money(c.clv_monthly)+"/شهر</td><td>"+money(c.total_spent)+"</td><td>"+c.months_active+"</td><td>"+c.done_count+"</td><td>"+goBtn(c.phone)+"</td></tr>");
+      });
+    }
+
+    // ═══════════ (10) تصدير CSV ═══════════
+    async function exportCsv(){
+      var msg = document.getElementById("expMsg");
+      msg.textContent = "⏳ جارٍ تجهيز الملف...";
+      try {
+        var r = await fetch(API + "/export.csv");
+        if (r.status === 401) { location.href = "/admin/login"; return; }
+        if (!r.ok) { msg.textContent = ""; toast("تعذّر تصدير الملف", true); return; }
+        var blob = await r.blob();
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url; a.download = "crm-customers.csv";
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        msg.textContent = "✅ تم تنزيل الملف — افتحه في Excel مباشرة";
+        toast("تم التصدير ✅");
+      } catch(e){ msg.textContent = ""; toast("تعذّر الاتصال بالخادم", true); }
+    }
+  </script>
+</body>
+</html>

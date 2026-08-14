@@ -67,6 +67,12 @@
   </header>
   <div class="layout">
     <div class="chatcol">
+      <div style="background:#fff;border-bottom:1px solid var(--line);padding:10px 14px">
+        <div style="max-width:840px;margin:0 auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div id="today" style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mut)"></div>
+          <button id="fmm" onclick="findMoney()" style="margin-inline-start:auto;background:linear-gradient(120deg,#b8860b,#e6a817);color:#fff;border:none;border-radius:20px;padding:10px 20px;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 3px 10px rgba(184,134,11,.35)">💰 FIND ME MONEY</button>
+        </div>
+      </div>
       <div class="chat" id="chat"><div class="cwrap" id="cwrap"></div></div>
       <div class="composer">
         <div class="cbox">
@@ -76,6 +82,20 @@
       </div>
     </div>
     <div class="pipecol">
+      <div style="border:1px solid #f0e2b6;background:#fffdf5;border-radius:12px;padding:11px;margin-bottom:12px">
+        <div style="font-weight:800;font-size:13px;color:var(--gold);margin-bottom:6px">🧬 DNA المنتج الرابح عندك</div>
+        <div id="dna" style="font-size:11.5px;color:#6d5a12;white-space:pre-wrap;line-height:1.8">—</div>
+        <button class="stb" style="margin-top:7px" onclick="genDNA(this)">🔄 استخرج/حدّث الـDNA من نتائجي</button>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:12px">
+        <div style="font-weight:800;font-size:13px;color:var(--green2);margin-bottom:6px">💵 محرك التسعير</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <input id="prW" type="number" step="0.1" placeholder="جملة" style="width:70px;padding:6px;border:1px solid var(--line);border-radius:7px;font-family:inherit">
+          <input id="prA" type="number" step="0.5" placeholder="إعلان/طلب" style="width:85px;padding:6px;border:1px solid var(--line);border-radius:7px;font-family:inherit">
+          <button class="stb" onclick="calcPrice()">احسب</button>
+        </div>
+        <div id="prOut" style="font-size:11.5px;margin-top:7px;line-height:1.8"></div>
+      </div>
       <h3>📦 خط المنتجات (اضغط الحالة ليتعلم النظام)</h3>
       <div id="pipe"><div class="empty">جاري التحميل...</div></div>
     </div>
@@ -138,7 +158,9 @@
         const det=[d.why?('🔎 '+d.why):'', d.economics?('💰 '+d.economics):'', d.audience?('👥 '+d.audience):'',
           (d.videos&&d.videos.length)?('🎬 أفكار فيديو:\n- '+d.videos.join('\n- ')):'',
           (d.angles&&d.angles.length)?('📢 زوايا إعلانية:\n- '+d.angles.join('\n- ')):'',
-          d.suppliers?('🛒 '+d.suppliers):'', d.risks?('⚠️ '+d.risks):''].filter(Boolean).join('\n\n');
+          d.suppliers?('🛒 '+d.suppliers):'', d.risks?('⚠️ '+d.risks):'',
+          d.council?('🏛️ رأي المجلس (رئيس المجلس):\n'+d.council.chairman+'\n\nآراء الأعضاء:\n'+(d.council.opinions||[]).map(o=>'【'+o.role+' '+o.score+'/10】 '+o.opinion).join('\n\n')):''
+          ].filter(Boolean).join('\n\n');
         // 🔗 روابط بحث جاهزة: مكتبة إعلانات فيسبوك الرسمية + فيسبوك/ماركت بليس + موردين
         const qa=encodeURIComponent(d.keywords_ar||s.product);
         const qe=encodeURIComponent(d.keywords_en||s.product);
@@ -156,9 +178,11 @@
             <span class="score ${s.score>=85?'hot':''}">${s.score}/100</span></div>
           <div class="nums">جملة ~${s.wholesale}د → بيع ~${s.sell}د${s.category?(' | '+esc(s.category)):''}</div>
           ${links}
+          ${d.council?`<div style="font-size:11.5px;margin-bottom:6px;padding:6px 9px;background:#fffdf5;border:1px solid #f0e2b6;border-radius:9px">🏛️ قرار المجلس: <b>${esc(d.council.decision||'—')}</b> (${d.council.finalScore}/100)</div>`:''}
           <div class="stbtns">
             ${STATUSES.map(([st,cls])=>`<button class="stb ${s.status===st?('on '+cls):''}" onclick="setSt(${s.id},'${st}')">${st}</button>`).join('')}
-            ${det?`<button class="mini" onclick="tog(this)">📋 التفاصيل</button>`:''}
+            <button class="mini" onclick="council(${s.id},this)">🏛️ ${d.council?'أعد عقد':'اعقد'} المجلس</button>
+            ${det||d.council?`<button class="mini" onclick="tog(this)">📋 التفاصيل</button>`:''}
             <button class="mini del" onclick="delSt(${s.id})">حذف</button>
           </div>
           ${det?`<div class="details">${esc(det)}</div>`:''}
@@ -166,6 +190,79 @@
       }).join('');
     }
     function tog(b){ const d=b.closest('.study').querySelector('.details'); d.style.display=d.style.display==='block'?'none':'block'; }
+
+    // 📊 شريط قيادة اليوم
+    async function loadToday(){
+      try{ const r=await fetch('/admin/api/market/today'); const t=await r.json();
+        document.getElementById('today').innerHTML=
+          `<span>🔎 اليوم: <b>${t.discoveredToday}</b> دراسة</span><span>🔥 مؤهلة: <b>${t.hotToday}</b></span>`+
+          `<span>🏆 رابحة: <b>${t.winners}</b></span><span>🧪 تجربة: <b>${t.testing}</b></span>`+
+          `<span>💵 مبيعات اليوم: <b>${t.salesToday}د</b> (${t.ordersToday} طلب)</span>`;
+      }catch{}
+    }
+
+    // 💰 FIND ME MONEY
+    async function findMoney(){
+      if(busy) return; busy=true;
+      const btn=document.getElementById('fmm'); btn.disabled=true; btn.textContent='⏳ البايبلاين شغّال (1-3 دقائق)...';
+      addMsg('user','💰 FIND ME MONEY — شغّل البايبلاين الكامل');
+      const t=addTyping();
+      try{
+        const r=await fetch('/admin/api/market/findmoney',{method:'POST'});
+        const d=await r.json(); t.remove();
+        if(d.error){ addMsg('assistant','🙏 '+d.error); }
+        else{
+          if(d.steps&&d.steps.length){ const st=document.createElement('div'); st.className='steps';
+            st.innerHTML='<b>🕵️ خطوات البايبلاين الفعلية:</b><br>'+d.steps.map(s=>
+              (s.type==='search'?'🔍 بحث: ':s.type==='shortlist'?'🎯 المرشحون: ':'🏛️ مجلس على: ')+esc(String(s.q).slice(0,100))).join('<br>');
+            cwrap.appendChild(st); }
+          let msg='💰 نتيجة البايبلاين:\n\n🏆 النهائيون (بعد مجلس المستشارين):\n'+
+            (d.finalists||[]).map((f,i)=>`${i+1}. ${f.product} — ${f.score}/100 — القرار: ${f.decision||'—'}`).join('\n')+
+            '\n\n📋 بقية المرشحين: '+(d.candidates||[]).slice(3).map(c=>c.product).join('، ');
+          addMsg('assistant',msg);
+          loadPipe(); loadToday();
+        }
+      }catch(e){ t.remove(); addMsg('assistant','🙏 خطأ بالاتصال — جرّب كمان مرة.'); }
+      btn.disabled=false; btn.textContent='💰 FIND ME MONEY'; busy=false;
+    }
+
+    // 🏛️ عقد المجلس على دراسة
+    async function council(id,b){
+      b.disabled=true; b.textContent='⏳ المجلس منعقد...';
+      try{
+        const r=await fetch('/admin/api/market/council',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+        const d=await r.json();
+        if(d.error) alert(d.error);
+        loadPipe();
+      }catch{ alert('خطأ بالاتصال'); b.disabled=false; }
+    }
+
+    // 💵 محرك التسعير
+    async function calcPrice(){
+      const w=document.getElementById('prW').value, a=document.getElementById('prA').value||3;
+      const out=document.getElementById('prOut');
+      if(!w){ out.textContent='أدخل سعر الجملة'; return; }
+      const r=await fetch('/admin/api/market/pricing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({wholesale:w,adCost:a})});
+      const d=await r.json();
+      if(d.error){ out.textContent=d.error; return; }
+      out.innerHTML=(d.rows||[]).map(x=>
+        `${x.price===d.best.price?'⭐':'▫️'} <b>${x.price}د</b> → تحويل ~${x.conv}% | هامش ${x.netMargin}د | ربح/100 زيارة: <b>${x.profitPer100}د</b>`
+      ).join('<br>')+`<br><span style="color:#8d6e00">✅ الأفضل: ${d.best.price}د — ${esc(d.note)}</span>`;
+    }
+
+    // 🧬 Winner DNA
+    async function loadDNA(){
+      try{ const r=await fetch('/admin/api/market/dna'); const d=await r.json();
+        document.getElementById('dna').textContent=d.dna||'لسا ما انبنى — علّم منتجات (رابح/فاشل) ثم اضغط استخراج.'; }catch{}
+    }
+    async function genDNA(b){
+      b.disabled=true; b.textContent='⏳ يتعلم من نتائجك...';
+      try{ const r=await fetch('/admin/api/market/dna',{method:'POST'}); const d=await r.json();
+        if(d.error) alert(d.error); else document.getElementById('dna').textContent=d.dna;
+      }catch{ alert('خطأ'); }
+      b.disabled=false; b.textContent='🔄 استخرج/حدّث الـDNA من نتائجي';
+    }
+    loadToday(); loadDNA(); setInterval(loadToday, 60000);
     async function setSt(id,status){ await fetch('/admin/api/market/studies/'+id+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})}); loadPipe(); }
     async function delSt(id){ if(!confirm('حذف الدراسة؟'))return; await fetch('/admin/api/market/studies/'+id,{method:'DELETE'}); loadPipe(); }
 
