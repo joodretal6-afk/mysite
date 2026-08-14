@@ -5,44 +5,122 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>مركز الميزات — منصة الأجبان</title>
   <style>
-    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    :root { --green:#2e7d32; --green2:#1b5e20; --gold:#b8860b; --gold2:#8d6708; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
     * { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
     header { background:linear-gradient(120deg,#1b5e20,#2e7d32); color:#fff; padding:16px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
     header h1 { font-size:20px; } header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
-    .wrap { max-width:1000px; margin:0 auto; padding:24px 18px; }
-    .sub { color:var(--mut); font-size:14px; margin-bottom:18px; }
-    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
-    .mod { background:var(--card); border-radius:16px; padding:22px 18px; box-shadow:0 2px 10px rgba(0,0,0,.06); text-decoration:none; color:#263238; transition:transform .15s, box-shadow .15s; display:block; }
+    .wrap { max-width:1050px; margin:0 auto; padding:24px 18px 40px; }
+    .sub { color:var(--mut); font-size:14px; margin-bottom:16px; }
+    .stats { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+    .stat { background:var(--card); border-radius:12px; padding:12px 18px; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .stat b { display:block; font-size:22px; color:var(--green2); }
+    .stat span { font-size:12px; color:var(--mut); }
+    .search { width:100%; padding:13px 16px; border:1.5px solid var(--line); border-radius:12px; font-size:15px; font-family:inherit; margin-bottom:22px; background:var(--card); }
+    .search:focus { outline:none; border-color:var(--green); }
+    .tier { margin-bottom:28px; }
+    .tier h2 { font-size:15px; color:var(--green2); margin-bottom:4px; display:flex; align-items:center; gap:8px; }
+    .tier .desc { font-size:12.5px; color:var(--mut); margin-bottom:14px; }
+    .tier.imperial h2 { color:var(--gold2); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); gap:14px; }
+    .mod { background:var(--card); border-radius:16px; padding:20px 18px; box-shadow:0 2px 10px rgba(0,0,0,.06); text-decoration:none; color:#263238; transition:transform .15s, box-shadow .15s; display:block; position:relative; border-top:3px solid var(--green); }
+    .mod.imperial { border-top-color:var(--gold); }
     .mod:hover { transform:translateY(-3px); box-shadow:0 6px 18px rgba(0,0,0,.1); }
-    .mod .ic { font-size:34px; }
+    .mod .ic { font-size:32px; }
     .mod .t { font-weight:800; font-size:15.5px; margin-top:10px; color:var(--green2); }
+    .mod.imperial .t { color:var(--gold2); }
     .mod .c { font-size:12.5px; color:var(--mut); margin-top:4px; }
+    .badge { position:absolute; top:12px; left:12px; background:var(--gold); color:#fff; font-size:10.5px; font-weight:bold; padding:3px 9px; border-radius:10px; }
     .empty { text-align:center; color:var(--mut); padding:50px; background:var(--card); border-radius:16px; }
+    .none { display:none; }
   </style>
 </head>
 <body>
   <header>
-    <h1>⚡ مركز الميزات — 80 أداة لإمبراطورية مبيعاتك</h1>
+    <h1>⚡ مركز الميزات — إمبراطورية مبيعاتك</h1>
     <a href="/admin">→ اللوحة الرئيسية</a>
   </header>
   <div class="wrap">
-    <div class="sub">8 وحدات × 10 ميزات — كلها آمنة 100% (بدون أي إرسال استباقي أو مخاطر حظر). اضغط أي وحدة لتفتح أدواتها.</div>
-    <div class="grid" id="grid"><div class="empty">جاري التحميل...</div></div>
+    <div class="sub">كل الأدوات آمنة 100% — بدون أي إرسال استباقي للزبائن، وبدون أي مخاطر حظر.</div>
+    <div class="stats">
+      <div class="stat"><b id="s-mods">—</b><span>وحدة</span></div>
+      <div class="stat"><b id="s-feats">—</b><span>ميزة</span></div>
+      <div class="stat"><b>0</b><span>مخاطر حظر</span></div>
+    </div>
+    <input class="search" id="q" placeholder="🔎 ابحث عن أداة... (مثال: تسعير، مناطق، شكاوى، منافسين)" autocomplete="off">
+
+    <div class="tier imperial" id="tier-imperial">
+      <h2>👑 طبقة القيادة والتوسع</h2>
+      <div class="desc">وحدات استراتيجية: تقرأ أرقامك الحقيقية وتحوّلها لقرارات — قيادة، تسعير، جغرافيا، منافسون، إنتاج، احتفاظ، جودة، ونمو.</div>
+      <div class="grid" id="g-imperial"><div class="empty">جاري التحميل...</div></div>
+    </div>
+
+    <div class="tier" id="tier-ops">
+      <h2>⚙️ طبقة التشغيل اليومي</h2>
+      <div class="desc">أدوات الشغل اليومي: الطلبات، الزبائن، التقارير، المالية، التسويق، جودة البوت، الفريق، والنظام.</div>
+      <div class="grid" id="g-ops"></div>
+    </div>
   </div>
   <script>
-    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-    (async()=>{
-      const r=await fetch('/admin/api/features-list');
-      if(r.status===401){ location.href='/admin/login'; return; }
-      const {modules}=await r.json();
-      const g=document.getElementById('grid');
-      if(!modules.length){ g.innerHTML='<div class="empty">الوحدات قيد التجهيز...</div>'; return; }
-      g.innerHTML=modules.map(m=>`<a class="mod" href="/admin/f/${esc(m.slug)}">
-        <div class="ic">${esc(m.icon)}</div>
-        <div class="t">${esc(m.title)}</div>
-        <div class="c">10 ميزات جاهزة</div>
-      </a>`).join('');
+    var IMPERIAL = ['command','pricing','geo','intel','supply','retention','quality','growth'];
+    // كلمات مفتاحية للبحث لكل وحدة
+    var KEYS = {
+      command:'قيادة نبض صحة إنذارات هدف إحاطة شاشة',
+      pricing:'تسعير أسعار باقات هامش ربح خصم عروض مرونة',
+      geo:'مناطق محافظات خريطة توصيل جولة توسع جغرافي',
+      intel:'منافسين تنافسي أسعارهم إعلانات مقارنة swot',
+      supply:'إنتاج توريد موردين مخزون تنبؤ هدر دفعات جرد',
+      retention:'احتفاظ ولاء تكرار زبائن vip فقدان rfm كوهورت',
+      quality:'جودة شكاوى إلغاء استرجاع رضا تقييمات',
+      growth:'نمو قرارات خطة أهداف سيناريو اختناقات أولويات',
+      ordersops:'طلبات تحضير سائقين بوليصة توصيل متأخرة',
+      crm:'زبائن ولاء نقاط وسوم عناوين تصدير',
+      reports:'تقارير أسبوعي شهري كي بي اي قمع كوبونات',
+      finance:'مالية مصاريف ربح تسوية عهدة تعادل',
+      marketing:'تسويق منشورات كابشن فيديو تقويم هاشتاغ',
+      botquality:'بوت محادثات جودة أسئلة محاكي أخطاء',
+      team:'فريق مهام شفت تشيك ليست تذكيرات sop',
+      system:'نظام أمان نسخ احتياطي تدقيق صحة استيراد'
+    };
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+    (async function(){
+      var r = await fetch('/admin/api/features-list');
+      if (r.status === 401) { location.href = '/admin/login'; return; }
+      var data = await r.json();
+      var modules = (data && data.modules) || [];
+      var gi = document.getElementById('g-imperial'), go = document.getElementById('g-ops');
+      if (!modules.length) { gi.innerHTML = '<div class="empty">الوحدات قيد التجهيز...</div>'; return; }
+
+      function card(m) {
+        var imp = IMPERIAL.indexOf(m.slug) >= 0;
+        return '<a class="mod' + (imp ? ' imperial' : '') + '" data-k="' + esc(m.title + ' ' + (KEYS[m.slug] || '')) + '" href="/admin/f/' + esc(m.slug) + '">' +
+          (imp ? '<div class="badge">جديد</div>' : '') +
+          '<div class="ic">' + esc(m.icon) + '</div>' +
+          '<div class="t">' + esc(m.title) + '</div>' +
+          '<div class="c">10 ميزات جاهزة</div></a>';
+      }
+      var imperial = modules.filter(function(m){ return IMPERIAL.indexOf(m.slug) >= 0; });
+      var ops = modules.filter(function(m){ return IMPERIAL.indexOf(m.slug) < 0; });
+      gi.innerHTML = imperial.length ? imperial.map(card).join('') : '<div class="empty">قيد التجهيز...</div>';
+      go.innerHTML = ops.map(card).join('');
+      document.getElementById('s-mods').textContent = modules.length;
+      document.getElementById('s-feats').textContent = modules.length * 10;
+
+      document.getElementById('q').addEventListener('input', function(e){
+        var q = e.target.value.trim();
+        var cards = document.querySelectorAll('.mod');
+        for (var i = 0; i < cards.length; i++) {
+          var hit = !q || cards[i].getAttribute('data-k').indexOf(q) >= 0;
+          cards[i].classList.toggle('none', !hit);
+        }
+        // إخفاء أي طبقة ما ضلّ فيها نتائج
+        ['imperial','ops'].forEach(function(t){
+          var grid = document.getElementById('g-' + t);
+          var vis = grid.querySelectorAll('.mod:not(.none)').length;
+          document.getElementById('tier-' + t).classList.toggle('none', vis === 0);
+        });
+      });
     })();
   </script>
 </body>

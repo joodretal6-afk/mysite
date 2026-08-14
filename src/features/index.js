@@ -1,8 +1,13 @@
 // ═══════════════════════════════════════════════════════════
-// ⚡ محمّل وحدات الميزات (80 ميزة / 8 وحدات)
+// ⚡ محمّل وحدات الميزات (160 ميزة / 16 وحدة)
 // تحميل دفاعي: أي وحدة فيها خطأ تُتخطّى بدون ما توقف المنصة.
 // ═══════════════════════════════════════════════════════════
-const SLUGS = ["ordersops", "crm", "reports", "finance", "marketing", "botquality", "team", "system"];
+const SLUGS = [
+  // ── الطبقة الأولى: التشغيل اليومي ──
+  "ordersops", "crm", "reports", "finance", "marketing", "botquality", "team", "system",
+  // ── الطبقة الثانية: القيادة والتوسع (إمبراطورية) ──
+  "command", "pricing", "geo", "intel", "supply", "retention", "quality", "growth"
+];
 
 export async function loadFeatures() {
   const loaded = [];
