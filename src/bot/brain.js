@@ -220,7 +220,7 @@ export const PAGES = {
   // 🧼 صفحة مواد التنظيف (ريفان) — معرفة خاصة (SYSTEM) مستقلة عن الجبنة
   "618622274665182": {
     name: "ريفان لمواد التنظيف",
-    PAGE_TOKEN: "EAARu8DdiVZAwBSOLuZALwOEf7Hv3Ea8dD3HeYRQAAS46LOePodiMFaP1fHSOOEMH9z5YeZCgxXL3IxXpSQhQZAuJUSf4upNaaJTBasyHVCXj06PuCVlAYXB7kG4UigAZAg4lt5Ffgp6CtKVPgndaT2regdyo4f6xFZBjSiSOAWjFdoDjOuGkaIp5zk75yW0s0rzhLUkAZDZD",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSPty0EYjFgeppa6vmi8pqzixG0x4vNYcR0FC6Qc2iRZBIcQTNNcIh8NBFy5P7IpJw3fKXtnltUHpCTrZCpv13MZC5gPUcl70khGUZCkZAcfFywvy5RmcaoRZCzFfwJSpO6OeSH8WR6N8MHd42TOK9uKZBOyVjCbSqZCXVStXHeyHUej5vcsM85j0ZBdPt90VQiQZDZD",
     DELIVERY: 2,
     DEFAULT_UNIT: "عبوة",
     PRICES: { "جل غسيل ريفان": 10 },
