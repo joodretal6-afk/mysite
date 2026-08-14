@@ -8,22 +8,33 @@ import { ADDRESS_EXPERT } from "./addressExpert.js";
 export function buildNextTask(memory) {
   const cartItemsCount = memory.cart ? Object.keys(memory.cart).length : 0;
 
+  // 🧠 تثبيت السياق (ضد فقدان الذاكرة): نذكّر النموذج صراحةً بكل ما جمعناه حتى لا يعيد الترحيب أو السؤال
+  let ctx = "";
+  if ((memory.history || []).length > 0) {
+    ctx += "⚠️ هذه محادثة مستمرة (ليست جديدة): ممنوع الترحيب من جديد كأنها بداية — كمّل من حيث توقفت مباشرة.\n";
+  }
+  const known = [];
+  if (cartItemsCount > 0) known.push("الطلب: " + Object.entries(memory.cart).map(([p, q]) => p + " ×" + q).join("، "));
+  if (memory.area) known.push("العنوان: " + memory.area);
+  if (memory.phone) known.push("الرقم: " + memory.phone);
+  if (known.length) ctx += "✅ معلومات مؤكدة محفوظة (لا تسأل عنها مرة أخرى أبداً): " + known.join(" | ") + "\n";
+
   if (memory.invalidPhoneProvided) {
-    return "الآن: أخبر الزبون أن الرقم خطأ، واطلب رقم أردني صحيح (10 أرقام) فوراً.";
+    return ctx + "الآن: أخبر الزبون أن الرقم خطأ، واطلب رقم أردني صحيح (10 أرقام) فوراً.";
   }
   if (cartItemsCount === 0) {
-    return "الآن: اطلب من الزبون اختيار النوع والكمية.";
+    return ctx + "الآن: اطلب من الزبون اختيار النوع والكمية.";
   }
   if (!memory.area && !memory.phone) {
-    return "الآن: اطلب المحافظة ورقم الهاتف لتثبيت الطلب. (ممنوع طباعة الفاتورة أو تأكيد الطلب)";
+    return ctx + "الآن: اطلب المحافظة ورقم الهاتف لتثبيت الطلب. (ممنوع طباعة الفاتورة أو تأكيد الطلب)";
   }
   if (!memory.area) {
-    return "الآن: اطلب منه اسم المحافظة والمنطقة. (ممنوع تأكيد الطلب)";
+    return ctx + "الآن: اطلب منه اسم المحافظة والمنطقة. (ممنوع تأكيد الطلب)";
   }
   if (!memory.phone) {
-    return "الآن: 🔴 اطلب رقم الهاتف فوراً وبشكل حازم. (ممنوع تأكيد الطلب أو طباعة فاتورة قبل أخذ الرقم!)";
+    return ctx + "الآن: 🔴 اطلب رقم الهاتف فوراً وبشكل حازم. (ممنوع تأكيد الطلب أو طباعة فاتورة قبل أخذ الرقم!)";
   }
-  return "";
+  return ctx;
 }
 
 export async function askGemini(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge = "") {

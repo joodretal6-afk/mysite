@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>النظام والأمان — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; --blue:#1565c0; --amber:#ef6c00; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1050px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; -webkit-overflow-scrolling:touch; }
+    .tabs button { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:20px; cursor:pointer; font-family:inherit; font-size:13.5px; color:#37474f; white-space:nowrap; }
+    .tabs button.on { background:var(--green); border-color:var(--green); color:#fff; font-weight:bold; }
+    .card { background:var(--card); border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:18px; }
+    .card h3 { color:var(--green2); font-size:16px; margin-bottom:14px; }
+    .tab-page { display:none; }
+    .tab-page.on { display:block; }
+    .form { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+    .fld { display:flex; flex-direction:column; gap:5px; }
+    .fld label { font-size:12px; color:var(--mut); }
+    .fld input, .fld select { padding:10px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14px; font-family:inherit; min-width:120px; }
+    .btn { padding:11px 20px; background:var(--green); color:#fff; border:none; border-radius:9px; font-weight:bold; cursor:pointer; font-family:inherit; font-size:14px; }
+    .btn:hover { background:var(--green2); }
+    .btn.gray { background:#607d8b; }
+    .btn.small { padding:7px 12px; font-size:12.5px; }
+    .btn.danger { background:var(--red); }
+    .btn:disabled { opacity:.6; cursor:default; }
+    .tbl-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th,td { padding:10px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    td.wrapcell { white-space:normal; min-width:140px; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    .empty { text-align:center; padding:28px; color:var(--mut); }
+    .muted { color:var(--mut); font-size:12.5px; }
+    .msg { padding:10px 14px; border-radius:9px; margin:10px 0; font-size:13.5px; display:none; }
+    .msg.ok { display:block; background:#e8f5e9; color:var(--green2); }
+    .msg.err { display:block; background:#ffebee; color:var(--red); }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:12px 0; }
+    .stat { background:#f6faf6; border:1px solid #e2ece3; border-radius:11px; padding:14px; }
+    .stat .lbl { font-size:12px; color:var(--mut); margin-bottom:6px; }
+    .stat .val { font-size:19px; font-weight:800; color:var(--green2); word-break:break-word; }
+    .stat .sub { font-size:11.5px; color:var(--mut); margin-top:4px; }
+    .stat.bad { background:#ffebee; border-color:#f4c9c9; }
+    .stat.bad .val { color:var(--red); }
+    .stat.warn { background:#fff3e0; border-color:#f3ddbb; }
+    .stat.warn .val { color:var(--amber); }
+    .pill { display:inline-block; padding:3px 10px; border-radius:12px; font-size:12px; background:#e8f5e9; color:var(--green2); font-weight:700; }
+    .pill.down { background:#ffebee; color:var(--red); }
+    .pill.neutral { background:#eceff1; color:#546e7a; }
+    .ai-box { background:#f6faf6; border:1px solid #e2ece3; border-radius:11px; padding:14px; white-space:pre-line; line-height:1.9; font-size:14px; display:none; margin-top:10px; }
+    .notice { display:flex; justify-content:space-between; align-items:center; gap:10px; border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin-bottom:8px; flex-wrap:wrap; }
+    .notice.unseen { background:#f6faf6; border-color:#c8e0ca; }
+    .notice .txt { flex:1; min-width:200px; font-size:13.5px; line-height:1.7; }
+    .bar { background:#e9edea; border-radius:4px; height:8px; min-width:90px; overflow:hidden; }
+    .bar i { display:block; height:100%; border-radius:4px; background:var(--green); }
+    .file-drop { border:2px dashed var(--line); border-radius:11px; padding:22px; text-align:center; color:var(--mut); font-size:13.5px; margin:10px 0; }
+    .subhead { color:var(--green2); font-size:14.5px; margin:16px 0 8px; font-weight:700; }
+    @media (max-width:640px) { .wrap { padding:10px; } .card { padding:14px; } .fld input, .fld select { min-width:100px; } .stat .val { font-size:16px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🛡️ النظام والأمان</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+
+  <div class="wrap">
+    <nav class="tabs" id="tabs">
+      <button data-tab="notices" class="on">🔔 الإشعارات</button>
+      <button data-tab="integrity">🧪 فحص التناقضات</button>
+      <button data-tab="export">📦 تصدير كامل</button>
+      <button data-tab="import">📥 استيراد طلبات</button>
+      <button data-tab="archive">🗄️ أرشيف الطلبات</button>
+      <button data-tab="audit">📜 سجل التدقيق</button>
+      <button data-tab="health">❤️ مراقب الصحة</button>
+      <button data-tab="backup">💾 النسخ الاحتياطي</button>
+      <button data-tab="tables">📈 حجم الجداول</button>
+      <button data-tab="sessions">🧹 منظف الجلسات</button>
+    </nav>
+
+    <!-- 1) مركز الإشعارات -->
+    <section class="tab-page on" id="tab-notices">
+      <div class="card">
+        <h3>🔔 مركز إشعارات اللوحة <span class="pill" id="ntBadge" style="display:none"></span></h3>
+        <p class="muted" style="margin-bottom:10px">زر «فحص الآن» يبحث عن: طلبات متأخرة، طلبات ناقصة كثيرة اليوم، وانخفاض مبيعات اليوم عن متوسط آخر 7 أيام.</p>
+        <div class="form">
+          <button class="btn" id="ntCheckBtn" onclick="checkNotices()">🔍 فحص الآن</button>
+          <button class="btn gray" onclick="markSeen()">✅ تعليم الكل كمقروء</button>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#37474f"><input type="checkbox" id="ntUnseenOnly" onchange="loadNotices()"> غير المقروءة فقط</label>
+        </div>
+        <div class="msg" id="ntMsg"></div>
+        <div id="ntList" style="margin-top:12px"></div>
+        <div class="empty" id="ntEmpty" style="display:none">لا توجد إشعارات — كل شيء تحت السيطرة 🌿</div>
+      </div>
+    </section>
+
+    <!-- 2) فحص التناقضات -->
+    <section class="tab-page" id="tab-integrity">
+      <div class="card">
+        <h3>🧪 فحص تناقضات البيانات</h3>
+        <div class="form">
+          <button class="btn" onclick="loadIntegrity()">تشغيل الفحص</button>
+          <button class="btn gray" id="igAiBtn" onclick="integrityAI()">🤖 تقييم ذكي</button>
+        </div>
+        <div class="msg" id="igMsg"></div>
+        <div class="stats" id="igStats"></div>
+        <div class="ai-box" id="igAi"></div>
+        <div id="igSections"></div>
+        <div class="empty" id="igEmpty" style="display:none">اضغط «تشغيل الفحص» لبدء المراجعة 🔎</div>
+      </div>
+    </section>
+
+    <!-- 3) التصدير الكامل -->
+    <section class="tab-page" id="tab-export">
+      <div class="card">
+        <h3>📦 تصدير كامل للبيانات (JSON)</h3>
+        <p class="muted" style="margin-bottom:10px">يشمل: الطلبات، المستخدمين (بدون كلمات المرور)، الكوبونات، والإضافات. يُنزّل كملف JSON يمكن استيراد طلباته لاحقاً من تبويب «استيراد طلبات».</p>
+        <div class="form">
+          <button class="btn" id="exBtn" onclick="doExport()">⬇️ تنزيل النسخة الكاملة</button>
+        </div>
+        <div class="msg" id="exMsg"></div>
+        <div class="stats" id="exStats"></div>
+      </div>
+    </section>
+
+    <!-- 4) الاستيراد -->
+    <section class="tab-page" id="tab-import">
+      <div class="card">
+        <h3>📥 استيراد طلبات من ملف JSON مصدَّر</h3>
+        <p class="muted" style="margin-bottom:10px">اختر ملف تصدير سابق (JSON). الطلبات المكررة (نفس الرقم id) تُتخطى تلقائياً — لا حذف ولا استبدال.</p>
+        <div class="file-drop">
+          <input type="file" id="imFile" accept=".json,application/json">
+          <div class="muted" style="margin-top:8px">الحد الأقصى: 5000 طلب لكل عملية استيراد</div>
+        </div>
+        <div class="form">
+          <button class="btn" id="imBtn" onclick="doImport()">📥 استيراد الآن</button>
+        </div>
+        <div class="msg" id="imMsg"></div>
+        <div class="stats" id="imStats"></div>
+      </div>
+    </section>
+
+    <!-- 5) الأرشيف -->
+    <section class="tab-page" id="tab-archive">
+      <div class="card">
+        <h3>🗄️ أرشيف الطلبات — الأقدم من 90 يوماً <span class="muted">(عرض فقط، لا يُحذف شيء)</span></h3>
+        <div class="msg" id="arMsg"></div>
+        <div class="stats" id="arStats"></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>#</th><th>الصفحة</th><th class="wrapcell">الطلب</th><th>المبلغ</th><th class="wrapcell">العنوان</th><th>الهاتف</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+            <tbody id="arRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="arEmpty" style="display:none">لا توجد طلبات أقدم من 90 يوماً بعد 📭</div>
+        <div class="form" style="margin-top:12px">
+          <button class="btn gray small" id="arPrev" onclick="archivePage(-1)">→ الأحدث</button>
+          <span class="muted" id="arPageInfo"></span>
+          <button class="btn gray small" id="arNext" onclick="archivePage(1)">الأقدم ←</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6) سجل التدقيق -->
+    <section class="tab-page" id="tab-audit">
+      <div class="card">
+        <h3>📜 سجل التدقيق المتقدم</h3>
+        <div class="form">
+          <div class="fld"><label>المستخدم</label><select id="adUser"><option value="">الكل</option></select></div>
+          <div class="fld"><label>العملية</label><select id="adAction"><option value="">الكل</option></select></div>
+          <div class="fld"><label>بحث نصي</label><input type="text" id="adQ" placeholder="كلمة بالتفاصيل..."></div>
+          <button class="btn" onclick="auditOffset=0;loadAudit()">🔍 فلترة</button>
+          <button class="btn gray" onclick="auditCsv()">⬇️ تصدير CSV</button>
+        </div>
+        <div class="msg" id="adMsg"></div>
+        <p class="muted" id="adSummary" style="margin:10px 0"></p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>#</th><th>المستخدم</th><th>العملية</th><th class="wrapcell">التفاصيل</th><th>التاريخ</th></tr></thead>
+            <tbody id="adRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="adEmpty" style="display:none">لا توجد سجلات مطابقة 📭</div>
+        <div class="form" style="margin-top:12px">
+          <button class="btn gray small" onclick="auditPage(-1)">→ الأحدث</button>
+          <span class="muted" id="adPageInfo"></span>
+          <button class="btn gray small" onclick="auditPage(1)">الأقدم ←</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7) مراقب الصحة -->
+    <section class="tab-page" id="tab-health">
+      <div class="card">
+        <h3>❤️ مراقب صحة المنصة</h3>
+        <div class="form">
+          <button class="btn" onclick="loadHealth()">🔄 تحديث الفحص</button>
+        </div>
+        <div class="msg" id="hlMsg"></div>
+        <div class="stats" id="hlStats"></div>
+        <p class="muted" id="hlNote" style="margin-top:6px"></p>
+      </div>
+    </section>
+
+    <!-- 8) النسخ الاحتياطي -->
+    <section class="tab-page" id="tab-backup">
+      <div class="card">
+        <h3>💾 نسخة احتياطية فورية</h3>
+        <p class="muted" style="margin-bottom:10px">تُنسخ قاعدة البيانات باسم مؤرّخ إلى مجلد backups بجانبها. (متاح فقط عندما تكون القاعدة ملفاً محلياً)</p>
+        <div class="form">
+          <button class="btn" id="bkBtn" onclick="doBackup()">💾 إنشاء نسخة الآن</button>
+          <button class="btn gray" onclick="loadBackups()">🔄 تحديث القائمة</button>
+        </div>
+        <div class="msg" id="bkMsg"></div>
+        <div class="subhead">النسخ الموجودة</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th class="wrapcell">الملف</th><th>الحجم</th><th>التاريخ</th></tr></thead>
+            <tbody id="bkRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="bkEmpty" style="display:none">لا توجد نسخ احتياطية بعد — أنشئ أول نسخة 💾</div>
+      </div>
+    </section>
+
+    <!-- 9) حجم الجداول -->
+    <section class="tab-page" id="tab-tables">
+      <div class="card">
+        <h3>📈 مؤشر حجم الجداول الرئيسية</h3>
+        <div class="form">
+          <button class="btn" onclick="loadTables()">🔄 تحديث</button>
+        </div>
+        <div class="msg" id="tbMsg"></div>
+        <p class="muted" id="tbSummary" style="margin:10px 0"></p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>الجدول</th><th>عدد الصفوف</th><th style="min-width:120px">الحجم النسبي</th></tr></thead>
+            <tbody id="tbRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10) منظف الجلسات -->
+    <section class="tab-page" id="tab-sessions">
+      <div class="card">
+        <h3>🧹 منظف الجلسات المنتهية (kv)</h3>
+        <p class="muted" style="margin-bottom:10px">الجلسات منتهية الصلاحية لا تضر لكن حذفها يبقي القاعدة رشيقة. المفاتيح بلا تاريخ انتهاء لا تُمسّ أبداً.</p>
+        <div class="form">
+          <button class="btn gray" onclick="loadSessions()">🔄 تحديث العدّ</button>
+          <button class="btn danger" id="ssBtn" onclick="cleanSessions()">🧹 حذف المنتهية الآن</button>
+        </div>
+        <div class="msg" id="ssMsg"></div>
+        <div class="stats" id="ssStats"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    var API = '/admin/f-api/system';
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    function fmt(n){ return Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2}); }
+    function showMsg(id, text, ok){ var el=document.getElementById(id); el.textContent=text; el.className='msg '+(ok?'ok':'err'); if(ok) setTimeout(function(){ el.className='msg'; }, 4000); }
+    function dt(ms){ try { return new Date(Number(ms)).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}); } catch(e){ return ''; } }
+    function statCard(lbl, val, sub, cls){
+      return '<div class="stat'+(cls?' '+cls:'')+'"><div class="lbl">'+esc(lbl)+'</div><div class="val">'+val+'</div>'+(sub?'<div class="sub">'+sub+'</div>':'')+'</div>';
+    }
+    function bar(val, max){
+      var w = max>0 ? Math.max(2, Math.round(Number(val)/max*100)) : 0;
+      if (!Number(val)) w = 0;
+      return '<div class="bar"><i style="width:'+w+'%"></i></div>';
+    }
+
+    async function api(path, opts){
+      var r = await fetch(API+path, opts||{});
+      if (r.status===401){ location.href='/admin/login'; throw new Error('unauthorized'); }
+      var j = await r.json().catch(function(){ return {}; });
+      if (!r.ok) throw new Error(j.error || 'حدث خطأ غير متوقع');
+      return j;
+    }
+    // تنزيل ملف عبر fetch (للتصدير و CSV) مع تمرير الجلسة
+    async function downloadFile(path, fallbackName){
+      var r = await fetch(API+path);
+      if (r.status===401){ location.href='/admin/login'; throw new Error('unauthorized'); }
+      if (!r.ok){ var j = await r.json().catch(function(){ return {}; }); throw new Error(j.error||'فشل التنزيل'); }
+      var blob = await r.blob();
+      var cd = r.headers.get('Content-Disposition')||'';
+      var m = cd.match(/filename="?([^";]+)"?/);
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = m ? m[1] : fallbackName;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 3000);
+    }
+
+    // ── تبويبات ──
+    document.getElementById('tabs').addEventListener('click', function(e){
+      var b = e.target.closest('button'); if(!b) return;
+      document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('on'); });
+      document.querySelectorAll('.tab-page').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      document.getElementById('tab-'+b.dataset.tab).classList.add('on');
+      var loaders = { notices:loadNotices, integrity:function(){}, export:function(){}, import:function(){},
+                      archive:function(){ archiveOffset=0; loadArchive(); }, audit:function(){ loadAuditFilters(); loadAudit(); },
+                      health:loadHealth, backup:loadBackups, tables:loadTables, sessions:loadSessions };
+      if (loaders[b.dataset.tab]) loaders[b.dataset.tab]();
+    });
+
+    // ═══ 1) الإشعارات ═══
+    async function loadNotices(){
+      try {
+        var unseen = document.getElementById('ntUnseenOnly').checked;
+        var j = await api('/notices'+(unseen?'?unseen=1':''));
+        var badge = document.getElementById('ntBadge');
+        if (j.unseen_count > 0){ badge.style.display='inline-block'; badge.textContent = j.unseen_count+' جديد'; }
+        else badge.style.display='none';
+        var box = document.getElementById('ntList'); box.innerHTML='';
+        document.getElementById('ntEmpty').style.display = j.notices.length ? 'none' : 'block';
+        j.notices.forEach(function(n){
+          box.insertAdjacentHTML('beforeend',
+            '<div class="notice'+(n.seen?'':' unseen')+'"><div class="txt">'+esc(n.text)+
+            '<div class="muted">'+dt(n.created_at)+(n.seen?'':' — <b>جديد</b>')+'</div></div>'+
+            '<button class="btn danger small" onclick="delNotice('+Number(n.id)+')">حذف</button></div>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('ntMsg', e.message, false); }
+    }
+    async function checkNotices(){
+      var btn = document.getElementById('ntCheckBtn'); btn.disabled=true; btn.textContent='⏳ جارٍ الفحص...';
+      try {
+        var j = await api('/notices/check', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+        showMsg('ntMsg', j.created ? ('تم توليد '+j.created+' إشعار جديد ✅') : 'لا جديد — كل المؤشرات سليمة أو الإشعارات مسجلة مسبقاً اليوم 🌿', true);
+        loadNotices();
+      } catch(e){ if(e.message!=='unauthorized') showMsg('ntMsg', e.message, false); }
+      btn.disabled=false; btn.textContent='🔍 فحص الآن';
+    }
+    async function markSeen(){
+      try { await api('/notices/seen', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' }); loadNotices(); }
+      catch(e){ if(e.message!=='unauthorized') showMsg('ntMsg', e.message, false); }
+    }
+    async function delNotice(id){
+      try { await api('/notices/'+id, { method:'DELETE' }); loadNotices(); }
+      catch(e){ if(e.message!=='unauthorized') showMsg('ntMsg', e.message, false); }
+    }
+
+    // ═══ 2) فحص التناقضات ═══
+    function igTable(title, rows, emptyTxt){
+      var h = '<div class="subhead">'+esc(title)+' ('+rows.length+')</div>';
+      if (!rows.length) return h + '<p class="muted">'+esc(emptyTxt)+'</p>';
+      h += '<div class="tbl-wrap"><table><thead><tr><th>#</th><th>الصفحة</th><th class="wrapcell">الطلب</th><th>المبلغ</th><th>الهاتف</th><th class="wrapcell">العنوان</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>';
+      rows.forEach(function(r){
+        h += '<tr><td>'+Number(r.id)+'</td><td class="wrapcell">'+esc(r.page_name||'—')+'</td><td class="wrapcell">'+esc(r.order_string||'—')+
+             '</td><td><b>'+fmt(r.total)+' د</b></td><td>'+esc(r.phone||'—')+'</td><td class="wrapcell">'+esc(r.area||'—')+
+             '</td><td>'+esc(r.status)+'</td><td>'+dt(r.created_at)+'</td></tr>';
+      });
+      return h + '</tbody></table></div>';
+    }
+    async function loadIntegrity(){
+      try {
+        document.getElementById('igEmpty').style.display='none';
+        var j = await api('/integrity');
+        document.getElementById('igStats').innerHTML =
+          statCard('بلا هاتف (مكتملة)', fmt(j.no_phone.length), '', j.no_phone.length?'bad':'') +
+          statCard('بلا عنوان (مكتملة)', fmt(j.no_area.length), '', j.no_area.length?'bad':'') +
+          statCard('بمبلغ صفر', fmt(j.zero_total.length), '', j.zero_total.length?'warn':'') +
+          statCard('مبالغ شاذة', fmt(j.outliers.length), 'أكبر من '+fmt(j.outlier_threshold)+' د (5× متوسط '+fmt(j.avg_order)+' د)', j.outliers.length?'warn':'');
+        document.getElementById('igSections').innerHTML =
+          igTable('📵 طلبات مكتملة بلا هاتف', j.no_phone, 'لا يوجد — ممتاز ✅') +
+          igTable('🗺️ طلبات مكتملة بلا عنوان', j.no_area, 'لا يوجد — ممتاز ✅') +
+          igTable('0️⃣ طلبات بمبلغ صفر', j.zero_total, 'لا يوجد — ممتاز ✅') +
+          igTable('📈 مبالغ شاذة (أكبر من 5× المتوسط)', j.outliers, 'لا يوجد — ممتاز ✅');
+      } catch(e){ if(e.message!=='unauthorized') showMsg('igMsg', e.message, false); }
+    }
+    async function integrityAI(){
+      var btn = document.getElementById('igAiBtn'); btn.disabled=true; btn.textContent='⏳ جارٍ التقييم...';
+      try {
+        var j = await api('/integrity/ai');
+        var box = document.getElementById('igAi'); box.textContent = j.text; box.style.display='block';
+      } catch(e){ if(e.message!=='unauthorized') showMsg('igMsg', e.message, false); }
+      btn.disabled=false; btn.textContent='🤖 تقييم ذكي';
+    }
+
+    // ═══ 3) التصدير ═══
+    async function doExport(){
+      var btn = document.getElementById('exBtn'); btn.disabled=true; btn.textContent='⏳ جارٍ التحضير...';
+      try {
+        await downloadFile('/export', 'platform-export.json');
+        showMsg('exMsg', 'تم تنزيل النسخة الكاملة ✅', true);
+      } catch(e){ if(e.message!=='unauthorized') showMsg('exMsg', e.message, false); }
+      btn.disabled=false; btn.textContent='⬇️ تنزيل النسخة الكاملة';
+    }
+
+    // ═══ 4) الاستيراد ═══
+    async function doImport(){
+      var inp = document.getElementById('imFile');
+      if (!inp.files || !inp.files[0]) return showMsg('imMsg', 'اختر ملف JSON أولاً', false);
+      var btn = document.getElementById('imBtn'); btn.disabled=true; btn.textContent='⏳ جارٍ الاستيراد...';
+      try {
+        var text = await inp.files[0].text();
+        var data; try { data = JSON.parse(text); } catch(pe){ throw new Error('الملف ليس JSON صالحاً'); }
+        var orders = Array.isArray(data) ? data : (data.orders || (data.data && data.data.orders));
+        if (!Array.isArray(orders) || !orders.length) throw new Error('لم أجد مصفوفة طلبات بالملف');
+        var j = await api('/import', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ orders: orders }) });
+        document.getElementById('imStats').innerHTML =
+          statCard('بالملف', fmt(j.total), '') +
+          statCard('استُورد', fmt(j.inserted), '', 'good') +
+          statCard('مكرر (تخطي)', fmt(j.skipped), '') +
+          statCard('غير صالح', fmt(j.invalid), '', j.invalid?'warn':'');
+        showMsg('imMsg', 'اكتمل الاستيراد: '+j.inserted+' جديد، '+j.skipped+' مكرر ✅', true);
+      } catch(e){ if(e.message!=='unauthorized') showMsg('imMsg', e.message, false); }
+      btn.disabled=false; btn.textContent='📥 استيراد الآن';
+    }
+
+    // ═══ 5) الأرشيف ═══
+    var archiveOffset = 0, archiveLimit = 50, archiveTotal = 0;
+    async function loadArchive(){
+      try {
+        var j = await api('/archive?offset='+archiveOffset+'&limit='+archiveLimit);
+        archiveTotal = j.total;
+        document.getElementById('arStats').innerHTML =
+          statCard('طلبات بالأرشيف', fmt(j.total), 'أقدم من 90 يوماً') +
+          statCard('قيمتها الإجمالية', fmt(j.total_value)+' د', '');
+        var tb = document.getElementById('arRows'); tb.innerHTML='';
+        document.getElementById('arEmpty').style.display = j.orders.length ? 'none' : 'block';
+        j.orders.forEach(function(r){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td>'+Number(r.id)+'</td><td class="wrapcell">'+esc(r.page_name||'—')+'</td><td class="wrapcell">'+esc(r.order_string||'—')+
+            '</td><td><b>'+fmt(r.total)+' د</b></td><td class="wrapcell">'+esc(r.area||'—')+'</td><td>'+esc(r.phone||'—')+
+            '</td><td>'+esc(r.status)+'</td><td>'+dt(r.created_at)+'</td></tr>');
+        });
+        var page = Math.floor(archiveOffset/archiveLimit)+1, pages = Math.max(1, Math.ceil(j.total/archiveLimit));
+        document.getElementById('arPageInfo').textContent = 'صفحة '+page+' من '+pages;
+        document.getElementById('arPrev').disabled = archiveOffset<=0;
+        document.getElementById('arNext').disabled = archiveOffset+archiveLimit>=j.total;
+      } catch(e){ if(e.message!=='unauthorized') showMsg('arMsg', e.message, false); }
+    }
+    function archivePage(dir){
+      var next = archiveOffset + dir*archiveLimit;
+      if (next < 0 || next >= Math.max(1,archiveTotal)) return;
+      archiveOffset = next; loadArchive();
+    }
+
+    // ═══ 6) سجل التدقيق ═══
+    var auditOffset = 0, auditLimit = 100, auditTotal = 0;
+    function auditQuery(){
+      var p = ['limit='+auditLimit, 'offset='+auditOffset];
+      var u = document.getElementById('adUser').value, a = document.getElementById('adAction').value, q = document.getElementById('adQ').value.trim();
+      if (u) p.push('user='+encodeURIComponent(u));
+      if (a) p.push('action='+encodeURIComponent(a));
+      if (q) p.push('q='+encodeURIComponent(q));
+      return '?'+p.join('&');
+    }
+    async function loadAuditFilters(){
+      try {
+        var j = await api('/audit/filters');
+        var su = document.getElementById('adUser'), sa = document.getElementById('adAction');
+        if (su.options.length <= 1){
+          j.users.forEach(function(u){ var o=document.createElement('option'); o.value=u; o.textContent=u; su.appendChild(o); });
+          j.actions.forEach(function(a){ var o=document.createElement('option'); o.value=a; o.textContent=a; sa.appendChild(o); });
+        }
+      } catch(e){ /* الفلاتر ثانوية */ }
+    }
+    async function loadAudit(){
+      try {
+        var j = await api('/audit'+auditQuery());
+        auditTotal = j.total;
+        document.getElementById('adSummary').textContent = 'إجمالي السجلات المطابقة: '+fmt(j.total);
+        var tb = document.getElementById('adRows'); tb.innerHTML='';
+        document.getElementById('adEmpty').style.display = j.logs.length ? 'none' : 'block';
+        j.logs.forEach(function(r){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td>'+Number(r.id)+'</td><td>'+esc(r.username||'—')+'</td><td>'+esc(r.action||'—')+
+            '</td><td class="wrapcell">'+esc(r.detail||'—')+'</td><td>'+dt(r.created_at)+'</td></tr>');
+        });
+        var page = Math.floor(auditOffset/auditLimit)+1, pages = Math.max(1, Math.ceil(j.total/auditLimit));
+        document.getElementById('adPageInfo').textContent = 'صفحة '+page+' من '+pages;
+      } catch(e){ if(e.message!=='unauthorized') showMsg('adMsg', e.message, false); }
+    }
+    function auditPage(dir){
+      var next = auditOffset + dir*auditLimit;
+      if (next < 0 || next >= Math.max(1,auditTotal)) return;
+      auditOffset = next; loadAudit();
+    }
+    async function auditCsv(){
+      try {
+        var saveOffset = auditOffset; auditOffset = 0;
+        var q = auditQuery(); auditOffset = saveOffset;
+        await downloadFile('/audit/csv'+q, 'audit-log.csv');
+        showMsg('adMsg', 'تم تنزيل ملف CSV ✅', true);
+      } catch(e){ if(e.message!=='unauthorized') showMsg('adMsg', e.message, false); }
+    }
+
+    // ═══ 7) مراقب الصحة ═══
+    async function loadHealth(){
+      try {
+        var j = await api('/health');
+        var h = '';
+        if (j.db && j.db.ok) h += statCard('قاعدة البيانات', '✅ تستجيب', 'زمن الاستجابة: '+j.db.ms+' ملي ثانية', j.db.ms>500?'warn':'');
+        else h += statCard('قاعدة البيانات', '❌ لا تستجيب', j.db && j.db.error ? esc(j.db.error) : '', 'bad');
+        if (j.today) h += statCard('طلبات اليوم', fmt(j.today.orders), 'مبيعات: '+fmt(j.today.sales)+' د', j.today.orders===0?'warn':'');
+        else h += statCard('طلبات اليوم', '—', 'تعذّرت القراءة', 'bad');
+        if (j.last_inbound_min == null) h += statCard('آخر رسالة واردة', 'لا رسائل', '', 'warn');
+        else {
+          var mins = j.last_inbound_min;
+          var txt = mins < 60 ? ('قبل '+mins+' دقيقة') : ('قبل '+Math.round(mins/60*10)/10+' ساعة');
+          h += statCard('آخر رسالة واردة', txt, '', mins > 720 ? 'warn' : '');
+        }
+        if (j.db_file && j.db_file.exists) h += statCard('حجم ملف القاعدة', fmt(j.db_file.size_mb)+' MB', 'آخر تعديل: '+dt(j.db_file.modified_at));
+        else h += statCard('حجم ملف القاعدة', 'غير متاح', 'القاعدة سحابية أو الملف غير موجود', 'warn');
+        h += statCard('تشغيل الخادم', fmt(j.uptime_min)+' دقيقة', 'منذ آخر إعادة تشغيل');
+        document.getElementById('hlStats').innerHTML = h;
+        document.getElementById('hlNote').textContent = 'آخر فحص: '+dt(j.checked_at);
+      } catch(e){ if(e.message!=='unauthorized') showMsg('hlMsg', e.message, false); }
+    }
+
+    // ═══ 8) النسخ الاحتياطي ═══
+    async function doBackup(){
+      var btn = document.getElementById('bkBtn'); btn.disabled=true; btn.textContent='⏳ جارٍ النسخ...';
+      try {
+        var j = await api('/backup', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+        showMsg('bkMsg', 'أُنشئت النسخة: '+j.file+' ('+fmt(j.size_mb)+' MB) ✅', true);
+        loadBackups();
+      } catch(e){ if(e.message!=='unauthorized') showMsg('bkMsg', e.message, false); }
+      btn.disabled=false; btn.textContent='💾 إنشاء نسخة الآن';
+    }
+    async function loadBackups(){
+      try {
+        var j = await api('/backups');
+        var tb = document.getElementById('bkRows'); tb.innerHTML='';
+        document.getElementById('bkEmpty').style.display = j.backups.length ? 'none' : 'block';
+        j.backups.forEach(function(b){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td class="wrapcell"><b>'+esc(b.file)+'</b></td><td>'+(b.size_mb==null?'—':fmt(b.size_mb)+' MB')+'</td><td>'+dt(b.created_at)+'</td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('bkMsg', e.message, false); }
+    }
+
+    // ═══ 9) حجم الجداول ═══
+    var TB_LABELS = { orders:'الطلبات', messages:'الرسائل', kv:'الجلسات والذاكرة (kv)', activity_log:'سجل التدقيق', coupons:'الكوبونات', reviews:'التقييمات' };
+    async function loadTables(){
+      try {
+        var j = await api('/tables');
+        document.getElementById('tbSummary').textContent = 'إجمالي الصفوف بالجداول الرئيسية: '+fmt(j.total_rows);
+        var max = Math.max.apply(null, j.tables.map(function(t){ return t.rows||0; }).concat([0]));
+        var tb = document.getElementById('tbRows'); tb.innerHTML='';
+        j.tables.forEach(function(t){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td><b>'+esc(TB_LABELS[t.name]||t.name)+'</b> <span class="muted">'+esc(t.name)+'</span></td>'+
+            '<td>'+(t.rows==null?'<span class="pill down">تعذّرت القراءة</span>':'<b>'+fmt(t.rows)+'</b>')+'</td>'+
+            '<td>'+bar(t.rows||0, max)+'</td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('tbMsg', e.message, false); }
+    }
+
+    // ═══ 10) منظف الجلسات ═══
+    async function loadSessions(){
+      try {
+        var j = await api('/sessions/expired');
+        document.getElementById('ssStats').innerHTML =
+          statCard('منتهية الصلاحية', fmt(j.expired), 'قابلة للحذف الآن', j.expired>0?'warn':'') +
+          statCard('إجمالي المفاتيح', fmt(j.total), '') +
+          statCard('بلا تاريخ انتهاء', fmt(j.no_expiry), 'لا تُحذف أبداً');
+      } catch(e){ if(e.message!=='unauthorized') showMsg('ssMsg', e.message, false); }
+    }
+    async function cleanSessions(){
+      if (!confirm('حذف كل الجلسات منتهية الصلاحية؟ (لا يمس المفاتيح الفعالة)')) return;
+      var btn = document.getElementById('ssBtn'); btn.disabled=true;
+      try {
+        var j = await api('/sessions/clean', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+        showMsg('ssMsg', 'تم حذف '+fmt(j.deleted)+' مفتاح منتهٍ ✅', true);
+        loadSessions();
+      } catch(e){ if(e.message!=='unauthorized') showMsg('ssMsg', e.message, false); }
+      btn.disabled=false;
+    }
+
+    // البداية
+    loadNotices();
+  </script>
+</body>
+</html>

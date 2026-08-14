@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الفريق والإنتاجية — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; --amber:#ef6c00; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1050px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; -webkit-overflow-scrolling:touch; }
+    .tabs button { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:20px; cursor:pointer; font-family:inherit; font-size:13.5px; color:#37474f; white-space:nowrap; }
+    .tabs button.on { background:var(--green); border-color:var(--green); color:#fff; font-weight:bold; }
+    .card { background:var(--card); border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:18px; }
+    .card h3 { color:var(--green2); font-size:16px; margin-bottom:14px; }
+    .tab-page { display:none; }
+    .tab-page.on { display:block; }
+    .form { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+    .fld { display:flex; flex-direction:column; gap:5px; }
+    .fld label { font-size:12px; color:var(--mut); }
+    .fld input, .fld select, .fld textarea { padding:10px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14px; font-family:inherit; min-width:120px; }
+    .fld textarea { min-width:240px; }
+    .btn { padding:11px 20px; background:var(--green); color:#fff; border:none; border-radius:9px; font-weight:bold; cursor:pointer; font-family:inherit; font-size:14px; }
+    .btn:hover { background:var(--green2); }
+    .btn.gray { background:#607d8b; }
+    .btn.small { padding:7px 12px; font-size:12.5px; }
+    .btn.danger { background:var(--red); }
+    .tbl-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th,td { padding:10px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    td.wrapcell { white-space:normal; min-width:160px; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    .empty { text-align:center; padding:28px; color:var(--mut); }
+    .muted { color:var(--mut); font-size:12.5px; }
+    .pill { display:inline-block; padding:3px 10px; border-radius:12px; font-size:12px; background:#e8f5e9; color:var(--green2); }
+    .pill.red { background:#ffebee; color:var(--red); }
+    .pill.amber { background:#fff3e0; color:var(--amber); }
+    .msg { padding:10px 14px; border-radius:9px; margin:10px 0; font-size:13.5px; display:none; }
+    .msg.ok { display:block; background:#e8f5e9; color:var(--green2); }
+    .msg.err { display:block; background:#ffebee; color:var(--red); }
+    /* شريط التذكيرات المستحقة أعلى الصفحة */
+    .due-banner { background:#fff8e1; border:1.5px solid #ffe082; border-radius:14px; padding:14px 18px; margin-bottom:18px; display:none; }
+    .due-banner.show { display:block; }
+    .due-banner b { color:var(--amber); }
+    .due-banner ul { list-style:none; margin-top:8px; }
+    .due-banner li { padding:5px 0; display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
+    /* كانبان المهام */
+    .kanban { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; }
+    .kan-col { background:#fafbfc; border:1px solid var(--line); border-radius:12px; padding:12px; min-height:120px; }
+    .kan-col h4 { font-size:14px; color:var(--green2); margin-bottom:10px; display:flex; justify-content:space-between; }
+    .kan-col .cnt { background:#e8f5e9; border-radius:10px; padding:1px 9px; font-size:12px; }
+    .task { background:#fff; border:1px solid var(--line); border-radius:10px; padding:11px; margin-bottom:9px; font-size:13.5px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+    .task .t-title { font-weight:700; margin-bottom:5px; }
+    .task .t-meta { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+    .task .t-actions { display:flex; gap:6px; flex-wrap:wrap; }
+    .task .t-actions button { padding:5px 9px; font-size:12px; border:1px solid var(--line); background:#f6f8f7; border-radius:7px; cursor:pointer; font-family:inherit; }
+    .task .t-actions button.del { color:var(--red); border-color:#ffcdd2; background:#fff8f8; }
+    .task.p-high { border-right:4px solid var(--red); }
+    .task.p-low { border-right:4px solid #90a4ae; }
+    .task.p-norm { border-right:4px solid var(--green); }
+    /* دفتر الشفت */
+    .shift-item { border:1px solid var(--line); border-radius:10px; padding:13px; margin-bottom:10px; background:#fffdf7; }
+    .shift-item .s-head { display:flex; justify-content:space-between; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+    .shift-item .s-note { white-space:pre-wrap; line-height:1.8; font-size:13.5px; }
+    /* تشيك ليست */
+    .chk-item { display:flex; align-items:center; gap:10px; padding:10px 6px; border-bottom:1px solid var(--line); }
+    .chk-item input[type=checkbox] { width:20px; height:20px; accent-color:var(--green); cursor:pointer; }
+    .chk-item .chk-txt { flex:1; font-size:14px; }
+    .chk-item.done .chk-txt { text-decoration:line-through; color:var(--mut); }
+    .progress { height:10px; background:#eceff1; border-radius:6px; overflow:hidden; margin:10px 0; }
+    .progress > div { height:100%; background:var(--green); border-radius:6px; transition:width .3s; }
+    /* الملاحظات اللاصقة */
+    .stickies { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
+    .sticky { border-radius:10px; padding:14px; min-height:110px; box-shadow:0 2px 6px rgba(0,0,0,.09); font-size:13.5px; white-space:pre-wrap; line-height:1.7; position:relative; }
+    .sticky .st-del { position:absolute; top:6px; left:8px; border:none; background:transparent; cursor:pointer; font-size:14px; color:rgba(0,0,0,.45); }
+    .sticky.c-yellow { background:#fff9c4; } .sticky.c-green { background:#c8e6c9; }
+    .sticky.c-pink { background:#f8bbd0; } .sticky.c-blue { background:#bbdefb; } .sticky.c-orange { background:#ffe0b2; }
+    .color-dots { display:flex; gap:8px; align-items:center; }
+    .color-dots span { width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid transparent; display:inline-block; }
+    .color-dots span.sel { border-color:#37474f; }
+    .cd-yellow { background:#fff176; } .cd-green { background:#81c784; } .cd-pink { background:#f48fb1; } .cd-blue { background:#64b5f6; } .cd-orange { background:#ffb74d; }
+    /* SOP */
+    .sop-layout { display:grid; grid-template-columns:250px 1fr; gap:16px; }
+    @media (max-width:760px){ .sop-layout { grid-template-columns:1fr; } }
+    .sop-list-item { padding:10px 12px; border:1px solid var(--line); border-radius:9px; margin-bottom:8px; cursor:pointer; font-size:13.5px; }
+    .sop-list-item.on { background:#e8f5e9; border-color:var(--green); font-weight:700; }
+    .sop-content { white-space:pre-wrap; line-height:1.9; font-size:14px; }
+    /* نشاط ولوحات */
+    .bar-row { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+    .bar-row .b-name { width:110px; font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; }
+    .bar-row .b-track { flex:1; background:#eceff1; border-radius:6px; height:20px; overflow:hidden; }
+    .bar-row .b-fill { height:100%; background:var(--green); border-radius:6px; min-width:2px; }
+    .bar-row .b-val { width:44px; font-size:13px; font-weight:700; color:var(--green2); }
+    .medal { font-size:17px; }
+    /* الاجتماع اليومي */
+    .standup-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px; }
+    .stat { background:#f0f4f1; border-radius:11px; padding:14px; text-align:center; }
+    .stat .v { font-size:22px; font-weight:800; color:var(--green2); }
+    .stat .l { font-size:12.5px; color:var(--mut); margin-top:4px; }
+    .agenda-sec { margin-bottom:16px; }
+    .agenda-sec h4 { color:var(--green2); font-size:14.5px; margin-bottom:8px; border-bottom:2px solid #e8f5e9; padding-bottom:5px; }
+    .ai-box { background:#f3f7ff; border:1px solid #c5d5f0; border-radius:10px; padding:14px; white-space:pre-wrap; line-height:1.9; font-size:13.5px; margin-top:10px; display:none; }
+    .spin { display:inline-block; width:14px; height:14px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:sp 0.7s linear infinite; vertical-align:middle; }
+    @keyframes sp { to { transform:rotate(360deg); } }
+    @media print {
+      header, .tabs, .btn, .due-banner, .no-print { display:none !important; }
+      body { background:#fff; }
+      .card { box-shadow:none; border:none; padding:0; }
+      .tab-page { display:none !important; }
+      #page-standup { display:block !important; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🤝 الفريق والإنتاجية</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+
+  <div class="wrap">
+    <!-- شريط التذكيرات المستحقة اليوم -->
+    <div class="due-banner" id="dueBanner">
+      <b>🔔 تذكيرات اليوم</b>
+      <ul id="dueList"></ul>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button data-t="tasks" class="on">📋 المهام</button>
+      <button data-t="shifts">🔄 ملاحظات الشفت</button>
+      <button data-t="checklist">✅ تشيك ليست اليوم</button>
+      <button data-t="activity">👥 نشاط الموظفين</button>
+      <button data-t="reminders">🔔 التذكيرات</button>
+      <button data-t="stickies">🗒️ ملاحظات لاصقة</button>
+      <button data-t="sop">📖 دليل التشغيل</button>
+      <button data-t="log">🕓 سجل الأحداث</button>
+      <button data-t="achieve">🏆 إنجازات الأسبوع</button>
+      <button data-t="standup">☀️ الاجتماع اليومي</button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+
+    <!-- ═══ 1) المهام (كانبان) ═══ -->
+    <div class="tab-page on" id="page-tasks">
+      <div class="card">
+        <h3>➕ مهمة جديدة</h3>
+        <div class="form">
+          <div class="fld"><label>عنوان المهمة</label><input id="tTitle" placeholder="مثال: جرد الثلاجة"></div>
+          <div class="fld"><label>المسؤول</label><input id="tAssignee" placeholder="اسم الموظف"></div>
+          <div class="fld"><label>الأولوية</label>
+            <select id="tPriority"><option value="عادية">عادية</option><option value="عالية">عالية</option><option value="منخفضة">منخفضة</option></select>
+          </div>
+          <div class="fld"><label>تاريخ الاستحقاق</label><input id="tDue" type="date"></div>
+          <button class="btn" onclick="addTask()">إضافة</button>
+        </div>
+      </div>
+      <div class="kanban" id="kanban"></div>
+    </div>
+
+    <!-- ═══ 2) ملاحظات الشفت ═══ -->
+    <div class="tab-page" id="page-shifts">
+      <div class="card">
+        <h3>🔄 دفتر تسليم الورديات</h3>
+        <div class="form">
+          <div class="fld"><label>اسمك</label><input id="shAuthor" placeholder="مثال: أبو محمد"></div>
+          <div class="fld" style="flex:1"><label>ملاحظة التسليم</label><textarea id="shNote" rows="3" placeholder="مثال: باقي 3 طلبات جديدة بدها تواصل، والزبون فلان وعدناه نرد عليه الصبح..."></textarea></div>
+          <button class="btn" onclick="addShift()">تسليم الشفت</button>
+        </div>
+      </div>
+      <div class="card"><h3>📒 آخر الملاحظات</h3><div id="shiftsList"></div></div>
+    </div>
+
+    <!-- ═══ 3) تشيك ليست يومية ═══ -->
+    <div class="tab-page" id="page-checklist">
+      <div class="card">
+        <h3>✅ قائمة تجهيز اليوم <span class="muted" id="chkDay"></span></h3>
+        <div class="progress"><div id="chkBar" style="width:0%"></div></div>
+        <div class="muted" id="chkStats"></div>
+        <div id="chkList" style="margin-top:10px"></div>
+        <div class="form" style="margin-top:14px">
+          <div class="fld" style="flex:1"><label>بند جديد (يتكرر كل يوم)</label><input id="chkNew" placeholder="مثال: تفقد برادات الأجبان"></div>
+          <button class="btn" onclick="addChk()">إضافة بند</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ 4) نشاط الموظفين ═══ -->
+    <div class="tab-page" id="page-activity">
+      <div class="card">
+        <h3>👥 نشاط الموظفين — آخر 7 أيام</h3>
+        <div id="actBoard"></div>
+      </div>
+    </div>
+
+    <!-- ═══ 5) التذكيرات ═══ -->
+    <div class="tab-page" id="page-reminders">
+      <div class="card">
+        <h3>➕ تذكير جديد</h3>
+        <div class="form">
+          <div class="fld" style="flex:1"><label>نص التذكير</label><input id="remText" placeholder="مثال: اتصال بمورد الغنم لتأكيد الكمية"></div>
+          <div class="fld"><label>يوم التذكير</label><input id="remDay" type="date"></div>
+          <button class="btn" onclick="addRem()">إضافة</button>
+        </div>
+      </div>
+      <div class="card"><h3>🔔 كل التذكيرات</h3><div class="tbl-wrap" id="remList"></div></div>
+    </div>
+
+    <!-- ═══ 6) ملاحظات لاصقة ═══ -->
+    <div class="tab-page" id="page-stickies">
+      <div class="card">
+        <h3>🗒️ ملاحظة جديدة</h3>
+        <div class="form">
+          <div class="fld" style="flex:1"><label>النص</label><textarea id="stText" rows="2" placeholder="اكتب أي شي بدك الفريق يشوفه..."></textarea></div>
+          <div class="fld"><label>اللون</label>
+            <div class="color-dots" id="colorDots">
+              <span class="cd-yellow sel" data-c="yellow"></span>
+              <span class="cd-green" data-c="green"></span>
+              <span class="cd-pink" data-c="pink"></span>
+              <span class="cd-blue" data-c="blue"></span>
+              <span class="cd-orange" data-c="orange"></span>
+            </div>
+          </div>
+          <button class="btn" onclick="addSticky()">لصق</button>
+        </div>
+      </div>
+      <div class="stickies" id="stickyWall"></div>
+      <div class="empty" id="stickyEmpty" style="display:none">ما في ملاحظات لاصقة بعد — الصق أول وحدة 📌</div>
+    </div>
+
+    <!-- ═══ 7) دليل التشغيل SOP ═══ -->
+    <div class="tab-page" id="page-sop">
+      <div class="card">
+        <h3>📖 دليل التشغيل (SOP)</h3>
+        <div class="sop-layout">
+          <div>
+            <button class="btn small" style="width:100%;margin-bottom:10px" onclick="newSop()">➕ صفحة جديدة</button>
+            <div id="sopList"></div>
+          </div>
+          <div id="sopView"><div class="empty">اختر صفحة من القائمة أو أنشئ صفحة جديدة 📄</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ 8) سجل الأحداث ═══ -->
+    <div class="tab-page" id="page-log">
+      <div class="card">
+        <h3>🕓 سجل الأحداث</h3>
+        <div class="form" style="margin-bottom:12px">
+          <div class="fld"><label>المستخدم</label><select id="logUser"><option value="">الكل</option></select></div>
+          <button class="btn small" onclick="loadLog()">عرض</button>
+        </div>
+        <div class="tbl-wrap" id="logTable"></div>
+      </div>
+    </div>
+
+    <!-- ═══ 9) إنجازات الأسبوع ═══ -->
+    <div class="tab-page" id="page-achieve">
+      <div class="card">
+        <h3>🏆 إنجازات الأسبوع — تغييرات حالة الطلبات لكل موظف (آخر 7 أيام)</h3>
+        <div id="achieveBoard"></div>
+      </div>
+    </div>
+
+    <!-- ═══ 10) الاجتماع اليومي ═══ -->
+    <div class="tab-page" id="page-standup">
+      <div class="card">
+        <h3>☀️ أجندة الاجتماع الصباحي <span class="muted" id="standupDay"></span></h3>
+        <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+          <button class="btn small" onclick="loadStandup()">🔄 تحديث</button>
+          <button class="btn small gray" onclick="window.print()">🖨️ طباعة الأجندة</button>
+          <button class="btn small" id="aiBtn" onclick="aiSummary()">✨ ملخص ذكي</button>
+        </div>
+        <div id="standupBody"><div class="empty">جارِ التحميل...</div></div>
+        <div class="ai-box" id="aiBox"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var API = '/admin/f-api/team';
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    function fmtDate(ms){ if(!ms) return '—'; var d=new Date(Number(ms)); return d.toLocaleDateString('ar-JO')+' '+d.toLocaleTimeString('ar-JO',{hour:'2-digit',minute:'2-digit'}); }
+    function showMsg(text, ok){
+      var m=document.getElementById('msg'); m.textContent=text; m.className='msg '+(ok?'ok':'err');
+      clearTimeout(m._t); m._t=setTimeout(function(){ m.className='msg'; }, 3500);
+    }
+    async function api(path, opts){
+      opts = opts || {};
+      if (opts.body && typeof opts.body !== 'string'){ opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers); opts.body = JSON.stringify(opts.body); }
+      var r = await fetch(API + path, opts);
+      if (r.status === 401){ location.href = '/admin/login'; throw new Error('unauthorized'); }
+      var j = null; try { j = await r.json(); } catch(e){}
+      if (!r.ok) throw new Error((j && j.error) || 'حدث خطأ غير متوقع');
+      return j;
+    }
+
+    // ── تبويبات ──
+    var loaded = {};
+    document.getElementById('tabs').addEventListener('click', function(e){
+      var b = e.target.closest('button'); if(!b) return;
+      document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('on'); });
+      document.querySelectorAll('.tab-page').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      var t = b.dataset.t;
+      document.getElementById('page-'+t).classList.add('on');
+      openTab(t);
+    });
+    function openTab(t){
+      if (t==='tasks') loadTasks();
+      else if (t==='shifts') loadShifts();
+      else if (t==='checklist') loadChk();
+      else if (t==='activity') loadActivity();
+      else if (t==='reminders') loadRems();
+      else if (t==='stickies') loadStickies();
+      else if (t==='sop') loadSop();
+      else if (t==='log') loadLog();
+      else if (t==='achieve') loadAchieve();
+      else if (t==='standup') loadStandup();
+    }
+
+    // ═══ 1) المهام كانبان ═══
+    var TASK_COLS = [{k:'جديدة',icon:'🆕'},{k:'جارية',icon:'⏳'},{k:'منجزة',icon:'✔️'}];
+    async function loadTasks(){
+      try {
+        var d = await api('/tasks');
+        var kb = document.getElementById('kanban'); kb.innerHTML = '';
+        TASK_COLS.forEach(function(col){
+          var list = d.tasks.filter(function(t){ return t.status===col.k; });
+          var html = '<div class="kan-col"><h4>'+col.icon+' '+esc(col.k)+' <span class="cnt">'+list.length+'</span></h4>';
+          if (!list.length) html += '<div class="muted" style="text-align:center;padding:12px">لا مهام هنا</div>';
+          list.forEach(function(t){
+            var pc = t.priority==='عالية' ? 'p-high' : (t.priority==='منخفضة' ? 'p-low' : 'p-norm');
+            html += '<div class="task '+pc+'">'
+              + '<div class="t-title">'+esc(t.title)+'</div>'
+              + '<div class="t-meta">'
+              + (t.assignee ? '<span class="pill">👤 '+esc(t.assignee)+'</span>' : '')
+              + '<span class="pill '+(t.priority==='عالية'?'red':'')+'">'+esc(t.priority)+'</span>'
+              + (t.due_day ? '<span class="pill amber">📅 '+esc(t.due_day)+'</span>' : '')
+              + '</div><div class="t-actions">';
+            TASK_COLS.forEach(function(c2){
+              if (c2.k !== t.status) html += '<button onclick="moveTask('+t.id+',\''+c2.k+'\')">→ '+esc(c2.k)+'</button>';
+            });
+            html += '<button class="del" onclick="delTask('+t.id+')">حذف</button></div></div>';
+          });
+          kb.innerHTML += html + '</div>';
+        });
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function addTask(){
+      try {
+        var title = document.getElementById('tTitle').value.trim();
+        if (!title) return showMsg('اكتب عنوان المهمة', false);
+        await api('/tasks',{method:'POST',body:{title:title,assignee:document.getElementById('tAssignee').value,priority:document.getElementById('tPriority').value,due_day:document.getElementById('tDue').value}});
+        document.getElementById('tTitle').value=''; document.getElementById('tAssignee').value=''; document.getElementById('tDue').value='';
+        showMsg('تمت إضافة المهمة ✅', true); loadTasks();
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function moveTask(id, status){ try { await api('/tasks/'+id,{method:'PUT',body:{status:status}}); loadTasks(); } catch(e){ showMsg(e.message,false); } }
+    async function delTask(id){ if(!confirm('حذف هذه المهمة؟')) return; try { await api('/tasks/'+id,{method:'DELETE'}); loadTasks(); } catch(e){ showMsg(e.message,false); } }
+
+    // ═══ 2) ملاحظات الشفت ═══
+    async function loadShifts(){
+      try {
+        var d = await api('/shifts');
+        var box = document.getElementById('shiftsList');
+        if (!d.shifts.length){ box.innerHTML = '<div class="empty">دفتر الشفت فاضي — أول تسليم وردية يبدأ من هون 📒</div>'; return; }
+        box.innerHTML = d.shifts.map(function(s){
+          return '<div class="shift-item"><div class="s-head"><b>👤 '+esc(s.author||'بدون اسم')+'</b>'
+            + '<span class="muted">'+fmtDate(s.created_at)+' <button class="btn small danger" style="margin-inline-start:8px" onclick="delShift('+s.id+')">حذف</button></span></div>'
+            + '<div class="s-note">'+esc(s.note)+'</div></div>';
+        }).join('');
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function addShift(){
+      try {
+        var note = document.getElementById('shNote').value.trim();
+        if (!note) return showMsg('اكتب ملاحظة التسليم', false);
+        await api('/shifts',{method:'POST',body:{author:document.getElementById('shAuthor').value,note:note}});
+        document.getElementById('shNote').value='';
+        showMsg('تم تسليم الشفت ✅', true); loadShifts();
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function delShift(id){ if(!confirm('حذف هذه الملاحظة؟')) return; try { await api('/shifts/'+id,{method:'DELETE'}); loadShifts(); } catch(e){ showMsg(e.message,false); } }
+
+    // ═══ 3) تشيك ليست ═══
+    async function loadChk(){
+      try {
+        var d = await api('/checklist');
+        document.getElementById('chkDay').textContent = '— '+d.day;
+        var pct = d.total ? Math.round(d.doneCount*100/d.total) : 0;
+        document.getElementById('chkBar').style.width = pct+'%';
+        document.getElementById('chkStats').textContent = d.total ? ('منجز '+d.doneCount+' من '+d.total+' ('+pct+'%)') : '';
+        var box = document.getElementById('chkList');
+        if (!d.items.length){ box.innerHTML = '<div class="empty">ما في بنود بعد — أضف بنود التجهيز اليومي وبتتكرر كل يوم تلقائياً ✅</div>'; return; }
+        box.innerHTML = d.items.map(function(it){
+          return '<div class="chk-item'+(Number(it.done)?' done':'')+'">'
+            + '<input type="checkbox" '+(Number(it.done)?'checked':'')+' onchange="toggleChk('+it.id+',this.checked)">'
+            + '<span class="chk-txt">'+esc(it.item)+'</span>'
+            + '<button class="btn small danger" onclick="delChk('+it.id+')">حذف</button></div>';
+        }).join('');
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function addChk(){
+      try {
+        var v = document.getElementById('chkNew').value.trim();
+        if (!v) return showMsg('اكتب اسم البند', false);
+        await api('/checklist',{method:'POST',body:{item:v}});
+        document.getElementById('chkNew').value='';
+        loadChk();
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function toggleChk(id, done){ try { await api('/checklist/'+id,{method:'PUT',body:{done:done}}); loadChk(); } catch(e){ showMsg(e.message,false); } }
+    async function delChk(id){ if(!confirm('حذف البند من القائمة اليومية نهائياً؟')) return; try { await api('/checklist/'+id,{method:'DELETE'}); loadChk(); } catch(e){ showMsg(e.message,false); } }
+
+    // ═══ 4) نشاط الموظفين ═══
+    async function loadActivity(){
+      try {
+        var d = await api('/activity-board');
+        var box = document.getElementById('actBoard');
+        if (!d.users.length){ box.innerHTML = '<div class="empty">لا يوجد نشاط مسجل آخر 7 أيام</div>'; return; }
+        var max = Math.max.apply(null, d.users.map(function(u){ return u.ops; }));
+        box.innerHTML = d.users.map(function(u){
+          var topTxt = u.top.map(function(t){ return esc(t.action)+' ('+t.count+')'; }).join(' · ');
+          return '<div class="bar-row"><div class="b-name">'+esc(u.username)+'</div>'
+            + '<div class="b-track"><div class="b-fill" style="width:'+Math.round(u.ops*100/max)+'%"></div></div>'
+            + '<div class="b-val">'+u.ops+'</div></div>'
+            + '<div class="muted" style="margin:-4px 120px 10px 0">آخر نشاط: '+fmtDate(u.last_at)+(topTxt?' — الأكثر: '+topTxt:'')+'</div>';
+        }).join('');
+      } catch(e){ showMsg(e.message,false); }
+    }
+
+    // ═══ 5) التذكيرات ═══
+    async function loadRems(){
+      try {
+        var d = await api('/reminders');
+        renderDueBanner(d.due);
+        var box = document.getElementById('remList');
+        if (!d.reminders.length){ box.innerHTML = '<div class="empty">ما في تذكيرات — أضف تذكير وبيظهر بأعلى الصفحة بيومه 🔔</div>'; return; }
+        box.innerHTML = '<table><thead><tr><th>التذكير</th><th>اليوم</th><th>الحالة</th><th></th></tr></thead><tbody>'
+          + d.reminders.map(function(r){
+            var isDue = !Number(r.done) && r.remind_day <= d.today;
+            return '<tr><td class="wrapcell">'+esc(r.text)+'</td><td>'+esc(r.remind_day)+'</td>'
+              + '<td>'+(Number(r.done)?'<span class="pill">✔️ تم</span>':(isDue?'<span class="pill amber">🔔 مستحق</span>':'<span class="pill">⏳ قادم</span>'))+'</td>'
+              + '<td>'+(Number(r.done)?'':'<button class="btn small" onclick="doneRem('+r.id+')">تم ✔️</button> ')
+              + '<button class="btn small danger" onclick="delRem('+r.id+')">حذف</button></td></tr>';
+          }).join('') + '</tbody></table>';
+      } catch(e){ showMsg(e.message,false); }
+    }
+    function renderDueBanner(due){
+      var banner = document.getElementById('dueBanner');
+      if (!due || !due.length){ banner.classList.remove('show'); return; }
+      document.getElementById('dueList').innerHTML = due.map(function(r){
+        return '<li><span>• '+esc(r.text)+' <span class="muted">('+esc(r.remind_day)+')</span></span>'
+          + '<button class="btn small" onclick="doneRem('+r.id+')">تم ✔️</button></li>';
+      }).join('');
+      banner.classList.add('show');
+    }
+    async function addRem(){
+      try {
+        var text = document.getElementById('remText').value.trim();
+        var day = document.getElementById('remDay').value;
+        if (!text) return showMsg('اكتب نص التذكير', false);
+        if (!day) return showMsg('اختر يوم التذكير', false);
+        await api('/reminders',{method:'POST',body:{text:text,remind_day:day}});
+        document.getElementById('remText').value='';
+        showMsg('تمت إضافة التذكير ✅', true); loadRems();
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function doneRem(id){ try { await api('/reminders/'+id,{method:'PUT',body:{done:true}}); loadRems(); } catch(e){ showMsg(e.message,false); } }
+    async function delRem(id){ if(!confirm('حذف التذكير؟')) return; try { await api('/reminders/'+id,{method:'DELETE'}); loadRems(); } catch(e){ showMsg(e.message,false); } }
+
+    // ═══ 6) الملاحظات اللاصقة ═══
+    var stickyColor = 'yellow';
+    document.getElementById('colorDots').addEventListener('click', function(e){
+      var s = e.target.closest('span'); if(!s) return;
+      document.querySelectorAll('#colorDots span').forEach(function(x){ x.classList.remove('sel'); });
+      s.classList.add('sel'); stickyColor = s.dataset.c;
+    });
+    async function loadStickies(){
+      try {
+        var d = await api('/stickies');
+        var wall = document.getElementById('stickyWall');
+        document.getElementById('stickyEmpty').style.display = d.stickies.length ? 'none' : 'block';
+        wall.innerHTML = d.stickies.map(function(s){
+          return '<div class="sticky c-'+esc(s.color)+'"><button class="st-del" title="حذف" onclick="delSticky('+s.id+')">✖</button>'+esc(s.text)
+            + '<div class="muted" style="margin-top:8px;font-size:11px">'+fmtDate(s.created_at)+'</div></div>';
+        }).join('');
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function addSticky(){
+      try {
+        var text = document.getElementById('stText').value.trim();
+        if (!text) return showMsg('اكتب نص الملاحظة', false);
+        await api('/stickies',{method:'POST',body:{text:text,color:stickyColor}});
+        document.getElementById('stText').value='';
+        loadStickies();
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function delSticky(id){ if(!confirm('حذف الملاحظة؟')) return; try { await api('/stickies/'+id,{method:'DELETE'}); loadStickies(); } catch(e){ showMsg(e.message,false); } }
+
+    // ═══ 7) دليل SOP ═══
+    var curSop = null;
+    async function loadSop(){
+      try {
+        var d = await api('/sop');
+        var box = document.getElementById('sopList');
+        if (!d.pages.length){ box.innerHTML = '<div class="muted" style="text-align:center;padding:10px">ما في صفحات بعد</div>'; return; }
+        box.innerHTML = d.pages.map(function(p){
+          return '<div class="sop-list-item'+(curSop===p.id?' on':'')+'" onclick="openSop('+p.id+')">📄 '+esc(p.title)
+            + '<div class="muted" style="font-size:11px">'+fmtDate(p.updated_at)+'</div></div>';
+        }).join('');
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function openSop(id){
+      try {
+        var d = await api('/sop/'+id);
+        curSop = id; loadSop();
+        document.getElementById('sopView').innerHTML =
+          '<h3 style="margin-bottom:8px">'+esc(d.page.title)+'</h3>'
+          + '<div class="muted" style="margin-bottom:10px">آخر تحديث: '+fmtDate(d.page.updated_at)+'</div>'
+          + '<div class="sop-content">'+(d.page.content?esc(d.page.content):'<span class="muted">(صفحة فاضية — اضغط تعديل واكتب الإرشادات)</span>')+'</div>'
+          + '<div style="margin-top:14px;display:flex;gap:8px"><button class="btn small" onclick="editSop('+id+')">✏️ تعديل</button>'
+          + '<button class="btn small danger" onclick="delSop('+id+')">حذف</button></div>';
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function editSop(id){
+      try {
+        var d = await api('/sop/'+id);
+        document.getElementById('sopView').innerHTML =
+          '<div class="fld" style="margin-bottom:10px"><label>العنوان</label><input id="sopTitle" value="'+esc(d.page.title)+'"></div>'
+          + '<div class="fld"><label>المحتوى (نص عادي)</label><textarea id="sopContent" rows="12" style="width:100%">'+esc(d.page.content||'')+'</textarea></div>'
+          + '<div style="margin-top:12px;display:flex;gap:8px"><button class="btn small" onclick="saveSop('+id+')">💾 حفظ</button>'
+          + '<button class="btn small gray" onclick="openSop('+id+')">إلغاء</button></div>';
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function saveSop(id){
+      try {
+        await api('/sop/'+id,{method:'PUT',body:{title:document.getElementById('sopTitle').value,content:document.getElementById('sopContent').value}});
+        showMsg('تم حفظ الصفحة ✅', true); openSop(id);
+      } catch(e){ showMsg(e.message,false); }
+    }
+    async function newSop(){
+      var t = prompt('عنوان الصفحة الجديدة:'); if (!t || !t.trim()) return;
+      try { var d = await api('/sop',{method:'POST',body:{title:t.trim()}}); curSop=d.id; loadSop(); editSop(d.id); } catch(e){ showMsg(e.message,false); }
+    }
+    async function delSop(id){
+      if(!confirm('حذف صفحة الدليل نهائياً؟')) return;
+      try { await api('/sop/'+id,{method:'DELETE'}); curSop=null; document.getElementById('sopView').innerHTML='<div class="empty">اختر صفحة من القائمة 📄</div>'; loadSop(); } catch(e){ showMsg(e.message,false); }
+    }
+
+    // ═══ 8) سجل الأحداث ═══
+    async function loadLog(){
+      try {
+        var u = document.getElementById('logUser').value;
+        var d = await api('/activity-log'+(u?'?username='+encodeURIComponent(u):''));
+        var sel = document.getElementById('logUser');
+        var cur = sel.value;
+        sel.innerHTML = '<option value="">الكل</option>' + d.users.map(function(x){ return '<option value="'+esc(x)+'"'+(x===cur?' selected':'')+'>'+esc(x)+'</option>'; }).join('');
+        var box = document.getElementById('logTable');
+        if (!d.log.length){ box.innerHTML = '<div class="empty">لا أحداث مسجلة'+(u?' لهذا المستخدم':'')+'</div>'; return; }
+        box.innerHTML = '<table><thead><tr><th>المستخدم</th><th>الإجراء</th><th>التفاصيل</th><th>الوقت</th></tr></thead><tbody>'
+          + d.log.map(function(r){
+            return '<tr><td><b>'+esc(r.username||'—')+'</b></td><td><span class="pill">'+esc(r.action||'')+'</span></td>'
+              + '<td class="wrapcell">'+esc(r.detail||'')+'</td><td class="muted">'+fmtDate(r.created_at)+'</td></tr>';
+          }).join('') + '</tbody></table>';
+      } catch(e){ showMsg(e.message,false); }
+    }
+
+    // ═══ 9) إنجازات الأسبوع ═══
+    async function loadAchieve(){
+      try {
+        var d = await api('/week-achievements');
+        var box = document.getElementById('achieveBoard');
+        if (!d.users.length){ box.innerHTML = '<div class="empty">ما في تغييرات حالة مسجلة هذا الأسبوع — يلا نشتغل 💪</div>'; return; }
+        var medals = ['🥇','🥈','🥉'];
+        var max = d.users[0].changes || 1;
+        box.innerHTML = '<div class="muted" style="margin-bottom:12px">إجمالي تغييرات الحالة هذا الأسبوع: <b>'+d.total+'</b></div>'
+          + d.users.map(function(u,i){
+            return '<div class="bar-row"><span class="medal">'+(medals[i]||'▪️')+'</span>'
+              + '<div class="b-name">'+esc(u.username)+'</div>'
+              + '<div class="b-track"><div class="b-fill" style="width:'+Math.round(u.changes*100/max)+'%"></div></div>'
+              + '<div class="b-val">'+u.changes+'</div></div>';
+          }).join('');
+      } catch(e){ showMsg(e.message,false); }
+    }
+
+    // ═══ 10) الاجتماع اليومي ═══
+    var standupFacts = '';
+    async function loadStandup(){
+      try {
+        var d = await api('/standup');
+        document.getElementById('standupDay').textContent = '— '+d.today;
+        var h = '<div class="standup-grid">'
+          + '<div class="stat"><div class="v">'+d.yesterday.count+'</div><div class="l">طلبات أمس</div></div>'
+          + '<div class="stat"><div class="v">'+d.yesterday.sales.toFixed(1)+' د</div><div class="l">مبيعات أمس</div></div>'
+          + '<div class="stat"><div class="v">'+d.late.length+'</div><div class="l">طلبات متأخرة</div></div>'
+          + '<div class="stat"><div class="v">'+d.openTasksCount+'</div><div class="l">مهام مفتوحة</div></div>'
+          + '</div>';
+
+        h += '<div class="agenda-sec"><h4>⚠️ الطلبات المتأخرة (جديد +24 ساعة)</h4>';
+        if (!d.late.length) h += '<div class="muted">ولا طلب متأخر — ممتاز 👏</div>';
+        else h += '<div class="tbl-wrap"><table><thead><tr><th>#</th><th>الطلب</th><th>المنطقة</th><th>الهاتف</th><th>العمر</th></tr></thead><tbody>'
+          + d.late.map(function(o){ return '<tr><td>'+o.id+'</td><td class="wrapcell">'+esc(o.order_string)+'</td><td>'+esc(o.area||'—')+'</td><td dir="ltr">'+esc(o.phone||'—')+'</td><td class="pill red" style="display:table-cell">'+o.age_hours+' ساعة</td></tr>'; }).join('')
+          + '</tbody></table></div>';
+        h += '</div>';
+
+        h += '<div class="agenda-sec"><h4>📋 مهام اليوم المستحقة</h4>';
+        if (!d.tasks.length) h += '<div class="muted">لا مهام مستحقة اليوم</div>';
+        else h += d.tasks.map(function(t){ return '<div style="padding:6px 0">• <b>'+esc(t.title)+'</b> '+(t.assignee?'<span class="pill">👤 '+esc(t.assignee)+'</span>':'')+' <span class="pill '+(t.priority==='عالية'?'red':'')+'">'+esc(t.priority)+'</span> <span class="muted">('+esc(t.due_day)+')</span></div>'; }).join('');
+        h += '</div>';
+
+        h += '<div class="agenda-sec"><h4>🔔 تذكيرات اليوم</h4>';
+        if (!d.reminders.length) h += '<div class="muted">لا تذكيرات اليوم</div>';
+        else h += d.reminders.map(function(r){ return '<div style="padding:5px 0">• '+esc(r.text)+' <span class="muted">('+esc(r.remind_day)+')</span></div>'; }).join('');
+        h += '</div>';
+
+        if (d.lastShift) {
+          h += '<div class="agenda-sec"><h4>🔄 آخر تسليم شفت</h4><div class="shift-item"><div class="s-head"><b>👤 '+esc(d.lastShift.author||'بدون اسم')+'</b><span class="muted">'+fmtDate(d.lastShift.created_at)+'</span></div><div class="s-note">'+esc(d.lastShift.note)+'</div></div></div>';
+        }
+
+        if (d.yesterday.orders.length) {
+          h += '<div class="agenda-sec"><h4>🧾 تفاصيل طلبات أمس</h4><div class="tbl-wrap"><table><thead><tr><th>#</th><th>الطلب</th><th>المبلغ</th><th>الحالة</th></tr></thead><tbody>'
+            + d.yesterday.orders.map(function(o){ return '<tr><td>'+o.id+'</td><td class="wrapcell">'+esc(o.order_string)+'</td><td>'+Number(o.total).toFixed(1)+' د</td><td><span class="pill'+(o.status==='ملغي'?' red':'')+'">'+esc(o.status)+'</span></td></tr>'; }).join('')
+            + '</tbody></table></div></div>';
+        }
+
+        document.getElementById('standupBody').innerHTML = h;
+
+        standupFacts = 'طلبات أمس: '+d.yesterday.count+' بمبيعات '+d.yesterday.sales.toFixed(1)+' دينار.\n'
+          + 'الطلبات المتأخرة: '+d.late.length+(d.late.length?' — أقدمها عمره '+d.late[0].age_hours+' ساعة.':'.')+'\n'
+          + 'مهام مستحقة اليوم: '+d.tasks.map(function(t){ return t.title+(t.assignee?' ('+t.assignee+')':''); }).join('، ')+'\n'
+          + 'تذكيرات اليوم: '+d.reminders.map(function(r){ return r.text; }).join('، ')+'\n'
+          + (d.lastShift ? 'آخر ملاحظة شفت من '+(d.lastShift.author||'موظف')+': '+d.lastShift.note : '');
+      } catch(e){ document.getElementById('standupBody').innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; }
+    }
+    async function aiSummary(){
+      var btn = document.getElementById('aiBtn');
+      var box = document.getElementById('aiBox');
+      if (!standupFacts) return showMsg('حمّل الأجندة أولاً', false);
+      btn.disabled = true; btn.innerHTML = '<span class="spin"></span> جارِ التلخيص...';
+      try {
+        var d = await api('/standup/ai-summary',{method:'POST',body:{facts:standupFacts}});
+        box.textContent = d.summary; box.style.display = 'block';
+      } catch(e){ showMsg(e.message,false); }
+      btn.disabled = false; btn.textContent = '✨ ملخص ذكي';
+    }
+
+    // ── إقلاع: تبويب المهام + شريط التذكيرات المستحقة ──
+    loadTasks();
+    api('/reminders').then(function(d){ renderDueBanner(d.due); }).catch(function(){});
+  </script>
+</body>
+</html>
