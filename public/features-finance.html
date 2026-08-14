@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>💰 المالية والأرباح — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1200px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; -webkit-overflow-scrolling:touch; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .panel { display:none; }
+    .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.7; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    input, textarea, select { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; }
+    input:focus, textarea:focus, select:focus { outline:none; border-color:var(--green); }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:hover { background:var(--green2); }
+    .btn.gray { background:#eceff1; color:#37474f; }
+    .btn.red { background:var(--red); }
+    .btn.sm { padding:5px 10px; font-size:12px; border-radius:8px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:10px 12px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    tr:hover { background:#fafcfa; }
+    .empty { text-align:center; padding:36px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .n.bad { color:var(--red); }
+    .sc .l { font-size:11.5px; color:var(--mut); margin-top:3px; }
+    .chip { display:inline-flex; align-items:center; gap:6px; background:#e8f5e9; color:var(--green2); border:1px solid #c8e6c9; padding:4px 11px; border-radius:14px; font-size:12.5px; font-weight:700; margin:3px 2px; }
+    .pos { color:var(--green2); font-weight:700; }
+    .neg { color:var(--red); font-weight:700; }
+    .warnbox { background:#fff8e1; border:1px solid #ffe082; color:#795548; border-radius:10px; padding:10px 12px; font-size:12.5px; line-height:1.8; margin-top:10px; }
+    .pbar { background:#eceff1; border-radius:8px; height:10px; overflow:hidden; min-width:110px; display:inline-block; vertical-align:middle; }
+    .pfill { background:var(--green); height:100%; }
+    #toast { position:fixed; bottom:18px; right:50%; transform:translateX(50%); background:#263238; color:#fff; padding:11px 20px; border-radius:10px; font-size:13.5px; display:none; z-index:50; max-width:90vw; }
+    @media (max-width:600px){ .wrap{padding:10px} .card{padding:12px} th,td{padding:8px 9px} }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💰 المالية والأرباح</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+
+  <div class="wrap">
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-t="texp">💸 دفتر المصاريف</button>
+      <button class="tab" data-t="tprofit">📈 صافي الربح</button>
+      <button class="tab" data-t="trecon">⚖️ التسوية اليومية</button>
+      <button class="tab" data-t="tdrivers">🚚 عهدة السائقين</button>
+      <button class="tab" data-t="tmonthly">📅 التقرير الشهري</button>
+      <button class="tab" data-t="tcpa">🎯 تكلفة اكتساب الطلب</button>
+      <button class="tab" data-t="tbreak">🧮 نقطة التعادل</button>
+      <button class="tab" data-t="tforecast">🔮 توقع المبيعات</button>
+      <button class="tab" data-t="tgoals">🏁 أهداف الربح</button>
+      <button class="tab" data-t="texport">📥 تصدير CSV</button>
+    </div>
+
+    <!-- (1) دفتر المصاريف -->
+    <div class="panel active" id="texp">
+      <div class="card">
+        <h2 id="expFormTitle">💸 تسجيل مصروف جديد</h2>
+        <div class="hint">سجّل كل مصاريفك (إعلانات، تغليف، توصيل، بضاعة...) ليُحسب صافي ربحك الحقيقي.</div>
+        <div class="row">
+          <select id="expCat">
+            <option>إعلانات</option><option>تغليف</option><option>توصيل</option><option>بضاعة</option><option>أخرى</option>
+          </select>
+          <input id="expAmount" type="number" min="0" step="0.01" placeholder="💵 المبلغ" style="width:130px">
+          <input id="expDay" type="date">
+          <input id="expNote" placeholder="📝 ملاحظة (اختياري)" style="flex:1;min-width:160px">
+          <button class="btn" id="expSaveBtn" onclick="saveExp()">➕ إضافة</button>
+          <button class="btn gray" id="expCancelBtn" onclick="cancelEdit()" style="display:none">إلغاء التعديل</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>سجل المصاريف</h2>
+        <div class="row" style="margin-bottom:10px">
+          <label class="hint" style="margin:0">من</label><input id="expFrom" type="date">
+          <label class="hint" style="margin:0">إلى</label><input id="expTo" type="date">
+          <select id="expFilterCat"><option value="">كل الفئات</option><option>إعلانات</option><option>تغليف</option><option>توصيل</option><option>بضاعة</option><option>أخرى</option></select>
+          <button class="btn gray" onclick="loadExpenses()">🔄 تحديث</button>
+        </div>
+        <div id="expSummary"></div>
+        <div class="tbl-scroll"><table><thead><tr><th>التاريخ</th><th>الفئة</th><th>المبلغ</th><th>ملاحظة</th><th></th></tr></thead><tbody id="expRows"></tbody></table></div>
+        <div class="empty" id="expEmpty" style="display:none">💸 لا توجد مصاريف بهذه الفترة — سجّل أول مصروف من الأعلى</div>
+      </div>
+    </div>
+
+    <!-- (2) صافي الربح -->
+    <div class="panel" id="tprofit">
+      <div class="card">
+        <h2>📈 صافي الربح الفعلي بالفترة</h2>
+        <div class="hint">المعادلة: مبيعات الطلبات المكتملة − تكلفة المنتجات (من صفحة التكاليف) − المصاريف المسجّلة. اترك التواريخ فارغة لآخر 30 يوماً.</div>
+        <div class="row">
+          <label class="hint" style="margin:0">من</label><input id="prFrom" type="date">
+          <label class="hint" style="margin:0">إلى</label><input id="prTo" type="date">
+          <button class="btn" onclick="loadProfit()">حساب</button>
+        </div>
+      </div>
+      <div id="prOut"><div class="card"><div class="empty">📈 اضغط "حساب" لعرض صافي الربح</div></div></div>
+    </div>
+
+    <!-- (3) التسوية اليومية -->
+    <div class="panel" id="trecon">
+      <div class="card">
+        <h2>⚖️ التسوية اليومية</h2>
+        <div class="hint">قارن المبلغ المتوقع قبضه (طلبات "تم التسليم" باليوم) مع ما استلمته فعلياً بالكاش.</div>
+        <div class="row">
+          <input id="rcDay" type="date">
+          <button class="btn" onclick="loadRecon()">عرض اليوم</button>
+        </div>
+        <div id="rcInfo" style="margin-top:10px"></div>
+        <div class="row" style="margin-top:10px">
+          <input id="rcReceived" type="number" min="0" step="0.01" placeholder="💵 المبلغ المستلم فعلياً" style="width:200px">
+          <input id="rcNote" placeholder="📝 ملاحظة (اختياري)" style="flex:1;min-width:160px">
+          <button class="btn" onclick="saveRecon()">💾 حفظ التسوية</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>آخر التسويات</h2>
+        <div class="tbl-scroll"><table><thead><tr><th>اليوم</th><th>المتوقع</th><th>المستلم</th><th>الفرق</th><th>ملاحظة</th></tr></thead><tbody id="rcRows"></tbody></table></div>
+        <div class="empty" id="rcEmpty" style="display:none">⚖️ لا توجد تسويات محفوظة بعد</div>
+      </div>
+    </div>
+
+    <!-- (4) عهدة السائقين -->
+    <div class="panel" id="tdrivers">
+      <div class="card">
+        <h2>🚚 عهدة السائقين (الكاش)</h2>
+        <div class="hint">كاش الطلبات المسندة لكل سائق من وحدة عمليات الطلبات: "تم التسليم" = بعهدته ويجب قبضه، "تم الشحن" = في الطريق.</div>
+        <div class="row"><button class="btn gray" onclick="loadDrivers()">🔄 تحديث</button></div>
+        <div id="drTotals" style="margin-top:10px"></div>
+        <div class="tbl-scroll"><table><thead><tr><th>السائق</th><th>الهاتف</th><th>تسليمات</th><th>كاش بعهدته</th><th>في الطريق</th><th>كاش في الطريق</th></tr></thead><tbody id="drRows"></tbody></table></div>
+        <div class="empty" id="drEmpty" style="display:none">🚚 لا يوجد سائقون بعد</div>
+        <div class="warnbox" id="drWarn" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- (5) التقرير الشهري -->
+    <div class="panel" id="tmonthly">
+      <div class="card">
+        <h2>📅 التقرير المالي الشهري — آخر 6 أشهر</h2>
+        <div class="hint">إيرادات، تكلفة بضاعة، مصاريف، وصافي الربح لكل شهر.</div>
+        <div class="tbl-scroll"><table><thead><tr><th>الشهر</th><th>الطلبات</th><th>الإيرادات</th><th>تكلفة البضاعة</th><th>المصاريف</th><th>صافي الربح</th></tr></thead><tbody id="moRows"></tbody></table></div>
+        <div class="empty" id="moEmpty" style="display:none">📅 لا توجد بيانات بعد</div>
+      </div>
+    </div>
+
+    <!-- (6) تكلفة اكتساب الطلب -->
+    <div class="panel" id="tcpa">
+      <div class="card">
+        <h2>🎯 تكلفة اكتساب الطلب (CPA)</h2>
+        <div class="hint">مصاريف فئة "إعلانات" بالفترة ÷ عدد الطلبات المكتملة = كم كلّفك كل طلب من الإعلانات. اترك التواريخ فارغة لآخر 30 يوماً.</div>
+        <div class="row">
+          <label class="hint" style="margin:0">من</label><input id="cpaFrom" type="date">
+          <label class="hint" style="margin:0">إلى</label><input id="cpaTo" type="date">
+          <button class="btn" onclick="loadCpa()">حساب</button>
+        </div>
+      </div>
+      <div id="cpaOut"><div class="card"><div class="empty">🎯 اضغط "حساب" لعرض تكلفة اكتساب الطلب</div></div></div>
+    </div>
+
+    <!-- (7) نقطة التعادل -->
+    <div class="panel" id="tbreak">
+      <div class="card">
+        <h2>🧮 نقطة التعادل الإعلانية</h2>
+        <div class="hint">أدخل مبلغ الإعلان الذي تخطط لصرفه، والنظام يحسب كم طلباً يلزمك لتغطيته — بناءً على متوسط هامش الطلب الفعلي (إيراد − تكلفة بضاعة) بآخر 90 يوماً.</div>
+        <div class="row">
+          <input id="beSpend" type="number" min="0" step="0.01" placeholder="💵 مبلغ الإعلان المخطط" style="width:210px">
+          <button class="btn" onclick="loadBreakeven()">حساب</button>
+        </div>
+      </div>
+      <div id="beOut"><div class="card"><div class="empty">🧮 أدخل المبلغ واضغط "حساب"</div></div></div>
+    </div>
+
+    <!-- (8) توقع المبيعات -->
+    <div class="panel" id="tforecast">
+      <div class="card">
+        <h2>🔮 توقع بسيط للمبيعات</h2>
+        <div class="hint">متوسط مبيعات اليوم بآخر 30 يوماً × 7 (توقع الأسبوع) و× 30 (توقع الشهر).</div>
+        <div class="row"><button class="btn gray" onclick="loadForecast()">🔄 تحديث</button></div>
+      </div>
+      <div id="fcOut"><div class="card"><div class="empty">🔮 جارٍ التحميل...</div></div></div>
+    </div>
+
+    <!-- (9) أهداف الربح -->
+    <div class="panel" id="tgoals">
+      <div class="card">
+        <h2>🏁 هدف ربح شهري</h2>
+        <div class="hint">حدّد هدف صافي ربح لكل شهر وتابع تقدّمك الفعلي نحوه.</div>
+        <div class="row">
+          <input id="goalMonth" type="month">
+          <input id="goalTarget" type="number" min="0" step="0.01" placeholder="🎯 هدف صافي الربح" style="width:190px">
+          <button class="btn" onclick="saveGoal()">💾 حفظ الهدف</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>الأهداف والتقدم</h2>
+        <div class="tbl-scroll"><table><thead><tr><th>الشهر</th><th>الهدف</th><th>الصافي الفعلي</th><th>التقدم</th><th></th></tr></thead><tbody id="goalRows"></tbody></table></div>
+        <div class="empty" id="goalEmpty" style="display:none">🏁 لا توجد أهداف بعد — حدّد أول هدف من الأعلى</div>
+      </div>
+    </div>
+
+    <!-- (10) تصدير CSV -->
+    <div class="panel" id="texport">
+      <div class="card">
+        <h2>📥 تصدير مالي CSV</h2>
+        <div class="hint">ملفات CSV بترميز UTF-8 مع BOM — تُفتح بالعربية مباشرة في Excel.</div>
+        <div class="row">
+          <button class="btn" onclick="dlCsv('/export/expenses.csv','finance-expenses.csv')">💸 تصدير المصاريف</button>
+          <button class="btn" onclick="dlCsv('/export/monthly.csv','finance-monthly.csv')">📅 تصدير الملخص الشهري (6 أشهر)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    var API = "/admin/f-api/finance";
+
+    function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+    function money(v){ return (Math.round((+v||0)*100)/100).toLocaleString("en-US") + "د"; }
+    function fmtDay(t){ return t ? new Date(+t + 10800000).toISOString().slice(0,10) : "—"; }
+    function toast(msg, bad){
+      var t = document.getElementById("toast");
+      t.textContent = msg; t.style.background = bad ? "#c62828" : "#2e7d32"; t.style.display = "block";
+      clearTimeout(t._h); t._h = setTimeout(function(){ t.style.display = "none"; }, 3000);
+    }
+    async function api(path, opts){
+      var r;
+      try { r = await fetch(API + path, opts); }
+      catch(e){ toast("تعذّر الاتصال بالخادم", true); throw e; }
+      if (r.status === 401) { location.href = "/admin/login"; throw new Error("401"); }
+      var data = null;
+      try { data = await r.json(); } catch(e){ data = null; }
+      if (!r.ok) { var msg = (data && data.error) || "حدث خطأ غير متوقع"; toast(msg, true); var err = new Error(msg); err.data = data; throw err; }
+      return data;
+    }
+    function jbody(method, body){ return { method: method, headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) }; }
+    function netCls(v){ return (+v||0) >= 0 ? "" : " bad"; }
+    function signed(v){ return '<span class="' + ((+v||0) >= 0 ? "pos" : "neg") + '">' + money(v) + "</span>"; }
+    function today(){ return new Date(Date.now() + 10800000).toISOString().slice(0,10); }
+
+    // ── التبويبات ──
+    var loaded = {};
+    var loaders = { trecon: initRecon, tdrivers: loadDrivers, tmonthly: loadMonthly, tforecast: loadForecast, tgoals: loadGoals };
+    document.getElementById("tabs").addEventListener("click", function(ev){
+      var b = ev.target.closest(".tab"); if (!b) return;
+      document.querySelectorAll(".tab").forEach(function(x){ x.classList.toggle("active", x === b); });
+      document.querySelectorAll(".panel").forEach(function(p){ p.classList.toggle("active", p.id === b.dataset.t); });
+      var fn = loaders[b.dataset.t];
+      if (fn && !loaded[b.dataset.t]) { loaded[b.dataset.t] = 1; fn(); }
+    });
+
+    // ═══════════ (1) دفتر المصاريف ═══════════
+    var expCache = [];
+    var editId = null;
+
+    async function loadExpenses(){
+      var q = [];
+      var f = document.getElementById("expFrom").value, t = document.getElementById("expTo").value, c = document.getElementById("expFilterCat").value;
+      if (f) q.push("from=" + f); if (t) q.push("to=" + t); if (c) q.push("category=" + encodeURIComponent(c));
+      var d = await api("/expenses" + (q.length ? "?" + q.join("&") : ""));
+      expCache = d.expenses || [];
+      var sum = '<span class="chip">الإجمالي: ' + money(d.total) + '</span>';
+      (d.by_category || []).forEach(function(x){ sum += '<span class="chip">' + esc(x.category) + ": " + money(x.s) + " (" + x.c + ")</span>"; });
+      document.getElementById("expSummary").innerHTML = expCache.length ? sum : "";
+      var rows = "";
+      expCache.forEach(function(x){
+        rows += "<tr><td>" + fmtDay(x.spent_at) + "</td><td>" + esc(x.category) + "</td><td class='pos'>" + money(x.amount) + "</td><td style='white-space:normal'>" + esc(x.note || "—") +
+                "</td><td><button class='btn gray sm' onclick='editExp(" + (+x.id) + ")'>✏️ تعديل</button> <button class='btn red sm' onclick='delExp(" + (+x.id) + ")'>🗑️</button></td></tr>";
+      });
+      document.getElementById("expRows").innerHTML = rows;
+      document.getElementById("expEmpty").style.display = expCache.length ? "none" : "block";
+    }
+
+    async function saveExp(){
+      var body = {
+        category: document.getElementById("expCat").value,
+        amount: document.getElementById("expAmount").value,
+        spent_at: document.getElementById("expDay").value || today(),
+        note: document.getElementById("expNote").value.trim()
+      };
+      if (!(+body.amount > 0)) { toast("اكتب مبلغاً أكبر من صفر", true); return; }
+      if (editId) { await api("/expenses/" + editId, jbody("PUT", body)); toast("تم تعديل المصروف ✅"); cancelEdit(); }
+      else { await api("/expenses", jbody("POST", body)); toast("تم تسجيل المصروف ✅"); }
+      document.getElementById("expAmount").value = ""; document.getElementById("expNote").value = "";
+      loadExpenses();
+    }
+
+    function editExp(id){
+      var x = expCache.find(function(r){ return r.id === id; }); if (!x) return;
+      editId = id;
+      document.getElementById("expCat").value = x.category;
+      document.getElementById("expAmount").value = x.amount;
+      document.getElementById("expDay").value = fmtDay(x.spent_at);
+      document.getElementById("expNote").value = x.note || "";
+      document.getElementById("expFormTitle").textContent = "✏️ تعديل مصروف #" + id;
+      document.getElementById("expSaveBtn").textContent = "💾 حفظ التعديل";
+      document.getElementById("expCancelBtn").style.display = "";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function cancelEdit(){
+      editId = null;
+      document.getElementById("expFormTitle").textContent = "💸 تسجيل مصروف جديد";
+      document.getElementById("expSaveBtn").textContent = "➕ إضافة";
+      document.getElementById("expCancelBtn").style.display = "none";
+      document.getElementById("expAmount").value = ""; document.getElementById("expNote").value = "";
+      document.getElementById("expDay").value = today();
+    }
+
+    async function delExp(id){
+      if (!confirm("حذف هذا المصروف نهائياً؟")) return;
+      await api("/expenses/" + id, { method: "DELETE" });
+      toast("تم حذف المصروف"); if (editId === id) cancelEdit();
+      loadExpenses();
+    }
+
+    // ═══════════ (2) صافي الربح ═══════════
+    async function loadProfit(){
+      var q = [];
+      var f = document.getElementById("prFrom").value, t = document.getElementById("prTo").value;
+      if (f) q.push("from=" + f); if (t) q.push("to=" + t);
+      var d = await api("/profit" + (q.length ? "?" + q.join("&") : ""));
+      var h = '<div class="grid">' +
+        '<div class="sc"><div class="n">' + money(d.revenue) + '</div><div class="l">الإيرادات (طلبات مكتملة)</div></div>' +
+        '<div class="sc"><div class="n">' + money(d.cogs) + '</div><div class="l">تكلفة البضاعة</div></div>' +
+        '<div class="sc"><div class="n">' + money(d.expenses) + '</div><div class="l">المصاريف</div></div>' +
+        '<div class="sc"><div class="n' + netCls(d.net) + '">' + money(d.net) + '</div><div class="l">صافي الربح</div></div>' +
+        '<div class="sc"><div class="n">' + (+d.orders||0) + '</div><div class="l">طلب مكتمل</div></div></div>';
+      if (d.missing_costs && d.missing_costs.length)
+        h += '<div class="card"><div class="warnbox">⚠️ أصناف بلا تكلفة محددة (لم تدخل بحساب تكلفة البضاعة): ' + d.missing_costs.map(esc).join("، ") + ' — أضف تكلفتها من صفحة الأرباح/التكاليف لدقة أعلى.</div></div>';
+      document.getElementById("prOut").innerHTML = h;
+    }
+
+    // ═══════════ (3) التسوية اليومية ═══════════
+    function initRecon(){ loadRecon(); loadReconList(); }
+
+    async function loadRecon(){
+      var day = document.getElementById("rcDay").value || today();
+      document.getElementById("rcDay").value = day;
+      var d = await api("/recon?day=" + day);
+      var h = '<div class="grid">' +
+        '<div class="sc"><div class="n">' + money(d.expected) + '</div><div class="l">المتوقع قبضه (تم التسليم)</div></div>' +
+        '<div class="sc"><div class="n">' + (+d.delivered_count||0) + '</div><div class="l">طلب مُسلَّم باليوم</div></div>';
+      if (d.saved) {
+        var diff = (+d.saved.received||0) - (+d.saved.expected||0);
+        h += '<div class="sc"><div class="n">' + money(d.saved.received) + '</div><div class="l">المستلم المحفوظ</div></div>' +
+             '<div class="sc"><div class="n' + netCls(diff) + '">' + money(diff) + '</div><div class="l">الفرق</div></div>';
+        document.getElementById("rcReceived").value = d.saved.received;
+        document.getElementById("rcNote").value = d.saved.note || "";
+      } else {
+        document.getElementById("rcReceived").value = ""; document.getElementById("rcNote").value = "";
+      }
+      document.getElementById("rcInfo").innerHTML = h + "</div>";
+    }
+
+    async function saveRecon(){
+      var day = document.getElementById("rcDay").value || today();
+      var received = document.getElementById("rcReceived").value;
+      if (received === "" || +received < 0) { toast("اكتب المبلغ المستلم", true); return; }
+      var d = await api("/recon", jbody("POST", { day: day, received: received, note: document.getElementById("rcNote").value.trim() }));
+      toast(d.diff === 0 ? "تسوية مطابقة تماماً ✅" : "تم الحفظ — الفرق: " + money(d.diff));
+      loadRecon(); loadReconList();
+    }
+
+    async function loadReconList(){
+      var d = await api("/recon/list");
+      var rows = "";
+      (d.recons || []).forEach(function(r){
+        rows += "<tr><td>" + esc(r.day) + "</td><td>" + money(r.expected) + "</td><td>" + money(r.received) + "</td><td>" + signed(r.diff) + "</td><td style='white-space:normal'>" + esc(r.note || "—") + "</td></tr>";
+      });
+      document.getElementById("rcRows").innerHTML = rows;
+      document.getElementById("rcEmpty").style.display = (d.recons || []).length ? "none" : "block";
+    }
+
+    // ═══════════ (4) عهدة السائقين ═══════════
+    async function loadDrivers(){
+      document.getElementById("drWarn").style.display = "none";
+      var d;
+      try { d = await api("/drivers-custody"); }
+      catch(e){
+        var w = document.getElementById("drWarn");
+        w.textContent = "🚚 " + ((e.data && e.data.error) || "وحدة السائقين غير مفعّلة بعد");
+        w.style.display = "block";
+        document.getElementById("drRows").innerHTML = ""; document.getElementById("drEmpty").style.display = "none";
+        return;
+      }
+      var rows = "";
+      (d.drivers || []).forEach(function(r){
+        rows += "<tr><td>" + esc(r.name) + "</td><td>" + esc(r.phone || "—") + "</td><td>" + (+r.delivered_cnt||0) + "</td><td class='pos'>" + money(r.delivered_cash) +
+                "</td><td>" + (+r.shipped_cnt||0) + "</td><td>" + money(r.shipped_cash) + "</td></tr>";
+      });
+      document.getElementById("drRows").innerHTML = rows;
+      document.getElementById("drEmpty").style.display = (d.drivers || []).length ? "none" : "block";
+      document.getElementById("drTotals").innerHTML = (d.drivers || []).length
+        ? '<span class="chip">إجمالي كاش بالعُهد: ' + money(d.totals.delivered_cash) + '</span><span class="chip">إجمالي في الطريق: ' + money(d.totals.shipped_cash) + "</span>" : "";
+    }
+
+    // ═══════════ (5) التقرير الشهري ═══════════
+    async function loadMonthly(){
+      var d = await api("/monthly");
+      var rows = "";
+      (d.months || []).forEach(function(m){
+        rows += "<tr><td>" + esc(m.month) + "</td><td>" + (+m.orders||0) + "</td><td>" + money(m.revenue) + "</td><td>" + money(m.cogs) + "</td><td>" + money(m.expenses) + "</td><td>" + signed(m.net) + "</td></tr>";
+      });
+      document.getElementById("moRows").innerHTML = rows;
+      document.getElementById("moEmpty").style.display = (d.months || []).length ? "none" : "block";
+    }
+
+    // ═══════════ (6) تكلفة اكتساب الطلب ═══════════
+    async function loadCpa(){
+      var q = [];
+      var f = document.getElementById("cpaFrom").value, t = document.getElementById("cpaTo").value;
+      if (f) q.push("from=" + f); if (t) q.push("to=" + t);
+      var d = await api("/cpa" + (q.length ? "?" + q.join("&") : ""));
+      var h = '<div class="grid">' +
+        '<div class="sc"><div class="n">' + money(d.ads_spend) + '</div><div class="l">مصاريف الإعلانات</div></div>' +
+        '<div class="sc"><div class="n">' + (+d.orders||0) + '</div><div class="l">طلب مكتمل</div></div>' +
+        '<div class="sc"><div class="n">' + (d.cpa == null ? "—" : money(d.cpa)) + '</div><div class="l">تكلفة اكتساب الطلب</div></div></div>';
+      if (d.note) h += '<div class="card"><div class="warnbox">ℹ️ ' + esc(d.note) + "</div></div>";
+      document.getElementById("cpaOut").innerHTML = h;
+    }
+
+    // ═══════════ (7) نقطة التعادل ═══════════
+    async function loadBreakeven(){
+      var spend = document.getElementById("beSpend").value;
+      if (!(+spend > 0)) { toast("اكتب مبلغ الإعلان المخطط", true); return; }
+      var d;
+      try { d = await api("/breakeven?spend=" + encodeURIComponent(spend)); }
+      catch(e){ document.getElementById("beOut").innerHTML = '<div class="card"><div class="empty">' + esc((e.data && e.data.error) || "تعذّر الحساب") + "</div></div>"; return; }
+      document.getElementById("beOut").innerHTML = '<div class="grid">' +
+        '<div class="sc"><div class="n">' + money(d.spend) + '</div><div class="l">مبلغ الإعلان المخطط</div></div>' +
+        '<div class="sc"><div class="n">' + money(d.avg_margin) + '</div><div class="l">متوسط هامش الطلب</div></div>' +
+        '<div class="sc"><div class="n">' + (+d.orders_needed||0) + ' طلب</div><div class="l">لتغطية المصروف (التعادل)</div></div></div>' +
+        '<div class="card"><div class="hint">📐 الحساب مبني على ' + (+d.based_on_orders||0) + ' طلباً مكتملاً بآخر ' + (+d.based_on_days||90) + ' يوماً. الهامش = إيراد الطلب − تكلفة بضاعته (قبل المصاريف العامة).</div></div>';
+    }
+
+    // ═══════════ (8) توقع المبيعات ═══════════
+    async function loadForecast(){
+      var d = await api("/forecast");
+      document.getElementById("fcOut").innerHTML = '<div class="grid">' +
+        '<div class="sc"><div class="n">' + money(d.daily_avg) + '</div><div class="l">متوسط مبيعات اليوم</div></div>' +
+        '<div class="sc"><div class="n">' + money(d.week_forecast) + '</div><div class="l">توقع الأسبوع (×7)</div></div>' +
+        '<div class="sc"><div class="n">' + money(d.month_forecast) + '</div><div class="l">توقع الشهر (×30)</div></div>' +
+        '<div class="sc"><div class="n">' + (+d.orders||0) + '</div><div class="l">طلب مكتمل بآخر 30 يوماً</div></div></div>' +
+        '<div class="card"><div class="warnbox">⚠️ ' + esc(d.disclaimer || "توقع تقديري فقط") + "</div></div>";
+    }
+
+    // ═══════════ (9) أهداف الربح ═══════════
+    async function loadGoals(){
+      var d = await api("/goals");
+      if (!document.getElementById("goalMonth").value) document.getElementById("goalMonth").value = d.current_month || today().slice(0,7);
+      var rows = "";
+      (d.goals || []).forEach(function(g){
+        var pct = g.progress_pct == null ? 0 : Math.min(100, g.progress_pct);
+        rows += "<tr><td>" + esc(g.month) + "</td><td>" + money(g.target) + "</td><td>" + signed(g.actual_net) +
+                "</td><td><span class='pbar'><span class='pfill' style='display:block;width:" + pct + "%'></span></span> " +
+                (g.progress_pct == null ? "—" : g.progress_pct + "%") +
+                "</td><td><button class='btn red sm' onclick=\"delGoal('" + esc(g.month) + "')\">🗑️</button></td></tr>";
+      });
+      document.getElementById("goalRows").innerHTML = rows;
+      document.getElementById("goalEmpty").style.display = (d.goals || []).length ? "none" : "block";
+    }
+
+    async function saveGoal(){
+      var month = document.getElementById("goalMonth").value;
+      var target = document.getElementById("goalTarget").value;
+      if (!month) { toast("اختر الشهر", true); return; }
+      if (!(+target > 0)) { toast("اكتب هدفاً أكبر من صفر", true); return; }
+      await api("/goals", jbody("POST", { month: month, target: target }));
+      toast("تم حفظ الهدف ✅"); document.getElementById("goalTarget").value = "";
+      loadGoals();
+    }
+
+    async function delGoal(month){
+      if (!confirm("حذف هدف شهر " + month + "؟")) return;
+      await api("/goals/" + encodeURIComponent(month), { method: "DELETE" });
+      toast("تم حذف الهدف"); loadGoals();
+    }
+
+    // ═══════════ (10) تصدير CSV ═══════════
+    async function dlCsv(path, name){
+      var r;
+      try { r = await fetch(API + path); }
+      catch(e){ toast("تعذّر الاتصال بالخادم", true); return; }
+      if (r.status === 401) { location.href = "/admin/login"; return; }
+      if (!r.ok) { toast("تعذّر التصدير", true); return; }
+      var b = await r.blob();
+      var u = URL.createObjectURL(b);
+      var a = document.createElement("a");
+      a.href = u; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(u); }, 3000);
+      toast("تم تنزيل الملف ✅");
+    }
+
+    // ── إقلاع الصفحة ──
+    document.getElementById("expDay").value = today();
+    document.getElementById("rcDay").value = today();
+    loadExpenses();
+  </script>
+</body>
+</html>

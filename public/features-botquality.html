@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🤖 جودة البوت والمحادثات — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1200px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; -webkit-overflow-scrolling:touch; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .panel { display:none; }
+    .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.7; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    input, textarea, select { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; }
+    input:focus, textarea:focus, select:focus { outline:none; border-color:var(--green); }
+    textarea { width:100%; min-height:70px; resize:vertical; }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:hover { background:var(--green2); }
+    .btn:disabled { opacity:.6; cursor:wait; }
+    .btn.gray { background:#eceff1; color:#37474f; }
+    .btn.red { background:#c62828; }
+    .btn.sm { padding:5px 10px; font-size:12px; border-radius:8px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:10px 12px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    tr:hover { background:#fafcfa; }
+    td.wraptxt { white-space:normal; min-width:200px; }
+    .empty { text-align:center; padding:36px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .l { font-size:11.5px; color:var(--mut); margin-top:3px; }
+    .chip { display:inline-flex; align-items:center; gap:6px; background:#e8f5e9; color:var(--green2); border:1px solid #c8e6c9; padding:4px 11px; border-radius:14px; font-size:12.5px; font-weight:700; margin:3px 2px; }
+    .chip button { border:none; background:none; color:#c62828; cursor:pointer; font-size:13px; font-weight:800; padding:0; }
+    .badge { font-size:11px; padding:2px 9px; border-radius:12px; font-weight:700; background:#e8f5e9; color:var(--green2); }
+    .badge.off { background:#eceff1; color:#78909c; }
+    .badge.warn { background:#fdecea; color:#c62828; }
+    .aiout { background:#f7faf7; border:1px solid #dcede0; border-radius:10px; padding:14px; font-size:14px; line-height:1.9; white-space:pre-wrap; word-break:break-word; }
+    .loading { text-align:center; padding:26px; color:var(--mut); font-size:14px; }
+    .chatbox { border:1.5px solid var(--line); border-radius:12px; background:#fafcfa; padding:12px; min-height:220px; max-height:380px; overflow-y:auto; margin-bottom:10px; }
+    .msg { max-width:78%; padding:9px 13px; border-radius:14px; margin-bottom:8px; font-size:13.5px; line-height:1.7; white-space:pre-wrap; word-break:break-word; }
+    .msg.me { background:var(--green); color:#fff; margin-right:auto; border-bottom-left-radius:4px; }
+    .msg.bot { background:#fff; border:1px solid var(--line); margin-left:auto; border-bottom-right-radius:4px; }
+    .bars { display:flex; align-items:flex-end; gap:6px; height:150px; padding:8px 2px 0; overflow-x:auto; }
+    .bcol { flex:1; min-width:34px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+    .bpair { display:flex; align-items:flex-end; gap:3px; height:112px; }
+    .bar { width:12px; border-radius:4px 4px 0 0; min-height:2px; }
+    .bar.in { background:var(--green); }
+    .bar.out { background:#90caf9; }
+    .blab { font-size:10px; color:var(--mut); margin-top:5px; white-space:nowrap; }
+    .legend { font-size:12px; color:var(--mut); display:flex; gap:14px; margin-bottom:6px; }
+    .dot { display:inline-block; width:10px; height:10px; border-radius:3px; margin-left:4px; vertical-align:middle; }
+    .hotwrap { display:flex; flex-wrap:wrap; gap:8px; }
+    .hotword { background:#e8f5e9; border:1px solid #c8e6c9; color:var(--green2); border-radius:12px; padding:6px 13px; font-weight:700; }
+    .hotword small { color:#78909c; font-weight:600; }
+    #toast { position:fixed; bottom:18px; right:50%; transform:translateX(50%); background:#263238; color:#fff; padding:11px 20px; border-radius:10px; font-size:13.5px; display:none; z-index:50; max-width:90vw; }
+    @media (max-width:600px){ .wrap{padding:10px} .card{padding:12px} th,td{padding:8px 9px} .msg{max-width:90%} }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🤖 جودة البوت والمحادثات</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+
+  <div class="wrap">
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-t="treview">🧪 مراجعة الجودة</button>
+      <button class="tab" data-t="tfaq">❓ أسئلة شائعة</button>
+      <button class="tab" data-t="tsum">📝 ملخص محادثة</button>
+      <button class="tab" data-t="tnoreply">⏰ بلا رد</button>
+      <button class="tab" data-t="tdict">📖 قاموس الردود</button>
+      <button class="tab" data-t="tsim">💬 المحاكي</button>
+      <button class="tab" data-t="terrors">🐞 سجل الأخطاء</button>
+      <button class="tab" data-t="tstats">📊 الإحصاءات</button>
+      <button class="tab" data-t="thot">🔥 كلمات ساخنة</button>
+      <button class="tab" data-t="twatch">👁️ كلمات مراقبة</button>
+    </div>
+
+    <!-- (1) مراجعة الجودة -->
+    <div class="panel active" id="treview">
+      <div class="card">
+        <h2>🧪 مراجعة جودة ردود البوت بالذكاء</h2>
+        <div class="hint">يسحب آخر 3 محادثات ويطلب من الذكاء تقييم ردود البوت من 10 مع ملاحظات تحسين عملية. قراءة وتحليل فقط — لا يُرسل شيء للزبائن.</div>
+        <button class="btn" id="btnReview" onclick="runReview()">🚀 ابدأ المراجعة</button>
+      </div>
+      <div class="card"><div id="reviewOut"><div class="empty">اضغط "ابدأ المراجعة" لتقييم آخر 3 محادثات 🧪</div></div></div>
+    </div>
+
+    <!-- (2) أسئلة شائعة -->
+    <div class="panel" id="tfaq">
+      <div class="card">
+        <h2>❓ مقترح الأسئلة الشائعة</h2>
+        <div class="hint">يحلل الذكاء آخر 200 رسالة واردة من الزبائن ويستخرج أكثر 10 أسئلة تكرراً مع إجابات مقترحة يمكنك اعتمادها.</div>
+        <button class="btn" id="btnFaq" onclick="runFaq()">🔍 استخراج الأسئلة</button>
+      </div>
+      <div class="card"><div id="faqOut"><div class="empty">اضغط "استخراج الأسئلة" لتحليل رسائل زبائنك ❓</div></div></div>
+    </div>
+
+    <!-- (3) ملخص محادثة -->
+    <div class="panel" id="tsum">
+      <div class="card">
+        <h2>📝 ملخص محادثة بضغطة</h2>
+        <div class="hint">اختر محادثة من أحدث المحادثات واضغط "لخّص" للحصول على ملخص ذكي: ماذا طلب الزبون وهل اكتمل الطلب وما يحتاج متابعة.</div>
+        <div class="row">
+          <select id="convSel" style="flex:1;min-width:220px"><option value="">— جارٍ تحميل المحادثات... —</option></select>
+          <button class="btn gray" onclick="loadConvs()">🔄 تحديث</button>
+          <button class="btn" id="btnSum" onclick="runSummary()">📝 لخّص</button>
+        </div>
+      </div>
+      <div class="card"><div id="sumOut"><div class="empty">اختر محادثة ثم اضغط "لخّص" 📝</div></div></div>
+    </div>
+
+    <!-- (4) بلا رد -->
+    <div class="panel" id="tnoreply">
+      <div class="card">
+        <h2>⏰ محادثات بلا رد</h2>
+        <div class="hint">محادثات آخر رسالة فيها <b>واردة من الزبون</b> منذ أكثر من ساعة (ضمن آخر 7 أيام) — تحتاج انتباهك.</div>
+        <button class="btn gray" onclick="loadNoreply()">🔄 تحديث القائمة</button>
+      </div>
+      <div class="card">
+        <div class="tbl-scroll"><table><thead><tr><th>الصفحة</th><th>الزبون</th><th class="wraptxt">آخر رسالة</th><th>منذ</th></tr></thead><tbody id="noreplyRows"></tbody></table></div>
+        <div class="empty" id="noreplyEmpty" style="display:none">🎉 ممتاز! لا توجد محادثات منتظرة بلا رد</div>
+      </div>
+    </div>
+
+    <!-- (5) قاموس الردود -->
+    <div class="panel" id="tdict">
+      <div class="card">
+        <h2>📖 قاموس ردود مخصصة</h2>
+        <div class="hint">⚠️ <b>بيانات للاستخدام المستقبلي فقط:</b> هذا القاموس مخزن بيانات لا يغيّر ردود البوت حالياً — جهّز فيه كلمات مفتاحية وردودها لاعتمادها لاحقاً.</div>
+        <div class="row">
+          <input id="dictKw" placeholder="🔑 الكلمة المفتاحية (مثال: توصيل)" style="min-width:180px">
+          <input id="dictReply" placeholder="💬 الرد المخصص" style="flex:1;min-width:200px">
+          <button class="btn" onclick="addDict()">➕ إضافة</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>كل الردود</h2>
+        <div class="tbl-scroll"><table><thead><tr><th>الكلمة</th><th class="wraptxt">الرد</th><th>الحالة</th><th></th></tr></thead><tbody id="dictRows"></tbody></table></div>
+        <div class="empty" id="dictEmpty" style="display:none">لا توجد ردود بعد — أضف أول رد من الأعلى 📖</div>
+      </div>
+    </div>
+
+    <!-- (6) المحاكي -->
+    <div class="panel" id="tsim">
+      <div class="card">
+        <h2>💬 محاكي البوت</h2>
+        <div class="hint">جرّب ردود بوت بائع الأجبان دون أي اتصال بفيسبوك — اكتب كزبون وشاهد الرد. المحادثة تجريبية بالكامل ولا تُحفظ ولا تُرسل لأحد.</div>
+        <div class="chatbox" id="simBox"><div class="empty">👋 اكتب رسالتك الأولى كأنك زبون وجرّب البوت</div></div>
+        <div class="row">
+          <input id="simInput" placeholder="✍️ اكتب رسالة تجريبية... (مثال: بكم كيلو الغنم؟)" style="flex:1;min-width:200px" onkeydown="if(event.key==='Enter')simSend()">
+          <button class="btn" id="btnSim" onclick="simSend()">إرسال</button>
+          <button class="btn gray" onclick="simClear()">🗑️ مسح</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- (7) سجل الأخطاء -->
+    <div class="panel" id="terrors">
+      <div class="card">
+        <h2>🐞 سجل الأخطاء</h2>
+        <div class="hint">سجّل أي خطأ أو ملاحظة تقنية لاحظتها على البوت (رد غريب، سعر خاطئ...) لتتابعها لاحقاً. يعرض آخر 100 سجل.</div>
+        <div class="row">
+          <input id="errSource" placeholder="📌 المصدر (مثال: محادثة زبون)" style="min-width:170px">
+          <input id="errMsg" placeholder="🐞 وصف الخطأ..." style="flex:1;min-width:200px">
+          <button class="btn" onclick="addErr()">➕ تسجيل</button>
+          <button class="btn red" onclick="clearErrs()">🗑️ مسح الكل</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="tbl-scroll"><table><thead><tr><th>#</th><th>المصدر</th><th class="wraptxt">الخطأ</th><th>الوقت</th></tr></thead><tbody id="errRows"></tbody></table></div>
+        <div class="empty" id="errEmpty" style="display:none">✨ السجل نظيف — لا أخطاء مسجلة</div>
+      </div>
+    </div>
+
+    <!-- (8) الإحصاءات -->
+    <div class="panel" id="tstats">
+      <div class="grid" id="statsCards"></div>
+      <div class="card">
+        <h2>📊 الرسائل يومياً — آخر 14 يوم</h2>
+        <div class="legend"><span><span class="dot" style="background:#2e7d32"></span> واردة (زبائن)</span><span><span class="dot" style="background:#90caf9"></span> صادرة (البوت)</span></div>
+        <div class="bars" id="statsBars"></div>
+        <div class="empty" id="statsEmpty" style="display:none">لا توجد رسائل في آخر 14 يوم 📊</div>
+      </div>
+    </div>
+
+    <!-- (9) كلمات ساخنة -->
+    <div class="panel" id="thot">
+      <div class="card">
+        <h2>🔥 الكلمات الساخنة</h2>
+        <div class="hint">أكثر 20 كلمة تكراراً في رسائل الزبائن الواردة (آخر 1000 رسالة، مع استبعاد الكلمات الشائعة) — تعرّف ماذا يطلب زبائنك فعلاً.</div>
+        <button class="btn gray" onclick="loadHot()">🔄 تحديث</button>
+      </div>
+      <div class="card"><div id="hotOut"><div class="empty">جارٍ التحميل... 🔥</div></div></div>
+    </div>
+
+    <!-- (10) كلمات مراقبة -->
+    <div class="panel" id="twatch">
+      <div class="card">
+        <h2>👁️ كلمات المراقبة</h2>
+        <div class="hint">أضف كلمات حساسة (مثل: شكوى، خربان، متأخر...) وسيُفحص كل وارد آخر 24 ساعة ويعرض أي رسالة تحتويها.</div>
+        <div class="row">
+          <input id="watchWord" placeholder="👁️ كلمة للمراقبة..." style="min-width:180px" onkeydown="if(event.key==='Enter')addWatch()">
+          <button class="btn" onclick="addWatch()">➕ إضافة</button>
+        </div>
+        <div id="watchWords" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <h2>🚨 رسائل آخر 24 ساعة المطابقة</h2>
+        <div class="tbl-scroll"><table><thead><tr><th>الصفحة</th><th class="wraptxt">الرسالة</th><th>الكلمات</th><th>الوقت</th></tr></thead><tbody id="watchRows"></tbody></table></div>
+        <div class="empty" id="watchEmpty" style="display:none">لا رسائل مطابقة — كل شيء هادئ 👁️</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    var API = "/admin/f-api/botquality";
+
+    function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+    function toast(m){ var t=document.getElementById("toast"); t.textContent=m; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(function(){t.style.display="none";},2600); }
+    function fmtD(ms){ if(!ms) return "—"; var d=new Date(Number(ms)); return d.toLocaleDateString("ar-JO")+" "+d.toLocaleTimeString("ar-JO",{hour:"2-digit",minute:"2-digit"}); }
+
+    function api(path, opts){
+      opts = opts || {};
+      if (opts.body && typeof opts.body !== "string") { opts.body = JSON.stringify(opts.body); opts.headers = Object.assign({"Content-Type":"application/json"}, opts.headers||{}); }
+      return fetch(API + path, opts).then(function(r){
+        if (r.status === 401) { location.href = "/admin/login"; throw new Error("401"); }
+        return r.json().then(function(j){ if(!r.ok) throw new Error(j && j.error ? j.error : "حدث خطأ غير متوقع"); return j; });
+      });
+    }
+
+    // ── التبويبات ──
+    var loadedTabs = {};
+    document.getElementById("tabs").addEventListener("click", function(e){
+      var b = e.target.closest(".tab"); if(!b) return;
+      document.querySelectorAll(".tab").forEach(function(t){ t.classList.remove("active"); });
+      document.querySelectorAll(".panel").forEach(function(p){ p.classList.remove("active"); });
+      b.classList.add("active");
+      var id = b.getAttribute("data-t");
+      document.getElementById(id).classList.add("active");
+      if (!loadedTabs[id]) { loadedTabs[id] = true; initTab(id); }
+    });
+    function initTab(id){
+      if (id === "tsum") loadConvs();
+      else if (id === "tnoreply") loadNoreply();
+      else if (id === "tdict") loadDict();
+      else if (id === "terrors") loadErrs();
+      else if (id === "tstats") loadStats();
+      else if (id === "thot") loadHot();
+      else if (id === "twatch") { loadWatch(); loadWatchHits(); }
+    }
+
+    // ── (1) مراجعة الجودة ──
+    function runReview(){
+      var btn = document.getElementById("btnReview"), out = document.getElementById("reviewOut");
+      btn.disabled = true;
+      out.innerHTML = '<div class="loading">🧠 الذكاء يراجع آخر 3 محادثات... قد يستغرق نصف دقيقة</div>';
+      api("/review", {method:"POST"}).then(function(d){
+        var h = "";
+        if (d.threads && d.threads.length) {
+          h += '<div class="hint">المحادثات المُراجَعة: ';
+          d.threads.forEach(function(t){ h += '<span class="chip">'+esc(t.page_name||"صفحة")+' — '+t.cnt+' رسالة</span>'; });
+          h += '</div>';
+        }
+        h += '<div class="aiout">'+esc(d.review)+'</div>';
+        out.innerHTML = h;
+      }).catch(function(e){ if(e.message!=="401"){ out.innerHTML = '<div class="empty">⚠️ '+esc(e.message)+'</div>'; } })
+        .finally(function(){ btn.disabled = false; });
+    }
+
+    // ── (2) أسئلة شائعة ──
+    function runFaq(){
+      var btn = document.getElementById("btnFaq"), out = document.getElementById("faqOut");
+      btn.disabled = true;
+      out.innerHTML = '<div class="loading">🧠 الذكاء يحلل آخر 200 رسالة واردة...</div>';
+      api("/faq", {method:"POST"}).then(function(d){
+        out.innerHTML = '<div class="hint">تم تحليل '+d.analyzed+' رسالة واردة.</div><div class="aiout">'+esc(d.faq)+'</div>';
+      }).catch(function(e){ if(e.message!=="401"){ out.innerHTML = '<div class="empty">⚠️ '+esc(e.message)+'</div>'; } })
+        .finally(function(){ btn.disabled = false; });
+    }
+
+    // ── (3) ملخص محادثة ──
+    function loadConvs(){
+      var sel = document.getElementById("convSel");
+      api("/conversations?limit=30").then(function(d){
+        sel.innerHTML = "";
+        if (!d.conversations.length) { sel.innerHTML = '<option value="">— لا توجد محادثات بعد —</option>'; return; }
+        d.conversations.forEach(function(c){
+          var o = document.createElement("option");
+          o.value = c.page_id + "||" + c.sender_id;
+          o.textContent = (c.page_name||"صفحة") + " — " + (c.last_body||"...").slice(0,45) + " (" + c.cnt + " رسالة)";
+          sel.appendChild(o);
+        });
+      }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); });
+    }
+    function runSummary(){
+      var v = document.getElementById("convSel").value;
+      var out = document.getElementById("sumOut"), btn = document.getElementById("btnSum");
+      if (!v) { toast("اختر محادثة أولاً"); return; }
+      var p = v.split("||");
+      btn.disabled = true;
+      out.innerHTML = '<div class="loading">🧠 الذكاء يلخّص المحادثة...</div>';
+      api("/summary", {method:"POST", body:{page_id:p[0], sender_id:p[1]}}).then(function(d){
+        out.innerHTML = '<div class="hint">لُخّصت من '+d.count+' رسالة.</div><div class="aiout">'+esc(d.summary)+'</div>';
+      }).catch(function(e){ if(e.message!=="401"){ out.innerHTML = '<div class="empty">⚠️ '+esc(e.message)+'</div>'; } })
+        .finally(function(){ btn.disabled = false; });
+    }
+
+    // ── (4) بلا رد ──
+    function loadNoreply(){
+      api("/noreply").then(function(d){
+        var tb = document.getElementById("noreplyRows"); tb.innerHTML = "";
+        document.getElementById("noreplyEmpty").style.display = d.threads.length ? "none" : "block";
+        d.threads.forEach(function(t){
+          tb.insertAdjacentHTML("beforeend", "<tr><td>"+esc(t.page_name||"—")+"</td><td>"+esc(String(t.sender_id).slice(0,12))+"…</td><td class='wraptxt'>"+esc(t.last_body)+"</td><td><span class='badge warn'>⏰ "+t.hours_ago+" ساعة</span></td></tr>");
+        });
+      }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); });
+    }
+
+    // ── (5) قاموس الردود ──
+    function loadDict(){
+      api("/dict").then(function(d){
+        var tb = document.getElementById("dictRows"); tb.innerHTML = "";
+        document.getElementById("dictEmpty").style.display = d.entries.length ? "none" : "block";
+        d.entries.forEach(function(r){
+          tb.insertAdjacentHTML("beforeend", "<tr><td><b>"+esc(r.keyword)+"</b></td><td class='wraptxt'>"+esc(r.reply)+"</td>"+
+            "<td><span class='badge "+(r.active?"":"off")+"'>"+(r.active?"✅ مفعل":"⏸️ موقوف")+"</span></td>"+
+            "<td><button class='btn gray sm' onclick='toggleDict("+r.id+")'>"+(r.active?"إيقاف":"تفعيل")+"</button> "+
+            "<button class='btn red sm' onclick='delDict("+r.id+")'>🗑️</button></td></tr>");
+        });
+      }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); });
+    }
+    function addDict(){
+      var kw = document.getElementById("dictKw").value.trim(), rp = document.getElementById("dictReply").value.trim();
+      if (!kw || !rp) { toast("اكتب الكلمة والرد أولاً"); return; }
+      api("/dict", {method:"POST", body:{keyword:kw, reply:rp}}).then(function(){
+        document.getElementById("dictKw").value = ""; document.getElementById("dictReply").value = "";
+        toast("✅ أُضيف الرد"); loadDict();
+      }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); });
+    }
+    function toggleDict(id){ api("/dict/"+id+"/toggle", {method:"POST"}).then(loadDict).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); }); }
+    function delDict(id){ if(!confirm("حذف هذا الرد؟")) return; api("/dict/"+id, {method:"DELETE"}).then(function(){ toast("🗑️ حُذف"); loadDict(); }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); }); }
+
+    // ── (6) المحاكي ──
+    var simHistory = [];
+    function simRender(){
+      var box = document.getElementById("simBox");
+      if (!simHistory.length) { box.innerHTML = '<div class="empty">👋 اكتب رسالتك الأولى كأنك زبون وجرّب البوت</div>'; return; }
+      box.innerHTML = "";
+      simHistory.forEach(function(m){
+        box.insertAdjacentHTML("beforeend", '<div class="msg '+(m.role==="bot"?"bot":"me")+'">'+esc(m.text)+'</div>');
+      });
+      box.scrollTop = box.scrollHeight;
+    }
+    function simSend(){
+      var inp = document.getElementById("simInput"), btn = document.getElementById("btnSim");
+      var msg = inp.value.trim(); if(!msg) return;
+      var hist = simHistory.slice();
+      simHistory.push({role:"user", text:msg}); simRender();
+      inp.value = ""; btn.disabled = true;
+      var box = document.getElementById("simBox");
+      box.insertAdjacentHTML("beforeend", '<div class="msg bot">⏳ يكتب...</div>'); box.scrollTop = box.scrollHeight;
+      api("/simulate", {method:"POST", body:{message:msg, history:hist}}).then(function(d){
+        simHistory.push({role:"bot", text:d.reply});
+      }).catch(function(e){ if(e.message!=="401"){ simHistory.push({role:"bot", text:"⚠️ "+e.message}); } })
+        .finally(function(){ btn.disabled = false; simRender(); inp.focus(); });
+    }
+    function simClear(){ simHistory = []; simRender(); }
+
+    // ── (7) سجل الأخطاء ──
+    function loadErrs(){
+      api("/errors").then(function(d){
+        var tb = document.getElementById("errRows"); tb.innerHTML = "";
+        document.getElementById("errEmpty").style.display = d.errors.length ? "none" : "block";
+        d.errors.forEach(function(r){
+          tb.insertAdjacentHTML("beforeend", "<tr><td>"+r.id+"</td><td>"+esc(r.source||"—")+"</td><td class='wraptxt'>"+esc(r.message)+"</td><td>"+fmtD(r.created_at)+"</td></tr>");
+        });
+      }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); });
+    }
+    function addErr(){
+      var s = document.getElementById("errSource").value.trim(), m = document.getElementById("errMsg").value.trim();
+      if (!m) { toast("اكتب وصف الخطأ أولاً"); return; }
+      api("/errors", {method:"POST", body:{source:s, message:m}}).then(function(){
+        document.getElementById("errMsg").value = ""; toast("✅ سُجّل الخطأ"); loadErrs();
+      }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); });
+    }
+    function clearErrs(){
+      if (!confirm("مسح كل سجل الأخطاء؟")) return;
+      api("/errors", {method:"DELETE"}).then(function(){ toast("🗑️ مُسح السجل"); loadErrs(); }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); });
+    }
+
+    // ── (8) الإحصاءات ──
+    function loadStats(){
+      api("/stats").then(function(d){
+        document.getElementById("statsCards").innerHTML =
+          '<div class="sc"><div class="n">'+d.conversations+'</div><div class="l">💬 محادثة مميزة (14 يوم)</div></div>'+
+          '<div class="sc"><div class="n">'+d.total_in+'</div><div class="l">📥 رسائل واردة</div></div>'+
+          '<div class="sc"><div class="n">'+d.total_out+'</div><div class="l">📤 ردود البوت</div></div>'+
+          '<div class="sc"><div class="n">'+d.buyers+'</div><div class="l">🛒 زبائن طلبوا</div></div>'+
+          '<div class="sc"><div class="n">'+d.conversion+'%</div><div class="l">🎯 نسبة التحول لطلب</div></div>';
+        var bars = document.getElementById("statsBars"); bars.innerHTML = "";
+        document.getElementById("statsEmpty").style.display = d.daily.length ? "none" : "block";
+        var mx = 1;
+        d.daily.forEach(function(r){ mx = Math.max(mx, Number(r.inc)||0, Number(r.outc)||0); });
+        d.daily.forEach(function(r){
+          var hi = Math.round(((Number(r.inc)||0)/mx)*110), ho = Math.round(((Number(r.outc)||0)/mx)*110);
+          bars.insertAdjacentHTML("beforeend",
+            '<div class="bcol"><div class="bpair">'+
+            '<div class="bar in" style="height:'+hi+'px" title="واردة: '+r.inc+'"></div>'+
+            '<div class="bar out" style="height:'+ho+'px" title="صادرة: '+r.outc+'"></div>'+
+            '</div><div class="blab">'+esc(String(r.d).slice(5))+'</div></div>');
+        });
+      }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); });
+    }
+
+    // ── (9) كلمات ساخنة ──
+    function loadHot(){
+      var out = document.getElementById("hotOut");
+      out.innerHTML = '<div class="loading">🔥 جارٍ تحليل الرسائل...</div>';
+      api("/hotwords").then(function(d){
+        if (!d.words.length) { out.innerHTML = '<div class="empty">لا توجد رسائل واردة كافية بعد 🔥</div>'; return; }
+        var mx = d.words[0].count || 1, h = '<div class="hint">من تحليل '+d.analyzed+' رسالة واردة.</div><div class="hotwrap">';
+        d.words.forEach(function(w){
+          var size = 13 + Math.round((w.count/mx)*10);
+          h += '<span class="hotword" style="font-size:'+size+'px">'+esc(w.word)+' <small>('+w.count+')</small></span>';
+        });
+        out.innerHTML = h + '</div>';
+      }).catch(function(e){ if(e.message!=="401"){ out.innerHTML = '<div class="empty">⚠️ '+esc(e.message)+'</div>'; } });
+    }
+
+    // ── (10) كلمات مراقبة ──
+    function loadWatch(){
+      api("/watch").then(function(d){
+        var el = document.getElementById("watchWords");
+        if (!d.words.length) { el.innerHTML = '<div class="hint">لا كلمات مراقبة بعد — أضف مثلاً: شكوى، خربان، متأخر</div>'; return; }
+        el.innerHTML = "";
+        d.words.forEach(function(w){
+          el.insertAdjacentHTML("beforeend", '<span class="chip">👁️ '+esc(w.word)+'<button title="حذف" onclick="delWatch('+w.id+')">✕</button></span>');
+        });
+      }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); });
+    }
+    function addWatch(){
+      var w = document.getElementById("watchWord").value.trim();
+      if (!w) { toast("اكتب الكلمة أولاً"); return; }
+      api("/watch", {method:"POST", body:{word:w}}).then(function(){
+        document.getElementById("watchWord").value = ""; toast("✅ أُضيفت"); loadWatch(); loadWatchHits();
+      }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); });
+    }
+    function delWatch(id){
+      api("/watch/"+id, {method:"DELETE"}).then(function(){ loadWatch(); loadWatchHits(); }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); });
+    }
+    function loadWatchHits(){
+      api("/watch/hits").then(function(d){
+        var tb = document.getElementById("watchRows"); tb.innerHTML = "";
+        document.getElementById("watchEmpty").style.display = d.hits.length ? "none" : "block";
+        d.hits.forEach(function(h){
+          var chips = h.matched.map(function(w){ return '<span class="badge warn">'+esc(w)+'</span>'; }).join(" ");
+          tb.insertAdjacentHTML("beforeend", "<tr><td>"+esc(h.page_name||"—")+"</td><td class='wraptxt'>"+esc(h.body)+"</td><td>"+chips+"</td><td>"+fmtD(h.created_at)+"</td></tr>");
+        });
+      }).catch(function(e){ if(e.message!=="401") toast("⚠️ "+e.message); });
+    }
+  </script>
+</body>
+</html>
