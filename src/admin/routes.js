@@ -900,3 +900,17 @@ adminRouter.get("/export.csv", requireAuth, (req, res) => {
   res.setHeader("Content-Disposition", `attachment; filename="orders_${Date.now()}.csv"`);
   res.send("﻿" + lines.join("\r\n"));
 });
+
+// ═══════════════════════════════════════════════════════════
+// ⚡ مركز الميزات (80 ميزة / 8 وحدات) — تحميل دفاعي وتركيب مركزي خلف الحماية
+// ═══════════════════════════════════════════════════════════
+import { loadFeatures } from "../features/index.js";
+const FEATURE_MODULES = await loadFeatures();
+for (const f of FEATURE_MODULES) {
+  adminRouter.use("/f-api/" + f.slug, requireAuth, f.router);
+  adminRouter.get("/f/" + f.slug, requireAuth, (req, res) =>
+    res.sendFile(path.join(publicDir, "features-" + f.slug + ".html")));
+}
+adminRouter.get("/features", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "features.html")));
+adminRouter.get("/api/features-list", requireAuth, (req, res) =>
+  res.json({ modules: FEATURE_MODULES.map(f => ({ slug: f.slug, title: f.title, icon: f.icon })) }));
