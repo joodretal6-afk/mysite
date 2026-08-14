@@ -58,7 +58,12 @@ export function requireAuth(req, res, next) {
   const token = req.cookies?.[COOKIE_NAME];
   const session = verifyToken(token);
   if (!session) {
-    if (req.path.startsWith("/api/") || req.path.includes("export")) {
+    // طلبات الـ API ترجع 401 (وليس تحويلاً) حتى تتعامل معها الواجهة بشكل صحيح.
+    // ملاحظة: وحدات الميزات مركّبة على /admin/f-api/<slug> فيكون req.path هو المسار الداخلي فقط،
+    // لذلك نفحص العنوان الكامل أيضاً — وإلا رجع 302 وحاولت الصفحة قراءة HTML كأنه JSON.
+    const url = String(req.originalUrl || "");
+    const wantsJson = String(req.headers.accept || "").includes("application/json");
+    if (req.path.startsWith("/api/") || req.path.includes("export") || url.includes("/f-api/") || wantsJson) {
       return res.status(401).json({ error: "غير مصرّح" });
     }
     return res.redirect("/admin/login");
