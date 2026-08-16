@@ -7,7 +7,7 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64, op
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
-import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting, lastCompletedOrder, setCancelReason } from "../db/database.js";
+import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting, lastCompletedOrder, setCancelReason, db, retryDb } from "../db/database.js";
 
 // إلغاء صريح للطلب (منفصل عن "تعديل/تغيير الرأي")
 const CANCEL_INTENT = /(الغي الطلب|ألغي الطلب|الغاء الطلب|إلغاء الطلب|بطّل الطلب|بطل الطلب|ما بدي الطلب|ما عاد بدي|ما بديش|كنسل|cancel|لا تبعت|لا ترسل|ما بدي اكمل|ما بدي أكمل)/i;
@@ -390,6 +390,23 @@ async function _handleEvent(event, env, ctx) {
 
   const messengerUrl = `https://m.me/${senderId}`;
 
+  // 🎯 التقاط العميل المحتمل: حدّد صنف بس لسا ما أعطى رقم ولا عنوان.
+  // بدون هاد بيختفي كلياً من النظام. لا يرسل أي شيء — تسجيل فقط.
+  if (cartItemsCount > 0 && !memory.area && !memory.phone) {
+    try {
+      const names = Object.keys(memory.cart).join("، ");
+      let est = 0;
+      try { est = Number(computeOrder(effConfig, memory.cart, memory.coupon).total) || 0; } catch {}
+      const now = Date.now();
+      retryDb(() => db.prepare(
+        `INSERT INTO leads_prospects (page_id, page_name, sender_id, interest, est_value, first_at, last_at, status)
+         VALUES (?,?,?,?,?,?,?, 'open')
+         ON CONFLICT(page_id, sender_id) DO UPDATE SET
+           interest = excluded.interest, est_value = excluded.est_value, last_at = excluded.last_at`
+      ).run(recipientId, pageConfig.name || "", senderId, names, est, now, now));
+    } catch (e) { console.error("prospect capture:", e && e.message); }
+  }
+
   // 🟢 وصول فوري للسستم: أي أوردر فيه أصناف + (عنوان أو رقم) ينزل باللوحة مباشرة
   const hasIntent = cartItemsCount > 0 && (memory.area || memory.phone);
   if (hasIntent) {
@@ -411,6 +428,12 @@ async function _handleEvent(event, env, ctx) {
           messenger_url: messengerUrl, created_at: Date.now()
         });
       }
+      // صار طلب فعلي — يخرج من قائمة العملاء المحتملين
+      try {
+        retryDb(() => db.prepare(
+          "UPDATE leads_prospects SET status = 'converted' WHERE page_id = ? AND sender_id = ? AND status = 'open'"
+        ).run(recipientId, senderId));
+      } catch {}
     } catch (e) {
       console.error("🔴 live upsert FAILED:", e && e.message, e && e.stack);
     }

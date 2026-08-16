@@ -6,7 +6,7 @@ const SLUGS = [
   // ── الطبقة الأولى: التشغيل اليومي ──
   "ordersops", "crm", "reports", "finance", "marketing", "botquality", "team", "system",
   // ── الطبقة الثانية: القيادة والتوسع (إمبراطورية) ──
-  "command", "pricing", "geo", "intel", "supply", "retention", "quality", "growth"
+  "command", "leads", "pricing", "geo", "intel", "supply", "retention", "quality", "growth"
 ];
 
 export async function loadFeatures() {
