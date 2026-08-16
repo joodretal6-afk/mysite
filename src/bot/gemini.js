@@ -2,7 +2,7 @@
 // دالة المحادثة مع Gemini (دعم الصوت + CRM)
 // ═══════════════════════════════════════════════════════════
 import { CONFIG } from "../config.js";
-import { COMMON_KNOWLEDGE } from "./brain.js";
+import { COMMON_KNOWLEDGE, SALES_PERSONA, SALES_BEHAVIOR } from "./brain.js";
 import { ADDRESS_EXPERT } from "./addressExpert.js";
 
 export function buildNextTask(memory) {
@@ -50,7 +50,8 @@ export async function askGemini(history, userMsg, audioPart, pageConfig, memory,
 
   const nextTask = buildNextTask(memory);
   // معرفة خاصة بالصفحة (SYSTEM) تتجاوز معرفة الجبنة العامة — لصفحات بمجال مختلف (مثل مواد التنظيف)
-  const baseKnowledge = pageConfig.SYSTEM || COMMON_KNOWLEDGE;
+  // سلوك المبيعات طبقة مستقلة عن المنتج: تنطبق على كل الصفحات حتى اللي عندها برومبت خاص.
+  const baseKnowledge = SALES_PERSONA + "\n\n" + (pageConfig.SYSTEM || COMMON_KNOWLEDGE) + "\n\n" + SALES_BEHAVIOR;
   const systemInst = `${baseKnowledge}\n\n${ADDRESS_EXPERT}\n\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
 
   const contents = (history || []).map(h => ({
