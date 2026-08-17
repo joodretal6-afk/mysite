@@ -29,7 +29,7 @@ UI = B.mount([
     j.leaks.map(l => `<div class="item">
       <div class="t">${B.esc(l.step)} <span class="tag red">سقط ${B.num(l.dropped)} (${l.dropRate}%)</span></div>
       ${l.examples.map(e => `<div class="quote">
-        ${B.mlink(e.sender_id)} · نية ${e.intent} · ${B.num(e.messages)} رسالة
+        ${B.mlink(e.sender_id, e.url)} · نية ${e.intent} · ${B.num(e.messages)} رسالة
         ${e.objections.length ? ` · اعترض: ${e.objections.map(B.esc).join("، ")}` : ""}
         <br>"${B.esc(e.lastMessage)}"</div>`).join("")}
     </div>`).join("") || '<div class="empty">ما في تسريبات</div>' + `</div>`

@@ -32,6 +32,7 @@ import fs from "node:fs";
 import { WEB, CONFIG } from "../config.js";
 import { sendText, openReplyWindow, closeReplyWindow } from "../bot/messenger.js";
 import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
+import { inboxUrl } from "../brain/links.js";
 import { PAGES } from "../bot/brain.js";
 import { fetchConversations, fetchMessages, collectConversationsInRange } from "../bot/inbox.js";
 import { parseMessage } from "../bot/parser.js";
@@ -526,7 +527,7 @@ adminRouter.post("/api/orders/manual", requireAuth, (req, res) => {
     area: area || "",
     phone: phone || "",
     status: "جديد",
-    messenger_url: customer_id ? `https://m.me/${customer_id}` : "",
+    messenger_url: inboxUrl(page_id, customer_id),
     created_at: Date.now()
   });
   res.json({ ok: true, id });
@@ -601,7 +602,7 @@ adminRouter.post("/api/bulk-extract", requireAuth, async (req, res) => {
           area: area,
           phone: phone,
           status: "جديد",
-          messenger_url: c.customerId ? `https://m.me/${c.customerId}` : "",
+          messenger_url: inboxUrl(pid, c.customerId),
           created_at: c.updated ? new Date(c.updated).getTime() : Date.now()
         });
         saved++;

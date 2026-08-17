@@ -223,6 +223,32 @@ for (const col of [
   try { db.exec(col); } catch { /* العمود موجود */ }
 }
 
+// ── ترحيل: إصلاح روابط الماسنجر القديمة ──
+// الطلبات المحفوظة قبل هيك خزّنت https://m.me/<sender_id>، والـ sender_id
+// هو PSID مربوط بالصفحة — و m.me بيتوقّع معرّف صفحة، فكان بيطلع "غير متوفر".
+// منستبدلها برابط صندوق الصفحة، وهو الوحيد اللي بيفتح المحادثة فعلاً.
+try {
+  const done = db.prepare("SELECT value FROM kv WHERE key = '__fixed_mme_links'").get();
+  if (!done) {
+    const r = db.prepare(
+      `UPDATE orders
+          SET messenger_url = 'https://www.facebook.com/' || page_id ||
+                              '/inbox/?selected_item_id=' || sender_id
+        WHERE messenger_url LIKE 'https://m.me/%'
+          AND page_id IS NOT NULL AND page_id <> ''
+          AND sender_id IS NOT NULL AND sender_id <> ''`
+    ).run();
+    // الصفوف اللي بلا page_id ما إلها رابط صالح أصلاً — نفضّيها بدل ما نخلّيها مكسورة
+    db.prepare(
+      `UPDATE orders SET messenger_url = ''
+        WHERE messenger_url LIKE 'https://m.me/%'`
+    ).run();
+    db.prepare("INSERT INTO kv (key,value,expires_at) VALUES ('__fixed_mme_links','1',NULL) ON CONFLICT(key) DO NOTHING").run();
+    const n = Number(r && r.changes) || 0;
+    if (n) console.log(`🔗 صُلّح ${n} رابط ماسنجر قديم (كانت m.me وما بتفتح)`);
+  }
+} catch (e) { console.error("ترحيل روابط الماسنجر:", e.message); }
+
 // ── تنظيف دوري للمفاتيح المنتهية ──
 function cleanupExpired() {
   db.prepare("DELETE FROM kv WHERE expires_at IS NOT NULL AND expires_at < ?").run(Date.now());

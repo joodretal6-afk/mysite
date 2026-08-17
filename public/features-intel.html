@@ -25,7 +25,7 @@ B.mount([
     ]) +
     `<div class="box"><h3>ملفات الزبائن — مرتّبة حسب مين يستاهل انتباهك اليوم</h3>` +
     B.table(["الزبون", "طلبات", "أنفق", "نية", "احتمال الشراء", "الشرائح", "آخر طلب"], j.rows, r => [
-      B.mlink(r.sender_id),
+      B.mlink(r.sender_id, r.url),
       B.num(r.orders),
       `<b>${B.num(r.spend)}</b>`,
       `<span class="tag ${r.intent >= 70 ? "green" : r.intent >= 45 ? "amber" : ""}">${r.intent}</span>`,
@@ -45,7 +45,7 @@ B.mount([
     `</div><div class="box"><h3>المحادثات مرتّبة بالنية ${B.conf(j.confidence)}</h3>` +
     B.table(["الزبون", "النية", "المرحلة", "ليش هالدرجة", "الاعتراضات", "رسائل", "سرعة الرد"],
       j.rows.slice(0, 120), r => [
-      B.mlink(r.sender_id),
+      B.mlink(r.sender_id, r.url),
       `<b style="color:${r.intent >= 70 ? "var(--green)" : r.intent >= 45 ? "var(--amber)" : "var(--mut)"}">${r.intent}</b>`,
       `<span class="tag ${r.bought ? "green" : ""}">${B.esc(r.stage)}</span>`,
       `<div class="mut">${r.reasons.slice(0, 4).map(x =>
@@ -69,7 +69,7 @@ B.mount([
       `${r.reason} — ${B.num(r.n)} محادثة (${r.share}%) · قيمة ${B.num(r.value)}`)).join("") +
     `</div><div class="box"><h3>أعلى الفرص قيمة</h3>` +
     B.table(["الزبون", "الصفحة", "النية", "السبب", "القيمة", "آخر تواصل"], j.rows.slice(0, 100), r => [
-      B.mlink(r.sender_id), B.esc(r.page_name), `<b>${r.intent}</b>`,
+      B.mlink(r.sender_id, r.url), B.esc(r.page_name), `<b>${r.intent}</b>`,
       `<span class="tag red">${B.esc(r.reason)}</span>`, `<b>${B.num(r.value)}</b>`, B.dt(r.last_at)
     ]) + `</div>`
 },

@@ -6,6 +6,7 @@ import { PAGES } from "./brain.js";
 import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64, openReplyWindow, closeReplyWindow } from "./messenger.js";
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
+import { inboxUrl } from "../brain/links.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
 import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting, lastCompletedOrder, setCancelReason, db, retryDb } from "../db/database.js";
 
@@ -305,7 +306,7 @@ async function _handleEvent(event, env, ctx) {
         reason: need.reason, snippet: userMsg, pause: need.pause ? 1 : 0
       });
       ctx.waitUntil(notifyTelegram(
-        `🙋 تدخّل بشري مطلوب — (${pageConfig.name})\n⚠️ ${need.reason}\n💬 «${userMsg.slice(0, 200)}»\n🔗 https://m.me/${senderId}`
+        `🙋 تدخّل بشري مطلوب — (${pageConfig.name})\n⚠️ ${need.reason}\n💬 «${userMsg.slice(0, 200)}»\n🔗 ${inboxUrl(recipientId, senderId)}`
       ));
       const ack = "آسفين على أي إزعاج 🌹 وصلت رسالتك، ورح يتواصل معك موظف من الفريق حالاً ويهتم فيك شخصياً. لحظات ونكون معك 🙏";
       await sendText(token, senderId, ack);
@@ -367,7 +368,7 @@ async function _handleEvent(event, env, ctx) {
       const note = getSetting("wholesale_note") ||
         "🏢 إذا حابب كميات كبيرة أو بالجملة، عنا أسعار خاصة للتجار! خبّرني وبنرتّبلك عرض مميز.";
       memory._wholesaleNote = note;
-      ctx.waitUntil(notifyTelegram(`🏢 زبون جملة محتمل — (${pageConfig.name})\n💬 «${userMsg.slice(0, 150)}»\n🔗 https://m.me/${senderId}`));
+      ctx.waitUntil(notifyTelegram(`🏢 زبون جملة محتمل — (${pageConfig.name})\n💬 «${userMsg.slice(0, 150)}»\n🔗 ${inboxUrl(recipientId, senderId)}`));
     }
   } catch (e) { console.error("wholesale detect:", e && e.message); }
 
@@ -388,7 +389,7 @@ async function _handleEvent(event, env, ctx) {
   const complete = cartItemsCount > 0 && memory.area && memory.phone && !memory.invalidPhoneProvided;
   const readyForInvoice = complete && !memory.sent;
 
-  const messengerUrl = `https://m.me/${senderId}`;
+  const messengerUrl = inboxUrl(recipientId, senderId);
 
   // 🎯 التقاط العميل المحتمل: حدّد صنف بس لسا ما أعطى رقم ولا عنوان.
   // بدون هاد بيختفي كلياً من النظام. لا يرسل أي شيء — تسجيل فقط.

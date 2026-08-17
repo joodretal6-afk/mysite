@@ -34,7 +34,7 @@ B.mount([
     <div class="box"><h3>أعلى الزبائن قيمة</h3>` +
     B.table(["الزبون", "الفئة", "طلبات", "أنفق", "متوسط الطلب", "طلب/شهر", "القيمة المتوقعة", "الحساب"],
       j.rows.slice(0, 80), r => [
-      B.mlink(r.sender_id),
+      B.mlink(r.sender_id, r.url),
       `<span class="tag ${r.tier === "VIP" ? "green" : r.tier === "ذهبي" ? "amber" : ""}">${B.esc(r.tier)}</span>`,
       B.num(r.orders), B.num(r.spend), B.num(r.aov), B.num(r.perMonth),
       `<b style="color:var(--green)">${B.num(r.clv)}</b>`,
@@ -53,7 +53,7 @@ B.mount([
     `<div class="box"><h3>مين وقف يشتري — والمقياس بإيقاعه هو مش برقم ثابت</h3>` +
     B.table(["الزبون", "الحالة", "طلبات", "أنفق", "غايب من", "إيقاعه المعتاد", "متأخر بـ", "ليش فقدناه", "قيمة معرّضة"],
       j.rows.slice(0, 120), r => [
-      B.mlink(r.sender_id),
+      B.mlink(r.sender_id, r.url),
       `<span class="tag ${r.label === "مفقود" ? "red" : r.label === "خطر عالي" ? "amber" : ""}">${B.esc(r.label)}</span>`,
       B.num(r.orders), B.num(r.spend),
       `${r.daysSinceOrder} يوم`, `كل ${B.num(r.expectedGap)} يوم`,
@@ -72,7 +72,7 @@ B.mount([
     `<div class="box"><h3>شو ممكن يشتري كل زبون — والأساس مبيّن</h3>` +
     B.table(["الزبون", "بيملك", "التوصية", "على أي أساس", "التوقيت", "أنفق"],
       j.rows.slice(0, 100), r => [
-      B.mlink(r.sender_id),
+      B.mlink(r.sender_id, r.url),
       `<div class="mut">${r.owns.map(B.esc).join("، ")}</div>`,
       r.suggestions.map(s => `<span class="tag acc">${B.esc(s.product)}</span>`).join(""),
       `<div class="mut">${r.suggestions[0] ? r.suggestions[0].why.map(B.esc).join("<br>") : "—"}</div>`,
@@ -87,10 +87,10 @@ B.mount([
       "green") +
     `<div class="box"><h3>ضمن نافذة الـ24 ساعة</h3>` +
     B.table(["الزبون", "الصفحة", "طلبات", "أنفق", "آخر طلب", ""], j.rows, r => [
-      B.mlink(r.sender_id), B.esc(r.page_name), B.num(r.orders), B.num(r.spend),
+      B.mlink(r.sender_id, r.url), B.esc(r.page_name), B.num(r.orders), B.num(r.spend),
       r.daysSinceOrder == null ? "—" : `قبل ${r.daysSinceOrder} يوم`,
-      `<a class="btn" style="text-decoration:none;display:inline-block" href="${B.esc(r.url)}"
-          target="_blank" rel="noopener">افتح المحادثة</a>`
+      r.url ? `<a class="btn" style="text-decoration:none;display:inline-block" href="${B.esc(r.url)}"
+          target="_blank" rel="noopener">افتح المحادثة</a>` : `<span class="mut">ما في معرّف صفحة</span>`
     ]) + `</div>`
 }
 ]);

@@ -33,7 +33,15 @@ window.BUI = (() => {
     : `<div class="empty">ما في بيانات لعرضها</div>`;
 
   const headline = (txt, tone) => txt ? `<div class="headline ${tone || ""}">${esc(txt)}</div>` : "";
-  const mlink = sid => `<a class="m" href="https://m.me/${esc(sid)}" target="_blank" rel="noopener">${esc(String(sid).slice(0, 12))}…</a>`;
+  // الرابط بيجي محسوب من السيرفر (رابط صندوق الصفحة) — الـ sender_id لحاله
+  // ما بيصلح رابط، لأنه PSID مربوط بالصفحة مش معرّف عام.
+  // بلا رابط صالح منعرض المعرّف كنص بدل ما نعطي رابط بيوقّع على "غير متوفر".
+  const mlink = (sid, url) => {
+    const label = esc(String(sid).slice(0, 12)) + "…";
+    return url ? `<a class="m" href="${esc(url)}" target="_blank" rel="noopener"
+      title="بيفتح المحادثة بصندوق الصفحة">${label}</a>`
+      : `<span class="mut" title="ما في معرّف صفحة لهاد السجل — ما بنقدر نبني رابط">${label}</span>`;
+  };
   const bar = (v, max, label) => `<div class="bar"><i style="width:${max ? Math.min(100, v * 100 / max) : 0}%"></i><span>${esc(label)}</span></div>`;
 
   // إدارة التبويبات + الجلب

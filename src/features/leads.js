@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════
 import { Router } from "express";
 import { db, retryDb } from "../db/database.js";
+import { inboxUrl } from "../brain/links.js";
 
 export const slug = "leads";
 export const title = "الفرص الضائعة";
@@ -59,7 +60,7 @@ function since(req) {
   if (!Number.isFinite(d) || d < 1 || d > 180) d = 30;
   return { days: d, from: Date.now() - d * DAY_MS };
 }
-function mUrl(sid) { return "https://m.me/" + sid; }
+function mUrl(pageId, sid) { return inboxUrl(pageId, sid); }
 
 // ── آخر رسالة واردة لكل زبون: أساس حساب نافذة الـ24 ساعة ──
 function lastInboundMap(from) {
@@ -155,7 +156,7 @@ router.get("/lost", (req, res) => {
       why: "آخر رسالة من الزبون وما حدا ردّ — أسرع فرصة ترجّعها.",
       items: noReply.map(r => ({
         page_id: r.page_id, page: r.page_name || "", sender_id: r.sender_id, at: Number(r.last_at || 0),
-        label: "آخر رسالة من الزبون", url: mUrl(r.sender_id)
+        label: "آخر رسالة من الزبون", url: mUrl(r.page_id, r.sender_id)
       }))
     });
 
@@ -170,7 +171,7 @@ router.get("/lost", (req, res) => {
       why: "عرف شو بده بالضبط بس ما أعطى رقم ولا عنوان — أقرب واحد للشراء.",
       items: prospects.map(p => ({
         page_id: p.page_id, page: p.page_name || "", sender_id: p.sender_id, at: Number(p.last_at || 0),
-        label: p.interest || "اهتمام غير محدّد", value: Number(p.est_value || 0), url: mUrl(p.sender_id)
+        label: p.interest || "اهتمام غير محدّد", value: Number(p.est_value || 0), url: mUrl(p.page_id, p.sender_id)
       }))
     });
 
@@ -188,7 +189,7 @@ router.get("/lost", (req, res) => {
       items: incomplete.map(o => ({
         page_id: o.page_id, page: o.page_name || "", sender_id: o.sender_id, at: Number(o.created_at || 0),
         label: "#" + o.id + " " + (o.order_string || "") + (o.phone ? "" : " — بلا رقم") + (o.area ? "" : " — بلا عنوان"),
-        value: Number(o.total || 0), url: mUrl(o.sender_id)
+        value: Number(o.total || 0), url: mUrl(o.page_id, o.sender_id)
       }))
     });
 
@@ -202,7 +203,7 @@ router.get("/lost", (req, res) => {
       why: "انلغى — يستاهل تعرف السبب قبل ما يتكرر.",
       items: cancelled.map(o => ({
         page_id: o.page_id, page: o.page_name || "", sender_id: o.sender_id, at: Number(o.created_at || 0),
-        label: "#" + o.id + " " + (o.order_string || ""), value: Number(o.total || 0), url: mUrl(o.sender_id)
+        label: "#" + o.id + " " + (o.order_string || ""), value: Number(o.total || 0), url: mUrl(o.page_id, o.sender_id)
       }))
     });
 
@@ -256,7 +257,7 @@ router.get("/window", (req, res) => {
           interest: r.interest || "", value: Number(r.est_value || 0),
           lastIn: li, hoursLeft: Math.round((left / 3600000) * 10) / 10,
           touched: touched.has(r.page_id + "|" + r.sender_id),
-          url: mUrl(r.sender_id)
+          url: mUrl(r.page_id, r.sender_id)
         };
       })
       .filter(x => x.lastIn > 0 && x.hoursLeft > 0)

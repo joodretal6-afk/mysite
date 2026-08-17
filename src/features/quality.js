@@ -11,6 +11,7 @@ import {
   conversations, scanConversation, replyDelayMin, customerStats
 } from "../brain/core.js";
 import { evaluateExperiment, recordOutcome, runLearningCycle, lessons, safeJson } from "../brain/learn.js";
+import { inboxUrl } from "../brain/links.js";
 
 export const slug = "quality";
 export const title = "التجارب والجودة";
@@ -176,7 +177,7 @@ router.get("/journey", (req, res) => {
           intent: scan.intent, messages: cv.inCount,
           lastMessage: String((cv.msgs.filter(m => m.dir === "in").slice(-1)[0] || {}).body || "").slice(0, 120),
           objections: scan.objections.map(o => o.label),
-          url: "https://m.me/" + cv.sender_id
+          url: inboxUrl(cv.page_id, cv.sender_id)
         });
       }
     }

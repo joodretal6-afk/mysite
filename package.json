@@ -10,7 +10,8 @@
     "create-admin": "node scripts/create-admin.js",
     "test:brain": "node scripts/smoke-brain.js",
     "test:brain-ui": "node scripts/smoke-brain-ui.js",
-    "test": "node scripts/smoke-brain-ui.js && node scripts/smoke-brain.js"
+    "test:links": "node scripts/smoke-links.js",
+    "test": "node scripts/smoke-links.js && node scripts/smoke-brain-ui.js && node scripts/smoke-brain.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -17,6 +17,7 @@ import {
   parseItems, SIGNALS, OBJECTIONS, replyDelayMin
 } from "../brain/core.js";
 import { recordDecision } from "../brain/learn.js";
+import { inboxUrl } from "../brain/links.js";
 
 export const slug = "intel";
 export const title = "ذكاء العملاء";
@@ -46,7 +47,7 @@ router.get("/brain", (req, res) => {
       ...c,
       dna: classifyDNA(c),
       buyProbability: buyProbability(c),
-      url: "https://m.me/" + c.sender_id
+      url: inboxUrl(c.page_id, c.sender_id)
     }));
 
     reply(res, {
@@ -117,7 +118,7 @@ router.get("/intent", (req, res) => {
         messages: cv.inCount,
         last_at: cv.last_at,
         replyDelayMin: replyDelayMin(cv),
-        url: "https://m.me/" + cv.sender_id
+        url: inboxUrl(cv.page_id, cv.sender_id)
       };
     }).filter(r => r.intent >= minScore)
       .sort((a, b) => b.intent - a.intent);
@@ -187,7 +188,7 @@ router.get("/lost", (req, res) => {
         page_name: cv.page_name, sender_id: cv.sender_id,
         intent: scan.intent, reason, reasonKey, value,
         messages: cv.inCount, last_at: cv.last_at,
-        url: "https://m.me/" + cv.sender_id
+        url: inboxUrl(cv.page_id, cv.sender_id)
       });
       const b = byReason.get(reasonKey) || { key: reasonKey, reason, n: 0, value: 0 };
       b.n++; b.value = round(b.value + value);

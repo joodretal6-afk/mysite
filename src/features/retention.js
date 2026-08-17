@@ -14,6 +14,7 @@ import {
   customerStats, parseItems, productStats, inWindow
 } from "../brain/core.js";
 import { recordDecision, learn } from "../brain/learn.js";
+import { inboxUrl } from "../brain/links.js";
 
 export const slug = "retention";
 export const title = "الاحتفاظ وقيمة العميل";
@@ -130,7 +131,7 @@ router.get("/next-buy", (req, res) => {
         daysSinceOrder: c.daysSinceOrder, avgGapDays: c.avgGapDays,
         timing: due == null ? "غير معروف" : due >= 0 ? "متأخر عن موعده" : `بعد ${Math.abs(Math.round(due))} يوم تقريباً`,
         overdue: due != null && due >= 0,
-        url: "https://m.me/" + c.sender_id
+        url: inboxUrl(c.page_id, c.sender_id)
       });
     }
     rows.sort((a, b) => (b.overdue ? 1 : 0) - (a.overdue ? 1 : 0) || b.spend - a.spend);
@@ -175,7 +176,7 @@ router.get("/value", (req, res) => {
         orders: c.orders, spend: c.spend, aov: c.aov,
         perMonth, expectedMonths, clv,
         daysSinceOrder: c.daysSinceOrder, avgGapDays: c.avgGapDays,
-        url: "https://m.me/" + c.sender_id,
+        url: inboxUrl(c.page_id, c.sender_id),
         basis: perMonth > 0
           ? `${c.aov} متوسط × ${perMonth} طلب/شهر × ${expectedMonths} شهر متوقّع`
           : `طلب واحد بقيمة ${c.spend} — تقدير متحفظ`
@@ -262,7 +263,7 @@ router.get("/churn", (req, res) => {
         overdueRatio, risk, label, why,
         atRiskValue: round(c.aov * 2),      // قيمة الطلبين الجايين اللي رح نخسرهم
         products: c.products.slice(0, 3).map(p => p.name),
-        url: "https://m.me/" + c.sender_id
+        url: inboxUrl(c.page_id, c.sender_id)
       };
     }).filter(r => r.label !== "طبيعي")
       .sort((a, b) => b.risk - a.risk || b.spend - a.spend);
@@ -305,7 +306,7 @@ router.get("/actionable", (req, res) => {
       sender_id: c.sender_id, page_name: c.page_name, spend: c.spend, orders: c.orders,
       daysSinceOrder: c.daysSinceOrder,
       canMessage: inWindow(lastIn.get(c.sender_id)),
-      url: "https://m.me/" + c.sender_id
+      url: inboxUrl(c.page_id, c.sender_id)
     }));
     const open = rows.filter(r => r.canMessage);
 

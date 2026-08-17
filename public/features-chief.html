@@ -175,7 +175,7 @@ function render(j) {
     <div class="sub" style="margin-top:8px">${num(c.buyers)} مشتري من ${num(c.total)} تواصلوا معك</div>
     <table style="margin-top:12px"><tr><th>الزبون</th><th>أنفق</th><th>طلبات</th></tr>
     ${(c.top || []).slice(0, 6).map(t => `<tr>
-      <td><a class="m" href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.sender_id.slice(0, 12))}…</a></td>
+      <td>${t.url ? `<a class="m" href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.sender_id.slice(0,12))}…</a>` : `<span class="sub">${esc(t.sender_id.slice(0,12))}…</span>`}</td>
       <td><b>${num(t.spend)}</b></td><td>${num(t.orders)}</td></tr>`).join("")}
     </table></div>`);
 

@@ -17,6 +17,7 @@ import {
   replyDelayMin, costMap
 } from "../brain/core.js";
 import { recordDecision, lessons, runLearningCycle, safeJson } from "../brain/learn.js";
+import { inboxUrl } from "../brain/links.js";
 
 export const slug = "chief";
 export const title = "مركز القيادة";
@@ -221,7 +222,7 @@ router.get("/command", (req, res) => {
         total: customers.length, buyers: withOrders.length,
         topShare, top: top10.slice(0, 10).map(c => ({
           sender_id: c.sender_id, spend: c.spend, orders: c.orders,
-          url: "https://m.me/" + c.sender_id
+          url: inboxUrl(c.page_id, c.sender_id)
         })),
         note: `أعلى 10% بيجيبوا ${topShare}% من مبيعاتك`
       },
