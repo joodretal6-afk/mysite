@@ -8,7 +8,9 @@ const SLUGS = [
   // ── الطبقة الثانية: القيادة والتوسع (إمبراطورية) ──
   "command", "leads", "pricing", "geo", "intel", "supply", "retention", "quality", "growth",
   // ── الطبقة الثالثة: عقل المبيعات (20 محرك) ──
-  "chief"
+  "chief",
+  // ── الطبقة الرابعة: باني المشاريع الغذائية (30 خدمة) ──
+  "venture"
 ];
 
 export async function loadFeatures() {

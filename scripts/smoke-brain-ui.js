@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const PAGES = ["chief", "intel", "retention", "pricing", "growth", "quality"];
+const PAGES = ["chief", "intel", "retention", "pricing", "growth", "quality", "venture"];
 let fail = 0;
 
 // 1) الصفحات والأصول المشتركة موجودة
