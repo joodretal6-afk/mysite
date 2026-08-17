@@ -17,17 +17,51 @@ import { PAGES } from "./bot/brain.js";
 import { sendText, notifyTelegram } from "./bot/messenger.js";
 import { whatsappEnabled, handleWhatsAppMessage } from "./bot/whatsapp.js";
 
-// 🔑 تطبيق توكنات الصفحات المحفوظة من الموقع (تتجاوز توكنات الكود) عند الإقلاع
-(async function applySavedTokens() {
+// ═══════════════════════════════════════════════════════════
+// 🔑 توكنات الصفحات — ثلاث مصادر بترتيب أولوية واضح
+//
+//   1) متغيّر بيئة  PAGE_TOKEN_<معرّف الصفحة>   ← الأقوى والأأمن
+//   2) قاعدة البيانات (من صفحة فحص التوكنات)
+//   3) التوكن المكتوب بالكود                     ← الأضعف
+//
+// 🔴 ليش متغيّر البيئة أولاً: التوكن المكتوب بالكود بينرفع للمستودع.
+//    لو المستودع عام، GitHub بيرصد التوكن ويبلّغ ميتا، وميتا بتلغيه.
+//    متغيّر البيئة بيضل بلوحة الاستضافة وما بينرفع لأي مكان.
+//
+// مثال على Render → Environment:
+//    PAGE_TOKEN_1097322276797532 = EAAR...
+// ═══════════════════════════════════════════════════════════
+(async function applyTokens() {
+  // (2) قاعدة البيانات
   try {
     const { getPageTokenOverrides } = await import("./db/database.js");
     for (const row of getPageTokenOverrides()) {
       if (PAGES[row.page_id] && row.token) {
         PAGES[row.page_id].PAGE_TOKEN = row.token;
-        console.log(`🔑 توكن محفوظ من الموقع مُطبّق لصفحة: ${PAGES[row.page_id].name}`);
+        PAGES[row.page_id]._tokenSource = "قاعدة البيانات";
+        console.log(`🔑 توكن من قاعدة البيانات لصفحة: ${PAGES[row.page_id].name}`);
       }
     }
-  } catch (e) { console.error("applySavedTokens:", e && e.message); }
+  } catch (e) { console.error("applyTokens(db):", e && e.message); }
+
+  // (1) متغيّرات البيئة — بتدعس اللي قبلها لأنها الأأمن
+  try {
+    for (const [k, v] of Object.entries(process.env)) {
+      const m = k.match(/^PAGE_TOKEN_(\d{5,})$/);
+      if (!m || !v) continue;
+      const id = m[1];
+      if (!PAGES[id]) { console.warn(`⚠️ ${k}: ما في صفحة بهاد المعرّف`); continue; }
+      PAGES[id].PAGE_TOKEN = String(v).trim();
+      PAGES[id]._tokenSource = "متغيّر بيئة";
+      console.log(`🔑 توكن من متغيّر البيئة لصفحة: ${PAGES[id].name}`);
+    }
+  } catch (e) { console.error("applyTokens(env):", e && e.message); }
+
+  // تقرير حالة سريع عند الإقلاع — بيوفّر عليك تشخيص لاحق
+  for (const [id, p] of Object.entries(PAGES)) {
+    if (!p.PAGE_TOKEN) console.warn(`⚠️ ${p.name} (${id}): بلا توكن إطلاقاً`);
+    else if (!p._tokenSource) console.log(`📄 ${p.name}: توكن من الكود (يُفضّل نقله لمتغيّر بيئة)`);
+  }
 })();
 
 // 🛡️ حماية من توقّف السيرفر بسبب تقطّع شبكة Turso اللحظي (نسجّل الخطأ ونكمّل)
