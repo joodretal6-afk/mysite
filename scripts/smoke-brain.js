@@ -1,12 +1,24 @@
 // اختبار دخان لمحركات عقل المبيعات الـ20.
 // بيزرع بيانات وهمية بقاعدة مؤقتة وبيضرب كل نقطة نهاية.
 // التشغيل:  node scripts/smoke-brain.js
-process.env.DB_FILE = process.env.DB_FILE || "./data/smoke-brain.db";
+
+// 🔴 حارس: ممنوع الاختبار يلمس قاعدة الإنتاج.
+// غلطة سابقة: كنا نضبط DB_FILE والقاعدة بتقرأ DB_PATH — فكل الاختبارات
+// كتبت بيانات وهمية بقاعدة حقيقية. الحارس هون عشان ما تتكرر.
+if (!process.env.DB_PATH || /platform\.db/.test(process.env.DB_PATH)) {
+  process.env.DB_PATH = "./data/smoke-" + (import.meta.url.match(/smoke-([a-z-]+)\.js/) || [,"test"])[1] + ".db";
+}
+if (/platform\.db/.test(process.env.DB_PATH)) {
+  console.error("🔴 رفض: الاختبار ما بيشتغل على قاعدة الإنتاج"); process.exit(1);
+}
+process.env.DB_PATH = process.env.DB_PATH || "./data/smoke-brain.db";
 
 import fs from "node:fs";
 import express from "express";
 
-if (fs.existsSync(process.env.DB_FILE)) fs.rmSync(process.env.DB_FILE);
+// SQLite بوضع WAL بيكتب ملفات جانبية — لازم تنحذف كلها
+const wipe = () => ["", "-wal", "-shm"].forEach(x => { try { fs.rmSync(process.env.DB_PATH + x); } catch {} });
+wipe();
 
 const { db } = await import("../src/db/database.js");
 await new Promise(r => setTimeout(r, 1200));
@@ -142,4 +154,5 @@ try {
 
 console.log(`\n${"═".repeat(46)}\n   نجح ${pass} · فشل ${fail}\n${"═".repeat(46)}`);
 server.close();
+try { wipe(); } catch {}
 process.exit(fail ? 1 : 0);

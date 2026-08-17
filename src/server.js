@@ -121,11 +121,32 @@ function dailyBackup() {
   } catch (e) { console.error("dailyBackup error:", e && e.message); }
 }
 
+// ═══════════════════════════════════════════════════════════
+// 📡 فحص رادار السوق اليومي
+// بيشتغل بساعة مبكرة عشان يكون الملخّص جاهز قبل التقرير المسائي.
+// بياخد دقائق (بحث ويب حقيقي لكل صنف) — فبنشغّله بالخلفية.
+// ═══════════════════════════════════════════════════════════
+const RADAR_HOUR = Number(process.env.RADAR_SCAN_HOUR ?? 7);
+let _lastRadarDay = null;
+
+async function radarScan() {
+  try {
+    const { runDailyScan, watchlist } = await import("./venture/radar.js");
+    if (!watchlist(true).length) return;   // ما في أصناف مراقبة — ما في شي نفحصه
+    const r = await runDailyScan();
+    console.log(`📡 رادار السوق: ${r.scanned} صنف بـ${Math.round(r.ms / 1000)}ث`);
+    if (r.digest) await notifyTelegram(r.digest);
+  } catch (e) { console.error("radarScan error:", e && e.message); }
+}
+
 function dailyJobsTick() {
   const now = new Date();
   const day = now.toISOString().slice(0, 10);
   if (now.getHours() >= DAILY_REPORT_HOUR && _lastReportDay !== day) {
     _lastReportDay = day; dailyReport();
+  }
+  if (now.getHours() >= RADAR_HOUR && _lastRadarDay !== day) {
+    _lastRadarDay = day; radarScan();   // بالخلفية — ما منستنى
   }
   if (_lastBackupDay !== day) {   // نسخة احتياطية أول تشغيل باليوم
     _lastBackupDay = day; dailyBackup();

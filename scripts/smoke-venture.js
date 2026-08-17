@@ -1,10 +1,22 @@
 // اختبار باني المشاريع الغذائية.
 // بيركّز على الحساب — لأن غلطة برقم التعادل بتفلّس مشروع.
 // نقاط الذكاء الاصطناعي بتنختبر بالتوفّر مش بالمخرجات (بتحتاج مفتاح وشبكة).
-process.env.DB_FILE = process.env.DB_FILE || "./data/smoke-venture.db";
+
+// 🔴 حارس: ممنوع الاختبار يلمس قاعدة الإنتاج.
+// غلطة سابقة: كنا نضبط DB_FILE والقاعدة بتقرأ DB_PATH — فكل الاختبارات
+// كتبت بيانات وهمية بقاعدة حقيقية. الحارس هون عشان ما تتكرر.
+if (!process.env.DB_PATH || /platform\.db/.test(process.env.DB_PATH)) {
+  process.env.DB_PATH = "./data/smoke-" + (import.meta.url.match(/smoke-([a-z-]+)\.js/) || [,"test"])[1] + ".db";
+}
+if (/platform\.db/.test(process.env.DB_PATH)) {
+  console.error("🔴 رفض: الاختبار ما بيشتغل على قاعدة الإنتاج"); process.exit(1);
+}
+process.env.DB_PATH = process.env.DB_PATH || "./data/smoke-venture.db";
 import fs from "node:fs";
 import express from "express";
-if (fs.existsSync(process.env.DB_FILE)) fs.rmSync(process.env.DB_FILE);
+// SQLite بوضع WAL بيكتب ملفات جانبية — لازم تنحذف كلها
+const wipe = () => ["", "-wal", "-shm"].forEach(x => { try { fs.rmSync(process.env.DB_PATH + x); } catch {} });
+wipe();
 
 await import("../src/db/database.js");
 await new Promise(r => setTimeout(r, 1200));
@@ -180,5 +192,5 @@ ok(disc.json.limits && disc.json.limits.ما_ما_نقدر_عليه.length >= 3,
 
 server.close();
 console.log(`\n${"═".repeat(46)}\n   ${fail ? `فشل ${fail}` : "كل الفحوصات نجحت"}\n${"═".repeat(46)}`);
-try { fs.rmSync(process.env.DB_FILE); } catch {}
+try { fs.rmSync(process.env.DB_PATH); } catch {}
 process.exit(fail ? 1 : 0);

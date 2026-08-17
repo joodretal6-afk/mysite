@@ -12,7 +12,8 @@
     "test:brain-ui": "node scripts/smoke-brain-ui.js",
     "test:links": "node scripts/smoke-links.js",
     "test:venture": "node scripts/smoke-venture.js",
-    "test": "node scripts/smoke-links.js && node scripts/smoke-brain-ui.js && node scripts/smoke-brain.js && node scripts/smoke-venture.js"
+    "test:radar": "node scripts/smoke-radar.js",
+    "test": "node scripts/smoke-links.js && node scripts/smoke-brain-ui.js && node scripts/smoke-brain.js && node scripts/smoke-venture.js && node scripts/smoke-radar.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
