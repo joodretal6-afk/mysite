@@ -6,6 +6,7 @@ import { PAGES } from "./brain.js";
 import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64, openReplyWindow, closeReplyWindow } from "./messenger.js";
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
+import { parseAddress } from "./address.js";
 import { inboxUrl } from "../brain/links.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
 import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting, lastCompletedOrder, setCancelReason, db, retryDb } from "../db/database.js";
@@ -385,9 +386,46 @@ async function _handleEvent(event, env, ctx) {
     } catch (e) { console.error("coupon detect:", e && e.message); }
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // 📍 بوابة العنوان — ولا فاتورة بتطلع بعنوان ناقص
+  //
+  // العنوان ممكن يجي من 3 مصادر: الرادار، الذكاء الاصطناعي، أو طلب سابق.
+  // كلهم بيمرّوا من نفس المحرّك هون، عشان يكون في مقياس واحد للجاهزية
+  // بدل ما مصدر يمرّر ناقص ومصدر يرفض كامل.
+  // ═══════════════════════════════════════════════════════════
+  if (memory.area && !memory.addr) {
+    // عنوان جا من الذكاء الاصطناعي أو من طلب سابق — منقيسه بنفس المسطرة
+    try {
+      const checked = parseAddress(memory.area);
+      memory.addr = checked;
+      memory.area = checked.formatted;
+      memory.addressScore = checked.score;
+      memory.addressLevel = checked.level;
+      memory.addressReady = checked.deliverable;
+      memory.addressQuestion = checked.nextQuestion;
+    } catch (e) { console.error("address gate:", e && e.message); }
+  }
+
   const cartItemsCount = memory.cart ? Object.keys(memory.cart).length : 0;
-  const complete = cartItemsCount > 0 && memory.area && memory.phone && !memory.invalidPhoneProvided;
+  const addressOk = !!memory.area && memory.addressReady !== false;
+  const complete = cartItemsCount > 0 && addressOk && memory.phone && !memory.invalidPhoneProvided;
   const readyForInvoice = complete && !memory.sent;
+
+  // 🔴 عنده كل شي إلا إن العنوان ناقص → منسأل سؤال واحد محدّد، ما منطلّع فاتورة.
+  // هاي النقطة اللي كانت بتطلّع فواتير بعناوين غلط.
+  if (cartItemsCount > 0 && memory.phone && memory.area && memory.addressReady === false
+      && memory.addressQuestion && !memory.sent) {
+    const q = memory.addressQuestion;
+    if (memory._lastAddrQ !== q) {           // ما منكرّر نفس السؤال
+      memory._lastAddrQ = q;
+      memory.lastReply = q;
+      const ask = `تمام 👌 ضلّ إشي واحد بس عشان يوصلك الطلب صح:\n${q}`;
+      logMessage({ page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
+                   direction: "out", body: ask, created_at: Date.now() });
+      await sendText(senderId, ask, pageConfig);
+      return;
+    }
+  }
 
   const messengerUrl = inboxUrl(recipientId, senderId);
 
@@ -426,6 +464,7 @@ async function _handleEvent(event, env, ctx) {
           page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
           order_string: orderString, total,
           area: memory.area || "", phone: memory.phone || "", status,
+          address_score: memory.addressScore ?? -1, address_level: memory.addressLevel || "",
           messenger_url: messengerUrl, created_at: Date.now()
         });
       }

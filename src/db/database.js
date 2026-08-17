@@ -218,7 +218,10 @@ for (const col of [
   "ALTER TABLE orders ADD COLUMN reorder_sent INTEGER DEFAULT 0",  // أُرسل تذكير إعادة الطلب
   "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'admin'",        // دور المستخدم
   "ALTER TABLE orders ADD COLUMN postsale_sent INTEGER DEFAULT 0", // أُرسلت متابعة ما بعد البيع
-  "ALTER TABLE orders ADD COLUMN cancel_reason TEXT DEFAULT ''"    // سبب الإلغاء (لتحليله)
+  "ALTER TABLE orders ADD COLUMN cancel_reason TEXT DEFAULT ''",   // سبب الإلغاء (لتحليله)
+  // ثقة العنوان — عشان تعرف أي فاتورة عنوانها مؤكّد وأيها يحتاج مراجعة
+  "ALTER TABLE orders ADD COLUMN address_score INTEGER DEFAULT -1", // 0-100 (-1 = غير مقاس، طلبات قديمة)
+  "ALTER TABLE orders ADD COLUMN address_level TEXT DEFAULT ''"     // مؤكّد / كافٍ / ناقص / غير كافٍ
 ]) {
   try { db.exec(col); } catch { /* العمود موجود */ }
 }
@@ -318,8 +321,8 @@ export const SESSIONS_KV = {
 // دوال الأوردرات
 // ═══════════════════════════════════════════════════════════
 // نستخدم بارامترات ترتيبية (?) — الأضمن مع Turso/libsql
-const INSERT_ORDER = `INSERT INTO orders (page_id, page_name, sender_id, order_string, total, area, phone, status, messenger_url, created_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+const INSERT_ORDER = `INSERT INTO orders (page_id, page_name, sender_id, order_string, total, area, phone, status, messenger_url, created_at, address_score, address_level)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 export function saveOrder(o) {
   const info = retryDb(() => db.prepare(INSERT_ORDER).run(
@@ -332,7 +335,9 @@ export function saveOrder(o) {
     String(o.phone || ""),
     String(o.status || "جديد"),
     String(o.messenger_url || ""),
-    Number(o.created_at) || Date.now()
+    Number(o.created_at) || Date.now(),
+    Number.isFinite(Number(o.address_score)) ? Number(o.address_score) : -1,
+    String(o.address_level || "")
   ));
   const id = Number(info.lastInsertRowid);   // تفادي BigInt عند إرجاعه كـ JSON
   console.log(`💾 order saved #${id}: ${o.page_name} | ${o.order_string} | ${o.total}د | ${o.area} | ${o.phone}`);

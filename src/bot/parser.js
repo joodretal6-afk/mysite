@@ -2,6 +2,7 @@
 // الرادار الذكي الخارق: استخراج الهاتف + الكمية + المنطقة + السلة
 // ═══════════════════════════════════════════════════════════
 import { normalizeDigits } from "./utils.js";
+import { mergeAddress, looksLikeAddressAttempt, isCorrection } from "./address.js";
 
 // 🔴 تصليح مهم: القديم كان فيه "الغ" فأي زبون يكتب "بدي الغنم" كانت السلة بتنمسح
 export const RESET_INTENT = /(غيرت\s*رأي|غيرت\s*راي|بطلت|بدال|بدّل|بدل\s|امسح|الغي|ألغي|إلغاء|الغاء|تعديل)/i;
@@ -114,26 +115,40 @@ export function extractQty(text, pageConfig) {
   return 0;   // غير واضح → لا نخمّن (الأفضل نسأل الزبون بدل ما نضاعف طلبه)
 }
 
+// ═══════════════════════════════════════════════════════════
+// 📍 استخراج العنوان — عبر محرّك العناوين (bot/address.js)
+//
+// اللي تغيّر جذرياً عن النسخة القديمة:
+//  • بيتراكم ويتصحّح بدل ما يتقفل على أول التقاطة
+//  • بيخزّن العنوان منسّقاً، مش الرسالة كاملة
+//  • معه درجة ثقة وقائمة نواقص وسؤال واحد محدّد
+//  • السؤال ما بينحسب عنوان حتى لو سألنا عن العنوان قبله
+// ═══════════════════════════════════════════════════════════
 export function extractArea(memory, text) {
-  if (memory.area) return;
+  // منشيل رقم الهاتف بس — مش كل رقم. أرقام البنايات والشقق لازم تضل.
+  const stripped = text.replace(/(?:\+962|00962)?0?7[789]\d{7}/g, " ").trim();
+  if (stripped.length < 2) return;
 
-  const stripped = text.replace(/(?:07\d*|\+962\d*|00962\d*|\d{6,14})/g, "").trim();
-  if (stripped.length < 3) return;
+  const wasAsked = !!(memory.lastReply &&
+    /(عنوان|موقع|محافظ|وين|منطقت|مكانك|سكنك|أقرب معلم|اقرب معلم)/.test(memory.lastReply));
 
-  const isFiller = /^(طيب|تمام|اوك|أوك|ماشي|ان شاء الله|إن شاء الله|اه|ايه|نعم|لا|مرحبا|السلام عليكم|سلام|يسلمو|شكرا|يعطيك العافية|غلط|صح|هلا)$/i.test(stripped);
-  const isQuestion = /(بكم|سعر|شو|مالحة|حلوة|بتسيح|بتمط|كم|كيف|ليش|وين|\?|؟)/i.test(stripped);
-  if (isFiller || isQuestion) return;
+  const correcting = isCorrection(stripped);
+  // إذا مش محاولة عنوان ولا تصحيح — منتجاهله بهدوء
+  if (!correcting && !looksLikeAddressAttempt(stripped, { wasAsked })) return;
 
-  const wasAskedForLocation = memory.lastReply &&
-    /(عنوان|موقع|محافظة|وين|منطقتك|مكانك|توصيل|سكنك)/.test(memory.lastReply);
+  const before = memory.addr || null;
+  const next = mergeAddress(before, stripped, { force: correcting });
 
-  // نمط عنوان واقعي: يحتوي رقم بناية/شارع/طابق أو كلمات موقعية متعددة
-  const looksLikeAddress = /\d+\s*(شارع|بناية|عمارة|طابق|شقة|منزل|بيت|دار)/.test(stripped) ||
-    (stripped.split(/\s+/).length >= 3 && JORDAN_PLACES.test(stripped));
+  // ما منستبدل عنوان أقوى بأضعف إلا لو الزبون بيصحّح صراحةً
+  if (before && !correcting && next.score < before.score) return;
 
-  if (wasAskedForLocation || JORDAN_PLACES.test(stripped) || looksLikeAddress) {
-    memory.area = stripped.slice(0, 200);
-  }
+  memory.addr = next;
+  memory.area = next.formatted;                 // اللي بيروح للفاتورة
+  memory.addressScore = next.score;
+  memory.addressLevel = next.level;
+  memory.addressReady = next.deliverable;
+  memory.addressMissing = next.missing;
+  memory.addressQuestion = next.nextQuestion;   // سؤال واحد محدّد
 }
 
 export function parseMessage(memory, originalText, pageConfig) {

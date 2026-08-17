@@ -44,13 +44,25 @@
       if(!r.ok){ document.getElementById('inv').innerHTML='<div style="text-align:center;padding:40px;color:#c62828">الفاتورة غير موجودة</div>'; return; }
       const o = await r.json();
       const items = (o.order_string||'').split('+').map(s=>s.trim()).filter(Boolean);
+      // 🔴 شارة ثقة العنوان: الفاتورة ما بتطبع عنوان مشكوك فيه بصمت.
+      // الطلبات القديمة (قبل محرّك العناوين) درجتها -1 — منقول عنها "غير مقاس"
+      // بدل ما ندّعي إنها مؤكّدة.
+      function addrBadge(o){
+        const s = Number(o.address_score);
+        const lvl = o.address_level || '';
+        if (!Number.isFinite(s) || s < 0)
+          return ' <span style="background:#eceff1;color:#607d8b;padding:2px 8px;border-radius:10px;font-size:11px">غير مقاس</span>';
+        const c = s >= 80 ? ['#e8f5e9','#2e7d32'] : s >= 68 ? ['#fff8e1','#ef6c00'] : ['#ffebee','#c62828'];
+        const warn = s < 68 ? ' — راجعه قبل التوصيل' : '';
+        return ` <span style="background:${c[0]};color:${c[1]};padding:2px 8px;border-radius:10px;font-size:11px">${esc(lvl)||s} (${s}%)${warn}</span>`;
+      }
       const rows = items.map(it=>`<tr><td>${esc(it)}</td></tr>`).join('') || '<tr><td>—</td></tr>';
       document.getElementById('inv').innerHTML = `
         <div class="head"><div class="logo">🧀</div><h1>${esc(o.page_name)}</h1><div class="sub">فاتورة رقم #${o.id}</div></div>
         <div class="meta"><span>التاريخ: ${new Date(o.created_at).toLocaleString('ar-EG')}</span><span>الحالة: ${esc(o.status)}</span></div>
         <table class="rows"><thead><tr><th>تفاصيل الطلب</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="info">
-          <div>📍 <b>العنوان:</b> ${esc(o.area)||'—'}</div>
+          <div>📍 <b>العنوان:</b> ${esc(o.area)||'—'}${addrBadge(o)}</div>
           <div>📞 <b>التلفون:</b> ${esc(o.phone)||'—'}</div>
         </div>
         <div class="total">الإجمالي: ${(+o.total).toFixed(2)} دينار</div>
