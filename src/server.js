@@ -237,6 +237,10 @@ app.get("/sw.js", (req, res) => res.sendFile(path.join(pwaDir, "sw.js")));
 app.get("/manifest.webmanifest", (req, res) => res.sendFile(path.join(pwaDir, "manifest.webmanifest")));
 app.get("/icon.svg", (req, res) => res.sendFile(path.join(pwaDir, "icon.svg")));
 
+// أصول واجهة عقل المبيعات — تنسيق وكود عرض فقط، بلا أي بيانات
+app.get("/brain-ui.css", (req, res) => res.sendFile(path.join(pwaDir, "brain-ui.css")));
+app.get("/brain-ui.js", (req, res) => res.sendFile(path.join(pwaDir, "brain-ui.js")));
+
 // الصفحة الرئيسية → لوحة التحكم
 app.get("/", (req, res) => res.redirect("/admin"));
 

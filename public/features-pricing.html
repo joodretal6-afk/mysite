@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>💵 التسعير والعروض</title><link rel="stylesheet" href="/brain-ui.css">
+</head>
+<body>
+<header><h1>💵 التسعير والعروض</h1><div class="r">
+  <select id="days"><option value="30">30 يوم</option><option value="90" selected>90 يوم</option>
+  <option value="180">180 يوم</option></select>
+  <a href="/admin/features">→ مركز الميزات</a></div></header>
+<div class="wrap"><div id="tabs"></div><div id="out"></div></div>
+<script src="/brain-ui.js"></script>
+<script>
+const B = window.BUI, A = "/admin/f-api/pricing";
+
+B.mount([
+{
+  label: "💵 مستشار التسعير", url: () => `${A}/advisor?days=${B.days()}`,
+  render: j => B.headline(
+      `${j.actionable} منتج فيه اقتراح سعر` +
+      (j.needCost ? ` · ⚠️ ${j.needCost} منتج بلا تكلفة مسجّلة — ما بقدر أنصحك فيهم` : ""),
+      j.needCost ? "amber" : "green") +
+    `<div class="box"><h3>الاقتراحات — ولا سعر بيتغيّر لحاله</h3>` +
+    B.table(["المنتج", "السعر الحالي", "التكلفة", "الهامش", "شكوى السعر", "تحويل الاستفسار", "الاتجاه", "المقترح", "على أي أساس"],
+      j.rows, r => [
+      `<b>${B.esc(r.product)}</b>`,
+      B.num(r.unitPrice),
+      r.cost == null ? '<span class="tag red">غير مسجّلة</span>' : B.num(r.cost),
+      r.margin == null ? "—" : `<span class="tag ${r.margin < 15 ? "red" : r.margin > 45 ? "green" : "amber"}">${r.margin}%</span>`,
+      r.priceComplaintRate == null ? "—" : `${r.priceComplaintRate}% <span class="mut">(${r.mentions})</span>`,
+      r.askToOrder == null ? "—" : `${r.askToOrder}%`,
+      `<span class="tag ${r.direction === "ارفع" ? "green" : r.direction === "نزّل" ? "amber" : ""}">${B.esc(r.direction)}</span>`,
+      r.suggested == null ? "—" : `<b style="color:var(--acc)">${B.num(r.suggested)}</b>` +
+        (r.change ? `<div class="mut">${r.change > 0 ? "+" : ""}${r.change}%</div>` : ""),
+      `<div class="mut">${r.factors.map(f =>
+        `${B.esc(f.f)}<br><span style="opacity:.7">${B.esc(f.note || "")}</span>`).join("<br>")}</div>
+       ${B.conf(r.confidence)}`
+    ]) + `</div>`
+},
+{
+  label: "🧪 مختبر العروض", url: () => `${A}/offers?days=${B.days()}`,
+  render: j => B.headline(`${j.total} عرض مقترح مبني على بياناتك`, "green") +
+    `<div class="box"><h3>العروض</h3>` +
+    (j.offers.length ? j.offers.map(o => `<div class="item">
+      <div class="t"><span class="tag acc">${B.esc(o.type)}</span> ${B.esc(o.headline)}
+        ${o.viable === false ? '<span class="tag red">غير قابل للتطبيق</span>' : ""}
+        ${B.conf(o.confidence)}</div>
+      <div class="w"><b>الوضع:</b> ${B.esc(o.detail)}<br>
+        <b>التوقّع:</b> ${B.esc(o.expect)}<br>
+        <b>الأساس:</b> ${B.esc(o.basis)}
+        ${o.warn ? `<br><b style="color:var(--red)">⚠️ ${B.esc(o.warn)}</b>` : ""}</div>
+    </div>`).join("") : '<div class="empty">ما في عروض مقترحة — بيانات غير كافية</div>') + `</div>` +
+    (j.lessonsApplied && j.lessonsApplied.length
+      ? `<div class="box"><h3>🎓 دروس النظام المطبّقة</h3>` +
+        j.lessonsApplied.map(l => `<div class="item"><div class="w">${B.esc(l.lesson)}
+          <span class="tag">${B.num(l.samples)} حالة</span></div></div>`).join("") + `</div>` : "")
+},
+{
+  label: "🧠 المحاكي", url: () => `${A}/simulate/products`,
+  render: (j) => `<div class="box"><h3>شو بيصير لو…؟</h3>
+    <div class="form">
+      <div class="fld"><label>السيناريو</label>
+        <select id="sc">
+          <option value="price">تغيير السعر</option>
+          <option value="discount">خصم</option>
+          <option value="adspend">مضاعفة ميزانية الإعلان</option>
+        </select></div>
+      <div class="fld"><label>المنتج</label>
+        <select id="pr"><option value="">كل المنتجات</option>
+        ${j.products.map(p => `<option value="${B.esc(p.product)}">${B.esc(p.product)} — سعره ${B.num(p.unitPrice)}${p.hasCost ? "" : " ⚠️ بلا تكلفة"}</option>`).join("")}
+        </select></div>
+      <div class="fld" id="f1"><label>السعر الجديد</label><input id="v1" type="number" step="0.5" value="0"></div>
+      <button class="btn" id="run">شغّل المحاكاة</button>
+    </div>
+    <div class="mut">المحاكاة بترجعلك 3 سيناريوهات: الحالي، المتوقّع، والمتشائم. السيناريو المتشائم مقصود —
+      لأن التوقّع المتفائل لحاله بيوصلك لقرار غلط.</div>
+    </div><div id="res"></div>`,
+  after: () => {
+    const f = () => {
+      const sc = document.querySelector("#sc").value;
+      const lbl = { price: "السعر الجديد", discount: "نسبة الخصم %", adspend: "مضاعف الميزانية" }[sc];
+      document.querySelector("#f1 label").textContent = lbl;
+    };
+    document.querySelector("#sc").addEventListener("change", f); f();
+    document.querySelector("#run").addEventListener("click", async () => {
+      const sc = document.querySelector("#sc").value;
+      const v = Number(document.querySelector("#v1").value);
+      const body = { scenario: sc, product: document.querySelector("#pr").value, days: Number(B.days()) };
+      if (sc === "price") body.newPrice = v;
+      if (sc === "discount") body.percent = v;
+      if (sc === "adspend") body.multiplier = v;
+      const res = document.querySelector("#res");
+      res.innerHTML = '<div class="load">⏳ بنحاكي…</div>';
+      try {
+        const j = await (await fetch(`${A}/simulate`, {
+          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body)
+        })).json();
+        if (j.error) throw new Error(j.error);
+        res.innerHTML = B.headline(j.verdict, "amber") +
+          B.kpis([
+            { lbl: "خط الأساس — إيراد", val: j.base.revenue },
+            { lbl: "خط الأساس — ربح", val: j.base.profit },
+            { lbl: "المرونة المستخدمة", val: j.elasticity, raw: true, sub: j.elasticitySource },
+            { lbl: "الثقة", val: j.confidence.level, raw: true, tone: "amber", sub: j.confidence.note }
+          ]) +
+          `<div class="box"><h3>السيناريوهات</h3>` +
+          B.table(["السيناريو", "السعر", "الكمية", "الإيراد", "التكلفة", "الربح", "فرق الربح", "الملاحظة"],
+            j.results, r => [
+            `<b>${B.esc(r.scenario)}</b>`, B.num(r.unitPrice), B.num(r.units), B.num(r.revenue),
+            B.num(r.cost), `<b>${B.num(r.profit)}</b>`,
+            `<b style="color:${r.profitDelta > 0 ? "var(--green)" : r.profitDelta < 0 ? "var(--red)" : "var(--mut)"}">
+              ${r.profitDelta > 0 ? "+" : ""}${B.num(r.profitDelta)}</b>`,
+            `<div class="mut">${B.esc(r.note)}</div>`
+          ]) + `</div>` + B.basis(j.basis);
+      } catch (e) { res.innerHTML = `<div class="err">${B.esc(e.message)}</div>`; }
+    });
+  }
+}
+]);
+</script>
+</body></html>

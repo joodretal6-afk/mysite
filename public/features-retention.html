@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>♻️ الاحتفاظ وقيمة العميل</title><link rel="stylesheet" href="/brain-ui.css">
+</head>
+<body>
+<header><h1>♻️ الاحتفاظ وقيمة العميل</h1><div class="r">
+  <select id="days"><option value="90">90 يوم</option><option value="180" selected>180 يوم</option>
+  <option value="365">سنة</option></select>
+  <a href="/admin/features">→ مركز الميزات</a></div></header>
+<div class="wrap"><div id="tabs"></div><div id="out"></div></div>
+<script src="/brain-ui.js"></script>
+<script>
+const B = window.BUI, A = "/admin/f-api/retention";
+
+B.mount([
+{
+  label: "👑 قيمة العميل", url: () => `${A}/value?days=${B.days()}`,
+  render: j => B.headline(j.insight, "green") +
+    B.kpis([
+      { lbl: "مشترين", val: j.customers },
+      { lbl: "إجمالي القيمة المتوقعة", val: j.totalCLV, tone: "green" },
+      { lbl: "الثقة", val: j.confidence.level, raw: true, tone: "amber", sub: j.confidence.note }
+    ]) +
+    `<div class="box"><h3>الفئات واستراتيجية كل وحدة</h3>` +
+    B.table(["الفئة", "العدد", "% من الزبائن", "% من مبيعاتك", "قيمتهم المتوقعة", "الاستراتيجية"],
+      j.tiers, t => [
+      `<b class="tag ${t.tier === "VIP" ? "green" : t.tier === "ذهبي" ? "amber" : ""}">${B.esc(t.tier)}</b>`,
+      B.num(t.n), t.share + "%",
+      `<b style="color:var(--acc)">${t.valueShare}%</b>`,
+      B.num(t.totalCLV), `<div class="mut">${B.esc(t.strategy)}</div>`
+    ]) + `</div>
+    <div class="box"><h3>أعلى الزبائن قيمة</h3>` +
+    B.table(["الزبون", "الفئة", "طلبات", "أنفق", "متوسط الطلب", "طلب/شهر", "القيمة المتوقعة", "الحساب"],
+      j.rows.slice(0, 80), r => [
+      B.mlink(r.sender_id),
+      `<span class="tag ${r.tier === "VIP" ? "green" : r.tier === "ذهبي" ? "amber" : ""}">${B.esc(r.tier)}</span>`,
+      B.num(r.orders), B.num(r.spend), B.num(r.aov), B.num(r.perMonth),
+      `<b style="color:var(--green)">${B.num(r.clv)}</b>`,
+      `<div class="mut">${B.esc(r.basis)}</div>`
+    ]) + `</div>`
+},
+{
+  label: "♻️ العملاء المفقودون", url: () => `${A}/churn?days=${B.days()}`,
+  render: j => B.headline(j.headline, "red") +
+    B.kpis([
+      { lbl: "بخطر الفقدان", val: j.atRisk, tone: "amber" },
+      { lbl: "مفقودين فعلياً", val: j.lost, tone: "red" },
+      { lbl: "قيمة معرّضة للخسارة", val: j.lostValue, tone: "red" },
+      { lbl: "الثقة", val: j.confidence.level, raw: true }
+    ]) +
+    `<div class="box"><h3>مين وقف يشتري — والمقياس بإيقاعه هو مش برقم ثابت</h3>` +
+    B.table(["الزبون", "الحالة", "طلبات", "أنفق", "غايب من", "إيقاعه المعتاد", "متأخر بـ", "ليش فقدناه", "قيمة معرّضة"],
+      j.rows.slice(0, 120), r => [
+      B.mlink(r.sender_id),
+      `<span class="tag ${r.label === "مفقود" ? "red" : r.label === "خطر عالي" ? "amber" : ""}">${B.esc(r.label)}</span>`,
+      B.num(r.orders), B.num(r.spend),
+      `${r.daysSinceOrder} يوم`, `كل ${B.num(r.expectedGap)} يوم`,
+      `<b style="color:var(--red)">×${r.overdueRatio}</b>`,
+      `<div class="mut">${r.why.map(B.esc).join("<br>")}</div>`,
+      `<b>${B.num(r.atRiskValue)}</b>`
+    ]) + `</div>`
+},
+{
+  label: "🎯 الشراء التالي", url: () => `${A}/next-buy?days=${B.days()}`,
+  render: j => B.kpis([
+      { lbl: "زبائن عندهم توصية", val: j.total },
+      { lbl: "متأخرين عن موعدهم", val: j.overdue, tone: "amber" },
+      { lbl: "الثقة", val: j.confidence.level, raw: true }
+    ]) +
+    `<div class="box"><h3>شو ممكن يشتري كل زبون — والأساس مبيّن</h3>` +
+    B.table(["الزبون", "بيملك", "التوصية", "على أي أساس", "التوقيت", "أنفق"],
+      j.rows.slice(0, 100), r => [
+      B.mlink(r.sender_id),
+      `<div class="mut">${r.owns.map(B.esc).join("، ")}</div>`,
+      r.suggestions.map(s => `<span class="tag acc">${B.esc(s.product)}</span>`).join(""),
+      `<div class="mut">${r.suggestions[0] ? r.suggestions[0].why.map(B.esc).join("<br>") : "—"}</div>`,
+      `<span class="tag ${r.overdue ? "amber" : ""}">${B.esc(r.timing)}</span>`,
+      B.num(r.spend)
+    ]) + `</div>`
+},
+{
+  label: "✅ اللي بتقدر تراسله", url: () => `${A}/actionable`,
+  render: j => B.headline(
+      `${j.inWindow} من ${j.total} زبون راسلوك خلال آخر 24 ساعة — هدول بس اللي مسموح ترد عليهم`,
+      "green") +
+    `<div class="box"><h3>ضمن نافذة الـ24 ساعة</h3>` +
+    B.table(["الزبون", "الصفحة", "طلبات", "أنفق", "آخر طلب", ""], j.rows, r => [
+      B.mlink(r.sender_id), B.esc(r.page_name), B.num(r.orders), B.num(r.spend),
+      r.daysSinceOrder == null ? "—" : `قبل ${r.daysSinceOrder} يوم`,
+      `<a class="btn" style="text-decoration:none;display:inline-block" href="${B.esc(r.url)}"
+          target="_blank" rel="noopener">افتح المحادثة</a>`
+    ]) + `</div>`
+}
+]);
+</script>
+</body></html>

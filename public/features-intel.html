@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🧠 ذكاء العملاء</title><link rel="stylesheet" href="/brain-ui.css">
+</head>
+<body>
+<header><h1>🧠 ذكاء العملاء</h1><div class="r">
+  <select id="days"><option value="30">30 يوم</option><option value="60">60 يوم</option>
+  <option value="90" selected>90 يوم</option><option value="180">180 يوم</option></select>
+  <a href="/admin/features">→ مركز الميزات</a></div></header>
+<div class="wrap"><div id="tabs"></div><div id="out"></div></div>
+<script src="/brain-ui.js"></script>
+<script>
+const B = window.BUI, A = "/admin/f-api/intel";
+
+B.mount([
+{
+  label: "🧠 عقل العميل", url: () => `${A}/brain?days=${B.days()}&limit=150`,
+  render: j => B.kpis([
+      { lbl: "زبائن معروفين", val: j.summary["زبائن_معروفين"] },
+      { lbl: "منهم اشتروا", val: j.summary["منهم_اشتروا"], tone: "green" },
+      { lbl: "حكوا وما اشتروا", val: j.summary["منهم_حكوا_وما_اشتروا"], tone: "red" },
+      { lbl: "نيّتهم عالية", val: j.summary["عالي_النية"], tone: "amber" }
+    ]) +
+    `<div class="box"><h3>ملفات الزبائن — مرتّبة حسب مين يستاهل انتباهك اليوم</h3>` +
+    B.table(["الزبون", "طلبات", "أنفق", "نية", "احتمال الشراء", "الشرائح", "آخر طلب"], j.rows, r => [
+      B.mlink(r.sender_id),
+      B.num(r.orders),
+      `<b>${B.num(r.spend)}</b>`,
+      `<span class="tag ${r.intent >= 70 ? "green" : r.intent >= 45 ? "amber" : ""}">${r.intent}</span>`,
+      `<span class="tag acc">${r.buyProbability.score}%</span><div class="mut">${
+        r.buyProbability.factors.map(f => B.esc(f.f) + " " + (f.v > 0 ? "+" : "") + f.v).join(" · ")}</div>`,
+      r.dna.map(d => `<span class="tag" title="${B.esc(d.why)}">${B.esc(d.tag)}</span>`).join(""),
+      r.daysSinceOrder == null ? "—" : `قبل ${r.daysSinceOrder} يوم`
+    ]) + `</div>`
+},
+{
+  label: "🔥 نية الشراء", url: () => `${A}/intent?days=${B.days()}`,
+  render: j => B.headline(
+      j.hotNotBought ? `${j.hotNotBought} محادثة جاهزة للشراء وما صارت طلب — هدول أقرب فلوس إلك`
+                     : "ما في محادثات جاهزة للشراء بلا طلب", j.hotNotBought ? "red" : "green") +
+    `<div class="box"><h3>القمع</h3>` +
+    j.funnel.map(f => B.bar(f.n, Math.max(...j.funnel.map(x => x.n), 1), `${f.stage} — ${B.num(f.n)}`)).join("") +
+    `</div><div class="box"><h3>المحادثات مرتّبة بالنية ${B.conf(j.confidence)}</h3>` +
+    B.table(["الزبون", "النية", "المرحلة", "ليش هالدرجة", "الاعتراضات", "رسائل", "سرعة الرد"],
+      j.rows.slice(0, 120), r => [
+      B.mlink(r.sender_id),
+      `<b style="color:${r.intent >= 70 ? "var(--green)" : r.intent >= 45 ? "var(--amber)" : "var(--mut)"}">${r.intent}</b>`,
+      `<span class="tag ${r.bought ? "green" : ""}">${B.esc(r.stage)}</span>`,
+      `<div class="mut">${r.reasons.slice(0, 4).map(x =>
+        `${B.esc(x.label)} <b>${x.weight > 0 ? "+" : ""}${x.weight}</b>`).join("<br>") || "—"}</div>`,
+      r.objections.map(o => `<span class="tag red">${B.esc(o.label)}</span>`).join("") || "—",
+      B.num(r.messages),
+      r.replyDelayMin == null ? '<span class="tag red">بلا رد</span>' : `${B.num(r.replyDelayMin)} د`
+    ]) + `</div>`
+},
+{
+  label: "💰 الفلوس الضائعة", url: () => `${A}/lost?days=${B.days()}`,
+  render: j => B.headline(j.headline, "red") +
+    B.kpis([
+      { lbl: "محادثات ضاعت", val: j.total, tone: "red" },
+      { lbl: "قيمة تقديرية", val: j.totalValue, tone: "red" },
+      { lbl: "متوسط الطلب", val: j.aov },
+      { lbl: "مستوى الثقة", val: j.confidence.level, raw: true, tone: "amber", sub: j.confidence.note }
+    ]) +
+    `<div class="box"><h3>الأسباب — مرتّبة حسب الفلوس مش حسب العدد</h3>` +
+    j.reasons.map(r => B.bar(r.value, Math.max(...j.reasons.map(x => x.value), 1),
+      `${r.reason} — ${B.num(r.n)} محادثة (${r.share}%) · قيمة ${B.num(r.value)}`)).join("") +
+    `</div><div class="box"><h3>أعلى الفرص قيمة</h3>` +
+    B.table(["الزبون", "الصفحة", "النية", "السبب", "القيمة", "آخر تواصل"], j.rows.slice(0, 100), r => [
+      B.mlink(r.sender_id), B.esc(r.page_name), `<b>${r.intent}</b>`,
+      `<span class="tag red">${B.esc(r.reason)}</span>`, `<b>${B.num(r.value)}</b>`, B.dt(r.last_at)
+    ]) + `</div>`
+},
+{
+  label: "🧬 الحمض النووي", url: () => `${A}/dna?days=${B.days()}`,
+  render: j => `<div class="box"><h3>شرائح زبائنك — مستخرجة من سلوكهم ${B.conf(j.confidence)}</h3>` +
+    B.table(["الشريحة", "العدد", "% من الزبائن", "متوسط الإنفاق", "إجمالي الإنفاق", "% من قيمتك", "أمثلة"],
+      j.segments, s => [
+      `<b class="tag acc">${B.esc(s.tag)}</b>`, B.num(s.n), s.share + "%",
+      B.num(s.avgSpend), `<b>${B.num(s.spend)}</b>`,
+      `<b style="color:var(--acc)">${s.valueShare}%</b>`,
+      `<div class="mut">${s.samples.slice(0, 3).map(x => B.esc(x.why)).join(" · ")}</div>`
+    ]) + `</div>`
+},
+{
+  label: "🕵️ الاعتراضات", url: () => `${A}/objections?days=${B.days()}`,
+  render: j => B.headline(j.insight, "amber") +
+    B.kpis([
+      { lbl: "اعتراضات مرصودة", val: j.totalRaised },
+      { lbl: "معدل التحويل العام", val: j.overallConv, suffix: "%" },
+      { lbl: "الثقة", val: j.confidence.level, raw: true, tone: "amber" }
+    ]) +
+    `<div class="box"><h3>أكبر الموانع أمام الشراء</h3>` +
+    j.rows.map(r => `<div class="item">
+      <div class="t">${B.esc(r.label)}
+        <span class="tag red">${B.num(r.lost)} خسرناهم</span>
+        <span class="tag">${B.num(r.raised)} مرة (${r.share}%)</span>
+        <span class="tag ${r.conversionWhenRaised >= j.overallConv ? "green" : "amber"}">
+          حوّل ${r.conversionWhenRaised}% مقابل ${j.overallConv}% عام</span></div>
+      <div class="w">${r.conversionWhenRaised < j.overallConv
+        ? `لما بيطلع هالاعتراض، التحويل بينزل ${B.num(j.overallConv - r.conversionWhenRaised)} نقطة عن المعدل`
+        : "الغريب إنه هالاعتراض ما بيمنع الشراء — الناس بتشتري رغمه"}</div>
+      ${r.quotes.map(q => `<div class="quote">"${B.esc(q.text)}"</div>`).join("")}
+    </div>`).join("") || '<div class="empty">ما رصدنا اعتراضات</div>' + `</div>`
+}
+]);
+</script>
+</body></html>

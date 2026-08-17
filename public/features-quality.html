@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🔬 التجارب والجودة</title><link rel="stylesheet" href="/brain-ui.css">
+</head>
+<body>
+<header><h1>🔬 التجارب والجودة</h1><div class="r">
+  <select id="days"><option value="30" selected>30 يوم</option><option value="60">60 يوم</option>
+  <option value="90">90 يوم</option></select>
+  <a href="/admin/features">→ مركز الميزات</a></div></header>
+<div class="wrap"><div id="tabs"></div><div id="out"></div></div>
+<script src="/brain-ui.js"></script>
+<script>
+const B = window.BUI, A = "/admin/f-api/quality";
+let UI;
+
+UI = B.mount([
+{
+  label: "🗺️ رحلة العميل", url: () => `${A}/journey?days=${B.days()}`,
+  render: j => B.headline(j.headline, "red") +
+    `<div class="box"><h3>الخطوات — ووين بيسقطوا ${B.conf(j.confidence)}</h3>` +
+    j.steps.map(s => `<div style="margin-bottom:14px">
+      ${B.bar(s.reached, j.total, `${s.step} — ${B.num(s.reached)} (${s.ofTotal}% من الكل)`)}
+      ${s.dropped ? `<div class="mut" style="color:var(--red)">
+        ↓ سقط ${B.num(s.dropped)} (${s.dropRate}% من اللي وصلوا للخطوة السابقة)</div>` : ""}
+    </div>`).join("") + `</div>` +
+    `<div class="box"><h3>أكبر 3 تسريبات — وأمثلة حقيقية</h3>` +
+    j.leaks.map(l => `<div class="item">
+      <div class="t">${B.esc(l.step)} <span class="tag red">سقط ${B.num(l.dropped)} (${l.dropRate}%)</span></div>
+      ${l.examples.map(e => `<div class="quote">
+        ${B.mlink(e.sender_id)} · نية ${e.intent} · ${B.num(e.messages)} رسالة
+        ${e.objections.length ? ` · اعترض: ${e.objections.map(B.esc).join("، ")}` : ""}
+        <br>"${B.esc(e.lastMessage)}"</div>`).join("")}
+    </div>`).join("") || '<div class="empty">ما في تسريبات</div>' + `</div>`
+},
+{
+  label: "⚡ سرعة الرد", url: () => `${A}/speed?days=${B.days()}`,
+  render: j => B.headline(j.insight, "amber") +
+    B.kpis([
+      { lbl: "وسيط وقت الرد", val: j.median == null ? "—" : j.median + " د", raw: true,
+        tone: j.median > 15 ? "red" : "green" },
+      { lbl: "أبطأ 10%", val: j.p90 == null ? "—" : j.p90 + " د", raw: true, tone: "amber" },
+      { lbl: "بلا رد نهائياً", val: j.noReply.n, tone: "red" },
+      { lbl: "كلفة التأخير", val: j.costOfDelay == null ? "—" : B.num(j.costOfDelay), raw: true, tone: "red" }
+    ]) +
+    (j.alerts.length ? `<div class="box"><h3>تنبيهات</h3>${
+      j.alerts.map(a => `<div class="item"><div class="w">${B.esc(a)}</div></div>`).join("")}</div>` : "") +
+    `<div class="box"><h3>التحويل حسب سرعة الرد</h3>` +
+    B.table(["سرعة الرد", "محادثات", "اشتروا", "التحويل"], j.rows, r => [
+      `<b>${B.esc(r.bucket)}</b>`, B.num(r.n), B.num(r.bought),
+      `<b style="color:${r.conversion >= 15 ? "var(--green)" : "var(--amber)"}">${r.conversion}%</b>`
+    ]) +
+    `<div style="margin-top:14px">
+      <div class="t" style="color:var(--red)">ما إجاهم رد أبداً</div>
+      ${B.bar(j.noReply.n, j.totalConversations, `${B.num(j.noReply.n)} محادثة — تحويلهم ${
+        j.noReply.n ? B.num(j.noReply.bought * 100 / j.noReply.n) : 0}%`)}
+    </div></div>`
+},
+{
+  label: "🔬 التجارب A/B", url: () => `${A}/experiments`,
+  render: j => `<div class="box"><h3>تجربة جديدة</h3>
+    <div class="form">
+      <div class="fld"><label>اسم التجربة</label><input id="en" placeholder="اختبار خصم على الغنم"></div>
+      <div class="fld"><label>النوع</label><select id="ek">
+        <option value="offer">عرض</option><option value="price">سعر</option>
+        <option value="copy">نسخة بيعية</option><option value="speed">سرعة رد</option></select></div>
+      <div class="fld"><label>المنتج / الشريحة</label><input id="et" placeholder="غنم"></div>
+      <div class="fld"><label>الذراع A</label><input id="ea" placeholder="السعر الحالي"></div>
+      <div class="fld"><label>الذراع B</label><input id="eb" placeholder="خصم 10%"></div>
+      <button class="btn" id="mk">ابدأ التجربة</button>
+    </div>
+    <div class="mut">بعد ما تبدأ، سجّل كل مشاهدة وكل تحويل. النظام ما بيعلن فائز إلا لما
+      الفرق يتجاوز حدود الصدفة إحصائياً (ثقة 95%) — عشان ما تغيّر استراتيجيتك بناءً على ضجيج.</div>
+  </div>` +
+  `<div class="box"><h3>التجارب (${j.total})</h3>` +
+  (j.experiments.length ? j.experiments.map(e => `<div class="item">
+    <div class="t">${B.esc(e.name)}
+      <span class="tag ${e.status === "running" ? "amber" : "green"}">${e.status === "running" ? "شغّالة" : "منتهية"}</span>
+      ${e.significant ? `<span class="tag green">فائز: ${B.esc(e.best)}</span>`
+                      : '<span class="tag">لسه ما حُسمت</span>'}</div>
+    <div class="w">${B.esc(e.verdict)}</div>
+    ${B.table(["الذراع", "الوصف", "مشاهدات", "تحويلات", "المعدل", "إيراد", ""], e.arms, a => [
+      `<b>${B.esc(a.label)}</b>`, B.esc(a.description), B.num(a.exposures), B.num(a.conversions),
+      `<b>${a.rate}%</b>`, B.num(a.revenue),
+      e.status === "running"
+        ? `<button class="btn gray" onclick="rec(${e.id},${a.id},'exposure')">+ مشاهدة</button>
+           <button class="btn" onclick="rec(${e.id},${a.id},'conversion')">+ تحويل</button>` : ""
+    ])}
+    ${e.status === "running" ? `<button class="btn gray" style="margin-top:8px"
+      onclick="stopExp(${e.id})">أوقف التجربة</button>` : ""}
+  </div>`).join("") : '<div class="empty">ما في تجارب. ابدأ وحدة — بلا تجارب النظام ما بيتعلم إشي جديد.</div>')
+  + `</div>`,
+  after: () => {
+    document.querySelector("#mk").addEventListener("click", async () => {
+      const name = document.querySelector("#en").value.trim();
+      const a = document.querySelector("#ea").value.trim(), b = document.querySelector("#eb").value.trim();
+      if (!name || !a || !b) return alert("املأ الاسم والذراعين");
+      const r = await (await fetch(`${A}/experiments`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, kind: document.querySelector("#ek").value,
+          target: document.querySelector("#et").value,
+          variants: [{ label: "A", description: a }, { label: "B", description: b }] })
+      })).json();
+      if (r.error) return alert(r.error);
+      UI.reload();
+    });
+  }
+},
+{
+  label: "🎓 دروس النظام", url: () => `${A}/lessons`,
+  render: j => B.headline(
+      j.total ? `النظام تعلّم ${j.total} درس من نتائجك الفعلية`
+              : "لسه ما تعلّم النظام إشي — شغّل تجارب واحسمها عشان تتراكم المعرفة", j.total ? "green" : "amber") +
+    `<button class="btn" onclick="runLearn()" style="margin-bottom:14px">🔄 شغّل دورة التعلّم</button>
+    <div class="box"><h3>المعرفة المتراكمة</h3>` +
+    B.table(["النطاق", "الدرس", "العيّنة", "القوة"], j.lessons, l => [
+      `<span class="tag">${B.esc(l.scope)}</span>`,
+      B.esc(l.lesson), B.num(l.samples),
+      `<b style="color:${l.strength > 0 ? "var(--green)" : "var(--red)"}">${B.num(l.strength)}</b>`
+    ]) + `</div>`
+}
+]);
+
+async function rec(exp, variant, event) {
+  await fetch(`${A}/experiments/${exp}/record`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ variant_id: variant, event, value: event === "conversion" ? 0 : 0 })
+  });
+  UI.reload();
+}
+async function stopExp(id) {
+  if (!confirm("أوقف التجربة؟")) return;
+  await fetch(`${A}/experiments/${id}/stop`, { method: "POST" });
+  UI.reload();
+}
+async function runLearn() {
+  const r = await (await fetch(`${A}/learn`, { method: "POST" })).json();
+  alert(`دورة التعلّم خلصت — ${r.learned || 0} درس جديد`);
+  UI.reload();
+}
+</script>
+</body></html>

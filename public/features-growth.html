@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🚀 النمو والتوسع</title><link rel="stylesheet" href="/brain-ui.css">
+</head>
+<body>
+<header><h1>🚀 النمو والتوسع</h1><div class="r">
+  <select id="days"><option value="30">30 يوم</option><option value="90" selected>90 يوم</option>
+  <option value="180">180 يوم</option></select>
+  <a href="/admin/features">→ مركز الميزات</a></div></header>
+<div class="wrap"><div id="tabs"></div><div id="out"></div></div>
+<script src="/brain-ui.js"></script>
+<script>
+const B = window.BUI, A = "/admin/f-api/growth";
+
+B.mount([
+{
+  label: "📈 رادار الفرص", url: () => `${A}/radar?window=14`,
+  render: j => B.headline(j.headline, j.total ? "red" : "green") +
+    `<div class="box"><h3>إشارات آخر 14 يوم مقابل الـ14 اللي قبلهم</h3>` +
+    (j.signals.length ? j.signals.map(s => `<div class="item">
+      <div class="t">${B.esc(s.flag)} — ${B.esc(s.product)} ${B.conf(s.confidence)}</div>
+      <div class="w">${B.esc(s.why)}</div>
+      <div class="w" style="margin-top:6px">
+        <span class="tag">سائلين: ${B.num(s.prior.askers)} ← ${B.num(s.recent.askers)}
+          ${s.askGrowth != null ? `(${s.askGrowth > 0 ? "+" : ""}${s.askGrowth}%)` : ""}</span>
+        <span class="tag">طلبات: ${B.num(s.prior.orders)} ← ${B.num(s.recent.orders)}
+          ${s.salesGrowth != null ? `(${s.salesGrowth > 0 ? "+" : ""}${s.salesGrowth}%)` : ""}</span>
+        ${s.askToOrder != null ? `<span class="tag amber">تحويل ${s.askToOrder}%</span>` : ""}
+      </div></div>`).join("") : '<div class="empty">ما في تحركات لافتة</div>') + `</div>`
+},
+{
+  label: "🥇 ترتيب المنتجات", url: () => `${A}/ranking?days=${B.days()}`,
+  render: j => B.kpis([
+      { lbl: "🏆 وسّع", val: j.groups["وسّع"], tone: "green" },
+      { lbl: "🔧 عدّل", val: j.groups["عدّل"], tone: "amber" },
+      { lbl: "🛑 أوقف", val: j.groups["أوقف"], tone: "red" },
+      { lbl: "⏳ راقب", val: j.groups["راقب"] }
+    ]) +
+    (j.noCost ? B.headline(`⚠️ ${j.noCost} منتج بلا تكلفة مسجّلة — ترتيبهم ناقص لأن الربح أكبر عامل بالترتيب`, "amber") : "") +
+    `<div class="box"><h3>الترتيب المركّب</h3>` +
+    B.table(["المنتج", "الدرجة", "الحكم", "ربح", "هامش", "طلبات", "سائلين", "تحويل", "إلغاء", "شو تعمل"],
+      j.rows, r => [
+      `<b>${B.esc(r.product)}</b>${r.hasCost ? "" : ' <span class="tag red">بلا تكلفة</span>'}`,
+      `<b style="color:var(--acc);font-size:15px">${r.score}</b>`,
+      `<span class="tag ${r.verdict.includes("وسّع") ? "green" : r.verdict.includes("أوقف") ? "red" : r.verdict.includes("عدّل") ? "amber" : ""}">${B.esc(r.verdict)}</span>`,
+      B.num(r.profit), r.margin + "%", B.num(r.orders), B.num(r.askers),
+      r.askToOrder == null ? "—" : r.askToOrder + "%",
+      r.cancelRate + "%",
+      `<div class="mut">${B.esc(r.action)}</div>`
+    ]) + `</div>`
+},
+{
+  label: "🧲 مغناطيس العملاء", url: () => `${A}/magnet?days=${B.days()}`,
+  render: j => `<div class="box"><h3>ليش الناس بتنجذب لكل منتج — من كلامهم هم</h3>` +
+    (j.rows.length ? j.rows.map(r => `<div class="item">
+      <div class="t">${B.esc(r.product)}
+        <span class="tag">${B.num(r.conversations)} محادثة</span>
+        <span class="tag ${r.conversionRate >= 25 ? "green" : "amber"}">تحويل ${r.conversionRate}%</span></div>
+      <div class="w">
+        <b>🪝 Hook:</b> ${B.esc(r.hook)}<br>
+        <b>✨ Benefit:</b> ${B.esc(r.benefit)}<br>
+        <b>🛑 Objection:</b> ${B.esc(r.objection)}<br>
+        <b>🎯 Positioning:</b> ${B.esc(r.positioning)}<br>
+        <b>👉 CTA:</b> ${B.esc(r.cta)}</div>
+      ${r.quotes.slice(0, 3).map(q => `<div class="quote">"${B.esc(q)}"</div>`).join("")}
+      <button class="btn gray" style="margin-top:8px" onclick="copyFor('${B.esc(r.product)}')">
+        ✍️ ولّد نسخ بيعية لهاد المنتج</button>
+    </div>`).join("") : '<div class="empty">ما في محادثات كافية</div>') + `</div><div id="copyres"></div>`
+},
+{
+  label: "🏆 قائد السوق", url: () => `${A}/ranking?days=30`,
+  render: () => `<div class="box"><h3>خطة دخول السوق</h3>
+    <div class="form">
+      <div class="fld"><label>المنتج</label><input id="mp" placeholder="اسم المنتج"></div>
+      <div class="fld"><label>البلد</label><input id="mc" placeholder="الأردن"></div>
+      <div class="fld"><label>الفئة</label><input id="mg" placeholder="أغذية / سيارات / منزل"></div>
+      <button class="btn" id="mkplan">ابنِ الخطة</button>
+    </div>
+    <div class="mut">الخطة بتبنى من بياناتك. أي بند ما عندنا عنه بيانات رح يكتب صراحة
+      "يحتاج بحث منك" بدل ما نخترعه.</div>
+  </div><div id="planres"></div>`,
+  after: () => {
+    document.querySelector("#mkplan").addEventListener("click", async () => {
+      const res = document.querySelector("#planres");
+      res.innerHTML = '<div class="load">⏳ بنبني الخطة…</div>';
+      try {
+        const j = await (await fetch(`${A}/market-plan`, {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            product: document.querySelector("#mp").value,
+            country: document.querySelector("#mc").value,
+            category: document.querySelector("#mg").value })
+        })).json();
+        if (j.error) throw new Error(j.error);
+        const p = j.plan;
+        const sec = (icon, name, o) => `<div class="item">
+          <div class="t">${icon} ${name}
+            <span class="tag ${o.source === "بياناتك" ? "green" : "amber"}">${B.esc(o.source)}</span></div>
+          <div class="w">${Array.isArray(o.value) ? o.value.map(B.esc).join("<br>") : B.esc(o.value)}
+            <br><span style="opacity:.7">الأساس: ${B.esc(o.basis)}</span>
+            ${o.todo ? `<br><b style="color:var(--amber)">← ${B.esc(o.todo)}</b>` : ""}</div></div>`;
+        res.innerHTML =
+          B.headline(`خطة دخول: ${p.product} — ${p.country} — ${p.category} ` +
+            (p.dataBacked ? "(مدعومة ببيانات منتج مشابه)" : "(⚠️ ما عندك بيانات عن هاد المنتج — الثقة منخفضة)"),
+            p.dataBacked ? "green" : "amber") +
+          `<div class="box"><h3>الخطة ${B.conf(p.confidence)}</h3>` +
+          sec("👤", "العميل المستهدف", p.targetCustomer) +
+          sec("🎯", "Positioning", p.positioning) +
+          sec("💵", "السعر", p.pricing) +
+          sec("🎁", "العرض", p.offer) +
+          sec("⚔️", "المنافسة", p.competition) +
+          sec("📡", "القنوات", p.channels) +
+          sec("💬", "الرسائل", p.messaging) +
+          sec("🧩", "المنتجات المكملة", p.complements) +
+          `</div>
+          <div class="box"><h3>⚠️ المخاطر</h3>
+            ${p.risks.map(r => `<div class="item"><div class="w">${B.esc(r)}</div></div>`).join("")}</div>
+          <div class="box"><h3>📅 أول 30 يوم</h3>
+            ${p.plan30.map(x => `<div class="item"><div class="w">${B.esc(x)}</div></div>`).join("")}</div>
+          <div class="box"><h3>📅 أول 90 يوم</h3>
+            ${p.plan90.map(x => `<div class="item"><div class="w">${B.esc(x)}</div></div>`).join("")}</div>` +
+          B.basis(j.basis);
+      } catch (e) { res.innerHTML = `<div class="err">${B.esc(e.message)}</div>`; }
+    });
+  }
+}
+]);
+
+// ✍️ مختبر النسخ — بيتنادى من تبويب المغناطيس
+async function copyFor(product) {
+  const res = document.querySelector("#copyres");
+  res.innerHTML = '<div class="load">⏳ بنبني النسخ…</div>';
+  try {
+    const j = await (await fetch(`${A}/copy?product=${encodeURIComponent(product)}&days=${B.days()}`)).json();
+    if (j.error) throw new Error(j.error);
+    res.innerHTML = `<div class="box"><h3>✍️ نسخ بيعية لـ${B.esc(j.product)} ${B.conf(j.confidence)}</h3>` +
+      j.variants.map(v => `<div class="item">
+        <div class="t"><span class="tag acc">${B.esc(v.angle)}</span></div>
+        <div class="w"><b>ليش هالزاوية:</b> ${B.esc(v.why)}</div>
+        <div class="quote" style="border-right-color:var(--acc);font-style:normal">
+          <b>${B.esc(v.headline)}</b><br>${B.esc(v.body).replace(/\n/g, "<br>")}<br>
+          <b style="color:var(--acc)">${B.esc(v.cta)}</b></div>
+      </div>`).join("") +
+      `<div class="item"><div class="t">💬 رسالة Messenger</div>
+        <div class="quote" style="font-style:normal">${B.esc(j.messenger).replace(/\n/g, "<br>")}</div></div>
+       <div class="item"><div class="t">📄 صفحة المنتج</div>
+        <div class="quote" style="font-style:normal"><b>${B.esc(j.productPage.title)}</b><br>
+        ${j.productPage.bullets.map(b => "• " + B.esc(b)).join("<br>")}<br>
+        <b style="color:var(--acc)">${B.esc(j.productPage.cta)}</b></div></div>
+       <div class="headline amber" style="margin-top:14px">${B.esc(j.testAdvice)}</div>
+      </div>` + B.basis(j.basis);
+    res.scrollIntoView({ behavior: "smooth" });
+  } catch (e) { res.innerHTML = `<div class="err">${B.esc(e.message)}</div>`; }
+}
+</script>
+</body></html>
