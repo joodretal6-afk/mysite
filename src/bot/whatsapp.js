@@ -79,19 +79,30 @@ export async function handleWhatsAppMessage(msg, contactName, kv) {
       // 🔴 نفس قاعدة الماسنجر: ممنوع نثق بعنوان الذكاء أعمى. كل كلمة
       //    لازم تكون من كلام الزبون الفعلي، وإلا بنرفضه بدل ما نطبع
       //    عنوان مخترع بالفاتورة.
+      if (!mem.prov) mem.prov = {};
       if (ai.area) {
         const g = groundAddress(ai.area, convo);
-        if (g.ok) mem.area = parseAddress(g.grounded).formatted;
-        else console.warn(`🛑 واتساب: عنوان الذكاء مرفوض (${g.reason}): "${ai.area}"`);
+        if (g.ok) {
+          mem.area = parseAddress(g.grounded).formatted;
+          mem.prov.area = { value: mem.area, source_mid: "wa:" + from, status: "verified" };
+        } else console.warn(`🛑 واتساب: عنوان الذكاء مرفوض (${g.reason}): "${ai.area}"`);
       }
-      if (ai.phone) mem.phone = ai.phone;
+      // الرقم لازم يكون مكتوباً بكلام الزبون؛ وإلا منستخدم رقم قناة
+      // واتساب نفسه (وهو رقم الزبون الفعلي اللي بيراسل منه — مش رقم
+      // زبون تاني). ما منخترع ولا منكمّل.
+      if (ai.phone && convo.replace(/[\s\-\.]/g, "").includes(ai.phone)) {
+        mem.phone = ai.phone;
+        mem.prov.phone = { value: ai.phone, source_mid: "wa:" + from, status: "verified" };
+      }
       const { total, orderString } = computeOrder(page, mem.cart, null);
       const phone = mem.phone || from;
-      const complete = Boolean(mem.area && phone);
+      // مكتمل فقط لو عنوان له مصدر + رقم. غير هيك = ناقص ومنكمّل مع الزبون.
+      const complete = Boolean(mem.area && mem.prov.area && mem.prov.area.source_mid && phone);
       const payload = {
         page_id: p.id,
         page_name: (page.name || "واتساب") + " (واتساب)",
-        sender_id: from, order_string: orderString, total,
+        sender_id: from, session_key: `${p.id}_${from}`,
+        order_string: orderString, total,
         area: mem.area || "", phone,
         status: complete ? "جديد" : "ناقص",
         messenger_url: `https://wa.me/${from}`

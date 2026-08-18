@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import { normalizeDigits } from "./utils.js";
 import { mergeAddress, looksLikeAddressAttempt, isCorrection } from "./address.js";
+import { recordSource } from "./validate.js";
 
 // 🔴 تفريغ السلة إجراء مدمّر — لازم يكون الزبون قاصده صراحةً.
 //
@@ -79,11 +80,16 @@ const _terms = JORDAN_TERMS.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).j
 const _bound = "[\\s،.,:/\\-]";
 export const JORDAN_PLACES = new RegExp(`(?:^|${_bound})(?:${_terms})(?=$|${_bound})`, "i");
 
-export function extractPhone(memory, text) {
+export function extractPhone(memory, text, sourceMid = null) {
   // نوحّد الصيغة الدولية ثم نبحث عن رقم أردني صحيح
   const norm = text.replace(/[\s\-\.]/g, "").replace(/(?:\+962|00962)7/g, "07");
   const valid = norm.match(/07[789]\d{7}/);
-  if (valid) { memory.phone = valid[0]; memory.invalidPhoneProvided = false; return; }
+  if (valid) {
+    memory.phone = valid[0]; memory.invalidPhoneProvided = false;
+    // 🧾 الرقم مصدره هالرسالة بالضبط — إثبات إنه من العميل نفسه.
+    recordSource(memory, "phone", valid[0], sourceMid);
+    return;
+  }
 
   // نعتبره "رقم خاطئ" فقط إذا بدا كمحاولة رقم هاتف (يبدأ بـ 07/+962) لكن غير مكتمل،
   // حتى لا نظنّ أرقام العناوين (عمارة 123، رقم بناية...) رقم هاتف خاطئ.
@@ -137,7 +143,7 @@ export function extractQty(text, pageConfig) {
 //  • معه درجة ثقة وقائمة نواقص وسؤال واحد محدّد
 //  • السؤال ما بينحسب عنوان حتى لو سألنا عن العنوان قبله
 // ═══════════════════════════════════════════════════════════
-export function extractArea(memory, text) {
+export function extractArea(memory, text, sourceMid = null) {
   // منشيل رقم الهاتف بس — مش كل رقم. أرقام البنايات والشقق لازم تضل.
   const stripped = text.replace(/(?:\+962|00962)?0?7[789]\d{7}/g, " ").trim();
   if (stripped.length < 2) return;
@@ -165,14 +171,19 @@ export function extractArea(memory, text) {
   memory.addressReady = next.deliverable;
   memory.addressMissing = next.missing;
   memory.addressQuestion = next.nextQuestion;   // سؤال واحد محدّد
+  // 🧾 العنوان مصدره كلام العميل بهالرسالة (بعد ما عدّى محرّك العنوان
+  //    اللي أصلاً بيرفض أي كلمة مش من نص العميل).
+  recordSource(memory, "area", next.formatted, sourceMid);
 }
 
-export function parseMessage(memory, originalText, pageConfig) {
+export function parseMessage(memory, originalText, pageConfig, sourceMid = null) {
   const text = normalizeDigits(originalText);
 
   if (!memory.cart) memory.cart = {};
 
-  extractPhone(memory, text);
+  const cartBefore = JSON.stringify(memory.cart);
+
+  extractPhone(memory, text, sourceMid);
 
   const qty = extractQty(text, pageConfig);
 
@@ -224,6 +235,10 @@ export function parseMessage(memory, originalText, pageConfig) {
     if (keys.length === 1) memory.cart[keys[0]] = qty;
   }
 
-  extractArea(memory, text);
+  // 🧾 لو السلة تغيّرت بهالرسالة، مصدر الطلب هو هالرسالة.
+  if (JSON.stringify(memory.cart) !== cartBefore && Object.keys(memory.cart).length)
+    recordSource(memory, "order", { ...memory.cart }, sourceMid);
+
+  extractArea(memory, text, sourceMid);
   return memory;
 }

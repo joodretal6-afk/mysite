@@ -343,6 +343,16 @@ const INSERT_ORDER = `INSERT INTO orders (page_id, page_name, sender_id, order_s
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 export function saveOrder(o) {
+  // 🔴 حاجز الهوية على مستوى قاعدة البيانات (دفاع بالعمق، مستقل عن
+  //    الـ prompt والمنطق الأعلى): ممنوع نحفظ طلب بلا صفحة أو مرسِل،
+  //    وإذا انبعتت بصمة الجلسة لازم تطابق page_id_sender_id — وإلا
+  //    يعني بيانات تجمّعت من سياق غلط، فبنرفض الحفظ كلياً.
+  const pageId = String(o.page_id || "");
+  const senderId = String(o.sender_id || "");
+  if (!pageId || !senderId)
+    throw new Error(`saveOrder مرفوض: هوية ناقصة (page_id="${pageId}" sender_id="${senderId}")`);
+  if (o.session_key && o.session_key !== `${pageId}_${senderId}`)
+    throw new Error(`saveOrder مرفوض: بصمة الجلسة (${o.session_key}) لا تطابق ${pageId}_${senderId}`);
   const info = retryDb(() => db.prepare(INSERT_ORDER).run(
     String(o.page_id || ""),
     String(o.page_name || ""),

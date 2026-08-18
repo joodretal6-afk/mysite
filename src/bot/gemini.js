@@ -40,7 +40,9 @@ export function buildNextTask(memory) {
 export async function askGemini(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge = "") {
   let crmContext = "";
   if (crmData && crmData.lastOrder) {
-    crmContext = `\nملاحظة هامة: هذا زبون قديم. آخر طلب له كان (${crmData.lastOrder}) وعنوانه (${crmData.lastArea}). رحب به كزبون دائم واعرض عليه تكرار طلبه.`;
+    // 🔴 ممنوع نحقن العنوان السابق. منرحّب بالزبون القديم ومنعرض تكرار
+    //    طلبه، بس العنوان لازم يبعثه من جديد بهالمحادثة — ما منفترضه.
+    crmContext = `\nملاحظة هامة: هذا زبون قديم (رحّب به كزبون دائم واعرض عليه تكرار طلبه إن رغب). 🔴 لا تفترض عنوانه أو رقمه من طلب سابق — اطلبهما منه في هذه المحادثة.`;
   }
 
   // 🧠 معلومات إضافية يغذّيها الأدمن لهذه الصفحة (لها أولوية عالية)

@@ -7,6 +7,8 @@ import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64, op
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { parseAddress, groundAddress } from "./address.js";
+import { withSessionLock } from "./lock.js";
+import { validateOrder, recordSource, sessionFingerprint } from "./validate.js";
 import { inboxUrl } from "../brain/links.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
 import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting, lastCompletedOrder, setCancelReason, db, retryDb } from "../db/database.js";
@@ -100,12 +102,18 @@ function cartAddedThisTurn(text, pageConfig) {
 // غلاف يفتح "نافذة الرد" أثناء معالجة رسالة واردة فقط، ويقفلها بعدها دائماً.
 // خارج هذه النافذة، طبقة الإرسال ترفض أي رسالة للزبون (ضمان عدم الإرسال الاستباقي).
 export async function handleEvent(event, env, ctx) {
-  openReplyWindow();
-  try {
-    return await _handleEvent(event, env, ctx);
-  } finally {
-    closeReplyWindow();
-  }
+  // 🔒 قفل لكل جلسة: أحداث نفس العميل تنعالج بالتسلسل (الترتيب مضمون،
+  //    ولا race على الجلسة). أحداث عملاء مختلفين تضل متوازية تماماً.
+  const sid = event?.sender?.id, rid = event?.recipient?.id;
+  const lockKey = (sid && rid) ? sessionFingerprint(rid, sid) : null;
+  return withSessionLock(lockKey, async () => {
+    openReplyWindow();
+    try {
+      return await _handleEvent(event, env, ctx);
+    } finally {
+      closeReplyWindow();
+    }
+  });
 }
 
 async function _handleEvent(event, env, ctx) {
@@ -152,13 +160,20 @@ async function _handleEvent(event, env, ctx) {
   const token = pageConfig.PAGE_TOKEN;
   if (!token) { console.error("No page token for", recipientId); return; }
 
-  // منع تكرار المعالجة لما فيسبوك يعيد إرسال نفس الرسالة
+  // منع تكرار المعالجة لما فيسبوك يعيد إرسال نفس الرسالة.
+  // 🔴 ذرّي: منكتب العلامة **قبل** المعالجة وننتظرها (await مش waitUntil).
+  //    مع قفل الجلسة، فحص+كتابة العلامة بيصيروا بلا تسابق — فإعادة
+  //    إرسال سريعة ما بتنعالج مرتين ولا بتطلع فاتورة/طلب مكرر.
   const mid = event.message.mid;
   if (mid) {
     const seen = await env.SESSIONS_KV.get("MID_" + mid);
     if (seen) return;
-    ctx.waitUntil(env.SESSIONS_KV.put("MID_" + mid, "1", { expirationTtl: 600 }));
+    await env.SESSIONS_KV.put("MID_" + mid, "1", { expirationTtl: 600 });
   }
+  // مصدر البيانات: نستخدم معرّف رسالة فيسبوك لو موجود، وإلا معرّف
+  // محلّي — المهم إثبات إنه من رسالة بهالجلسة (مش قيمة مفترَضة). بلا
+  // هيك رسالة بلا mid كانت رح تخلّي كل الحقول "بلا مصدر" فما يكمل طلب.
+  const srcId = mid || `local:${sessionKey}:${Date.now()}`;
 
   ctx.waitUntil(sendTyping(token, senderId));
 
@@ -171,9 +186,21 @@ async function _handleEvent(event, env, ctx) {
   if (!memory) {
     memory = {
       cart: {}, area: null, phone: null, sent: false,
-      history: [], lastReply: "", invalidPhoneProvided: false, upsellOffered: false
+      history: [], lastReply: "", invalidPhoneProvided: false, upsellOffered: false,
+      prov: {}, sessionKey
     };
   }
+  // 🔒 نثبّت بصمة الجلسة ونتحقق منها: لو الذاكرة المقروءة مفتاحها مش
+  //    مفتاح جلستنا، يعني قراءة من سياق غلط — منبلّش من ذاكرة نظيفة
+  //    بدل ما نخاطر نخلط بيانات عميل بعميل.
+  if (memory.sessionKey && memory.sessionKey !== sessionKey) {
+    console.error(`🔴 عدم تطابق بصمة الجلسة: ${memory.sessionKey} ≠ ${sessionKey} — ذاكرة نظيفة`);
+    memory = { cart: {}, area: null, phone: null, sent: false, history: [],
+               lastReply: "", invalidPhoneProvided: false, upsellOffered: false,
+               prov: {}, sessionKey };
+  }
+  if (!memory.sessionKey) memory.sessionKey = sessionKey;
+  if (!memory.prov) memory.prov = {};
 
   let userMsg = event.message.text ? event.message.text.trim() : "";
   let audioPart = null;
@@ -325,7 +352,7 @@ async function _handleEvent(event, env, ctx) {
   } catch (e) { console.error("handoff detect:", e && e.message); }
 
   if (!memory.sent && userMsg !== "[رسالة صوتية]") {
-    parseMessage(memory, userMsg, effConfig);
+    parseMessage(memory, userMsg, effConfig, srcId);
   }
 
   // 🧠 استخراج ذكي من كامل المحادثة (يفهم أي صياغة طبيعية ويكمّل النواقص)
@@ -359,12 +386,24 @@ async function _handleEvent(event, env, ctx) {
               memory.addressLevel = checked.level;
               memory.addressReady = checked.deliverable;
               memory.addressQuestion = checked.nextQuestion;
+              // 🧾 مصدره رسالة العميل الحالية (التأريض أثبت إنه من كلامه).
+              recordSource(memory, "area", checked.formatted, srcId);
             }
           } else {
             console.warn(`🛑 عنوان الذكاء الاصطناعي مرفوض (${g.reason}): "${ai.area}"`);
           }
         }
-        if (ai.phone) { memory.phone = ai.phone; memory.invalidPhoneProvided = false; }
+        // 🔴 حتى رقم الذكاء لازم يكون موجود حرفياً بكلام العميل — مش
+        //    مكمّل ولا مفترَض. منتحقق إنه أرقامه ظاهرة بنص العميل.
+        if (ai.phone) {
+          const digitsInConv = convText.replace(/[\s\-\.]/g, "").includes(ai.phone);
+          if (digitsInConv) {
+            memory.phone = ai.phone; memory.invalidPhoneProvided = false;
+            recordSource(memory, "phone", ai.phone, srcId);
+          } else {
+            console.warn(`🛑 رقم الذكاء مرفوض (مش موجود بكلام العميل): "${ai.phone}"`);
+          }
+        }
       }
       // لو فشل الذكاء (ai.ok=false) نُبقي نتائج الرادار كما هي
     } catch (e) {
@@ -456,8 +495,14 @@ async function _handleEvent(event, env, ctx) {
   // ما عرفنا وين أصلاً (محافظة لحالها أو وصف بلا مكان) = مش جاهز
   const addrUnknown = !!memory.area && memory.addressReady === false;
 
-  const complete = cartItemsCount > 0 && !!memory.area && !addrUnknown
-                   && memory.phone && !memory.invalidPhoneProvided;
+  // 🔴 الاكتمال يمرّ من التحقق النهائي: كل حقل مطلوب لازم يكون موجود
+  //    **ومصدره رسالة من نفس جلسة العميل** (source_mid). أي حقل بلا
+  //    مصدر (احتمال مفترَض) بيخلّي الطلب "ناقص" ومنسأل عنه — ما منطبع
+  //    فاتورة ببيانات ما قدرنا نثبت مصدرها.
+  const check = validateOrder(memory, { pageId: recipientId, senderId });
+  if (check.reasons.length)
+    console.log(`🧾 تحقق الطلب [${sessionKey}]: ${check.complete ? "مكتمل" : "ناقص → " + check.missing.join(",")} | ${check.reasons.join(" · ")}`);
+  const complete = check.complete && !check.blocked;
   const readyForInvoice = complete && !memory.sent;
   const needsAddressReview = complete && addrCoarse;
 
@@ -515,6 +560,7 @@ async function _handleEvent(event, env, ctx) {
       } else {
         memory.orderId = saveOrder({
           page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
+          session_key: sessionKey,
           order_string: orderString, total,
           area: memory.area || "", phone: memory.phone || "", status,
           address_score: memory.addressScore ?? -1, address_level: memory.addressLevel || "",
