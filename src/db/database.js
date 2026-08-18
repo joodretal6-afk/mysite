@@ -29,15 +29,31 @@ const REMOTE_PRIMARY = TURSO_URL && !USE_LOCAL;
 
 // اتصال قابل لإعادة الفتح (Turso أحياناً يُنهي الـ stream فنعيد الاتصال)
 export let db;
+let _remoteActive = false;   // هل القاعدة الأساسية فعلاً هي Turso السحابي؟
 function connect() {
-  db = REMOTE_PRIMARY
-    ? new Database(TURSO_URL, { authToken: TURSO_TOKEN })
-    : new Database(WEB.DB_PATH);
-  if (!REMOTE_PRIMARY) { try { db.pragma("journal_mode = WAL"); } catch { /* تجاهل */ } }
+  // 🔴 حماية الإقلاع: لو فشل الاتصال بـ Turso وقت التشغيل (توكن منتهي،
+  //    شبكة، عنوان غلط) — بلا هالحماية كان الاستثناء بيوقع البروسيس
+  //    كله وقت التحميل، فترجع Render 502 دائم والمنصة كلها تنطفي.
+  //    القاعدة: نجرّب السحابي، وإذا فشل ننزل على القرص المحلي ونكمّل
+  //    شغل (المنصة حيّة > المنصة ميتة)، مع تحذير صارخ للمالك.
+  if (REMOTE_PRIMARY) {
+    try {
+      db = new Database(TURSO_URL, { authToken: TURSO_TOKEN });
+      db.prepare("SELECT 1").get();   // نتأكد إنه الاتصال فعلاً شغّال
+      _remoteActive = true;
+      return db;
+    } catch (e) {
+      console.error(`🔴🔴 فشل الاتصال بـ Turso السحابي عند الإقلاع: ${e && e.message}`);
+      console.error("⚠️ المنصة رح تكمّل على قاعدة محلية عشان ما تنطفي — صلّح توكن/عنوان Turso بأقرب وقت.");
+    }
+  }
+  db = new Database(WEB.DB_PATH);
+  _remoteActive = false;
+  try { db.pragma("journal_mode = WAL"); } catch { /* تجاهل */ }
   return db;
 }
 connect();
-console.log(REMOTE_PRIMARY ? "☁️  متصل بـ Turso السحابي" : `💽 قاعدة محلية على القرص: ${WEB.DB_PATH}`);
+console.log(_remoteActive ? "☁️  متصل بـ Turso السحابي" : `💽 قاعدة محلية على القرص: ${WEB.DB_PATH}`);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS kv (
