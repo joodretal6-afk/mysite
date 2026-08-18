@@ -23,7 +23,8 @@ import {
   cancelReasonsReport, peakHeatmap,
   addGoal, listGoalsWithProgress, setGoalStatus, deleteGoal,
   setPageToken, getPageTokenOverrides, deletePageToken,
-  listStudies, setStudyStatus, deleteStudy
+  listStudies, setStudyStatus, deleteStudy,
+  findPhonesInRange
 } from "../db/database.js";
 import { askAdvisor } from "../bot/advisor.js";
 import { askMarket, runCouncil, priceScenarios, generateWinnerDNA, findMeMoney } from "../bot/market.js";
@@ -427,6 +428,23 @@ adminRouter.get("/api/chats", requireAuth, (req, res) => {
 adminRouter.get("/api/chat", requireAuth, (req, res) => {
   const { page_id, sender_id } = req.query;
   res.json({ messages: getChatMessages(page_id, sender_id) });
+});
+
+// 📞 صفحة البحث عن الأرقام + الـ API
+adminRouter.get("/phones", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "phones.html")));
+adminRouter.get("/api/phones", requireAuth, (req, res) => {
+  try {
+    // التواريخ بصيغة YYYY-MM-DD؛ "من" أول اليوم و"إلى" آخر اليوم
+    const { from, to, page_id } = req.query;
+    const fromTs = from ? new Date(from + "T00:00:00").getTime() : null;
+    const toTs   = to   ? new Date(to   + "T23:59:59.999").getTime() : null;
+    if (page_id && !PAGES[page_id]) return res.status(400).json({ error: "صفحة غير صحيحة" });
+    const results = findPhonesInRange({ from: fromTs, to: toTs, page_id: page_id || null });
+    res.json({ count: results.length, results });
+  } catch (e) {
+    console.error("api/phones:", e && e.message);
+    res.status(500).json({ error: "تعذّر البحث عن الأرقام" });
+  }
 });
 
 // جلب فلاتر البيانات (الصفحات + الإحصائيات)

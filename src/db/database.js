@@ -555,6 +555,60 @@ export function getChatMessages(pageId, senderId) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// 📞 بحث عن كل أرقام الهاتف في الدردشات ضمن مدى تاريخي
+//
+// بيمسح رسائل الزبائن (direction='in') بين تاريخين، بيستخرج كل رقم
+// أردني من 10 خانات (07xxxxxxxx) — مع تطبيع الأرقام العربية والصيغة
+// الدولية — وبيرجّع قائمة فريدة: الرقم، كم مرة ظهر، بأي صفحة، آخر
+// ظهور، ومقتطف. الأرقام من كلام الزبون نفسه فقط (مش مخترعة).
+// ═══════════════════════════════════════════════════════════
+const AR_DIGITS = { "٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9",
+                    "۰":"0","۱":"1","۲":"2","۳":"3","۴":"4","۵":"5","۶":"6","۷":"7","۸":"8","۹":"9" };
+function toEnDigits(s) { return String(s || "").replace(/[٠-٩۰-۹]/g, d => AR_DIGITS[d] || d); }
+
+export function findPhonesInRange({ from, to, pageId } = {}) {
+  const params = [];
+  let where = "direction = 'in' AND body IS NOT NULL";
+  if (from != null) { where += " AND created_at >= ?"; params.push(Number(from)); }
+  if (to != null)   { where += " AND created_at <= ?"; params.push(Number(to)); }
+  if (pageId)       { where += " AND page_id = ?";     params.push(String(pageId)); }
+
+  const rows = retryDb(() => db.prepare(
+    `SELECT page_name, sender_id, body, created_at FROM messages WHERE ${where} ORDER BY created_at ASC`
+  ).all(...params));
+
+  // رقم أردني: 07 + 7/8/9 + 7 خانات. منطبّع الصيغة الدولية والأرقام العربية.
+  const RE = /(?:\+?962|00962)?0?7[789]\d{7}/g;
+  const map = new Map();   // phone → {phone, count, pages:Set, senders:Set, first_at, last_at, sample}
+
+  for (const r of rows) {
+    const norm = toEnDigits(r.body).replace(/[\s\-().]/g, "");
+    const matches = norm.match(RE);
+    if (!matches) continue;
+    for (let m of matches) {
+      // نوحّد لصيغة محلية 07xxxxxxxx
+      m = m.replace(/^(?:\+?962|00962)/, "0").replace(/^00?7/, "07");
+      const mm = m.match(/7[789]\d{7}$/);
+      if (!mm) continue;
+      const phone = "0" + mm[0];
+      let e = map.get(phone);
+      if (!e) { e = { phone, count: 0, pages: new Set(), senders: new Set(),
+                      first_at: r.created_at, last_at: r.created_at, sample: r.body.slice(0, 120) }; map.set(phone, e); }
+      e.count++;
+      e.pages.add(r.page_name || "—");
+      e.senders.add(r.sender_id);
+      if (r.created_at < e.first_at) e.first_at = r.created_at;
+      if (r.created_at > e.last_at) { e.last_at = r.created_at; e.sample = r.body.slice(0, 120); }
+    }
+  }
+
+  return [...map.values()]
+    .map(e => ({ phone: e.phone, count: e.count, pages: [...e.pages], customers: e.senders.size,
+                 first_at: e.first_at, last_at: e.last_at, sample: e.sample }))
+    .sort((a, b) => b.last_at - a.last_at);
+}
+
+// ═══════════════════════════════════════════════════════════
 // دوال المستخدمين
 // ═══════════════════════════════════════════════════════════
 export function getUser(username) {
