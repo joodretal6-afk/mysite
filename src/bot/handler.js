@@ -369,6 +369,10 @@ async function _handleEvent(event, env, ctx) {
         if (ai.is_order && ai.items.length) {
           memory.cart = {};
           ai.items.forEach(it => { memory.cart[it.product] = it.qty; });
+          // 🧾 مصدر الطلب: الذكاء استخرجه من رسائل الزبون بهالجلسة. بدون
+          //    هالتسجيل كان التحقق النهائي يعتبر الطلب "ناقص" فما تطلع
+          //    فاتورة أبداً — والبوت يأكّد بالكلام بس والطلب ما ينزل.
+          recordSource(memory, "order", { ...memory.cart }, srcId);
         }
         // 🔴 ممنوع نثق بعنوان الذكاء الاصطناعي أعمى — ممكن يكون مخترعاً.
         // بنمرّره من بوابة التأريض: كل كلمة لازم تكون من كلام الزبون

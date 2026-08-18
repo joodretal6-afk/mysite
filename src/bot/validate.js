@@ -62,28 +62,30 @@ export function validateOrder(memory, { pageId, senderId } = {}) {
     }
   }
 
-  // 2) الأصناف
+  // ملاحظة مهمة: منع الاختراع بيصير **لحظة الالتقاط** (بوابة تأريض
+  // العنوان، فحص الرقم مقابل نص الزبون، مطابقة المنتج بالكلمات). فهون
+  // بنمنع الاكتمال بس لما القيمة نفسها ناقصة — ما بنوقف طلب جاهز لمجرّد
+  // إنه المصدر مش متسجّل (وإلا طلب كامل بيضيع بلا فاتورة). غياب المصدر
+  // بينكتب كتحذير للتدقيق، مش كمانع.
+  const warnNoSource = [];
+
+  // 2) الأصناف — القيمة نفسها لازم تكون موجودة (الأصناف ما بتتخترع:
+  //    المحلّل بيطابق كلمات منتج حقيقية، والذكاء بيصفّي على المتاح فقط)
   const cartCount = memory.cart ? Object.keys(memory.cart).length : 0;
   if (cartCount === 0) { missing.push("order"); reasons.push("لا يوجد صنف"); }
-  else if (!prov.order || !prov.order.source_mid) {
-    missing.push("order");
-    reasons.push("الطلب بلا مصدر رسالة");
-  }
+  else if (!prov.order || !prov.order.source_mid) warnNoSource.push("order");
 
-  // 3) العنوان — لازم يوصل (deliverable) ومصدره رسالة عميل
+  // 3) العنوان — لازم يوصل (deliverable). التأريض وقت الالتقاط ضِمن إنه
+  //    من كلام الزبون؛ فإذا العنوان موجود وكافٍ، هو صالح.
   const addrUsable = !!memory.area && memory.addressReady !== false;
   if (!addrUsable) { missing.push("address"); reasons.push("العنوان ناقص أو غير كافٍ للتوصيل"); }
-  else if (!prov.area || !prov.area.source_mid) {
-    missing.push("address");
-    reasons.push("العنوان بلا مصدر رسالة (احتمال مفترَض) — رُفض");
-  }
+  else if (!prov.area || !prov.area.source_mid) warnNoSource.push("address");
 
-  // 4) الرقم — صحيح ومصدره رسالة عميل
+  // 4) الرقم — صحيح (فحص الصيغة وقت الالتقاط ضِمن إنه من الزبون)
   if (!memory.phone || memory.invalidPhoneProvided) { missing.push("phone"); reasons.push("الرقم ناقص أو غير صالح"); }
-  else if (!prov.phone || !prov.phone.source_mid) {
-    missing.push("phone");
-    reasons.push("الرقم بلا مصدر رسالة (احتمال مفترَض) — رُفض");
-  }
+  else if (!prov.phone || !prov.phone.source_mid) warnNoSource.push("phone");
 
-  return { complete: missing.length === 0, missing, reasons, blocked: false };
+  if (warnNoSource.length) reasons.push(`⚠️ حقول بلا مصدر مسجّل (للتدقيق): ${warnNoSource.join(",")}`);
+
+  return { complete: missing.length === 0, missing, reasons, blocked: false, warnNoSource };
 }
