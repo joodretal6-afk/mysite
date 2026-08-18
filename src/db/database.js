@@ -226,6 +226,24 @@ for (const col of [
   try { db.exec(col); } catch { /* العمود موجود */ }
 }
 
+// ═══════════════════════════════════════════════════════════
+// 📇 فهارس الأداء
+// كل محركات التحليل بتمشّط messages و orders بالتاريخ والمرسل.
+// بلا هالفهارس كل استعلام بيمسح الجدول كامل — وبتكبر المشكلة مع
+// كل يوم بيمر لأن الجداول بتزيد ولا بتنقص.
+// ═══════════════════════════════════════════════════════════
+for (const idx of [
+  "CREATE INDEX IF NOT EXISTS idx_msg_created ON messages(created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_msg_dir_created ON messages(direction, created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_msg_sender ON messages(page_id, sender_id, created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_orders_sender ON orders(sender_id, created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status, created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_kv_expires ON kv(expires_at) WHERE expires_at IS NOT NULL"
+]) {
+  try { db.exec(idx); } catch (e) { console.error("فهرس:", e.message); }
+}
+
 // ── ترحيل: إصلاح روابط الماسنجر القديمة ──
 // الطلبات المحفوظة قبل هيك خزّنت https://m.me/<sender_id>، والـ sender_id
 // هو PSID مربوط بالصفحة — و m.me بيتوقّع معرّف صفحة، فكان بيطلع "غير متوفر".
@@ -1081,7 +1099,16 @@ export function migrateFromTurso() {
     // كل الكتابة + علامة الإتمام داخل معاملة واحدة (الكل أو لا شيء → لا تكرار عند إعادة المحاولة)
     const doMigrate = db.transaction(() => {
       const insO = db.prepare(INSERT_ORDER);
-      for (const o of orders) insO.run(o.page_id, o.page_name, o.sender_id, o.order_string, o.total, o.area, o.phone, o.status, o.messenger_url, o.created_at);
+      // ⚠️ عدد الوسائط لازم يطابق INSERT_ORDER بالضبط (12 عمود).
+      // لما انضاف address_score/address_level للاستعلام ونُسي تحديث هالسطر،
+      // كان أي ترحيل من Turso بينهار كاملاً. الطلبات القديمة ما إلها درجة
+      // عنوان، فمنحطّ -1 (غير مقاس) بدل ما ندّعي إنها مؤكدة.
+      for (const o of orders) insO.run(
+        o.page_id, o.page_name, o.sender_id, o.order_string, o.total,
+        o.area, o.phone, o.status, o.messenger_url, o.created_at,
+        Number.isFinite(Number(o.address_score)) ? Number(o.address_score) : -1,
+        String(o.address_level || "")
+      );
       const insM = db.prepare(INSERT_MESSAGE);
       for (const m of msgs) insM.run(m.page_id, m.page_name, m.sender_id, m.direction, m.body, m.created_at);
       const insK = db.prepare("INSERT INTO page_knowledge (page_id,extra,updated_at) VALUES (?,?,?) ON CONFLICT(page_id) DO UPDATE SET extra=excluded.extra");

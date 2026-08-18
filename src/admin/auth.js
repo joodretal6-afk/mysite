@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import crypto from "node:crypto";
 import { WEB } from "../config.js";
+import { getUser } from "../db/database.js";
 
 const COOKIE_NAME = "ajban_sid";
 
@@ -70,6 +71,32 @@ export function requireAuth(req, res, next) {
   }
   req.user = session.u;
   next();
+}
+
+// ═══════════════════════════════════════════════════════════
+// 👑 حارس الأدوار
+//
+// جدول users فيه عمود role من زمان، بس ما كان في شي بيفحصه —
+// فأي موظف بيقدر يوصل لإدارة الفريق والتوكنات والأسعار والنسخ
+// الاحتياطية. الدور موجود بالبيانات ومهمل بالتنفيذ.
+//
+// الحسابات القائمة محمية: role افتراضياً 'admin'، فما بينقفل
+// عليها شي بهاد التغيير — بس الحسابات الجديدة (staff) بتنحصر.
+// ═══════════════════════════════════════════════════════════
+export function requireAdmin(req, res, next) {
+  try {
+    const u = getUser(req.user);
+    // ما لقينا المستخدم = جلسة لحساب انحذف ⇒ نرفض
+    if (!u) return res.status(401).json({ error: "الحساب مش موجود — سجّل دخول من جديد" });
+    if ((u.role || "admin") !== "admin") {
+      return res.status(403).json({ error: "هاي العملية لمدير الحساب فقط" });
+    }
+    next();
+  } catch (e) {
+    console.error("requireAdmin:", e && e.message);
+    // عند فشل الفحص منمنع — الصلاحية ما بتنعطى بالشك
+    res.status(500).json({ error: "تعذّر التحقق من الصلاحية" });
+  }
 }
 
 export { COOKIE_NAME };

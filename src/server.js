@@ -102,9 +102,36 @@ app.use(express.json({ limit: "2mb", verify: (req, _res, buf) => { req.rawBody =
 app.use(express.urlencoded({ extended: true }));
 
 // التحقق من توقيع فيسبوك X-Hub-Signature-256 (يعمل فقط إن ضُبط APP_SECRET)
+// ═══════════════════════════════════════════════════════════
+// 🔐 التحقق من توقيع فيسبوك
+//
+// بلا FB_APP_SECRET أي حدا بيعرف رابط الويبهوك بيقدر يزوّر أحداث:
+// يخترع طلبات وهمية، أو يخلّي البوت يرد على ناس ما راسلوك.
+//
+// 🔴 قرار مقصود: ما بنمنع تلقائياً لما السر مش مضبوط.
+// المنع الفوري بيوقف بوتك كله لو نُشر التعديل قبل ما تضبط السر —
+// وإيقاف تجارة أسوأ من ثغرة لسه ما استُغلت. فبنحذّر بصوت عالي كل
+// مرة، ومنخلّي التشديد بضغطة منك: REQUIRE_FB_SIGNATURE=true.
+//
+// الترتيب الآمن: اضبط FB_APP_SECRET → تأكد إنه التحذير اختفى →
+// شغّل REQUIRE_FB_SIGNATURE=true.
+// ═══════════════════════════════════════════════════════════
+let _sigWarned = 0;
 function verifyFbSignature(req) {
   const appSecret = process.env.FB_APP_SECRET;
-  if (!appSecret) return true;   // غير مفعّل → لا نمنع (اختياري)
+  if (!appSecret) {
+    if (process.env.REQUIRE_FB_SIGNATURE === "true") {
+      console.error("🔴 REQUIRE_FB_SIGNATURE مفعّل بس FB_APP_SECRET مش مضبوط — الحدث مرفوض");
+      return false;
+    }
+    // تحذير كل ساعة كحد أقصى — عشان ما يغرق السجل
+    if (Date.now() - _sigWarned > 3600000) {
+      _sigWarned = Date.now();
+      console.warn("⚠️ FB_APP_SECRET مش مضبوط — الويبهوك بيقبل أي حدث بلا تحقق. " +
+                   "اضبطه بلوحة الاستضافة، وبعدها شغّل REQUIRE_FB_SIGNATURE=true");
+    }
+    return true;
+  }
   const sig = req.get("x-hub-signature-256") || "";
   if (!sig.startsWith("sha256=") || !req.rawBody) return false;
   const expected = "sha256=" + crypto.createHmac("sha256", appSecret).update(req.rawBody).digest("hex");
@@ -225,17 +252,32 @@ app.post("/webhook", async (req, res) => {
     const entries = body.entry || [];
     const ctx = makeCtx();
 
-    // 🔴 معالجة كل الأحداث مش أول واحد بس
-    for (const entry of entries) {
-      const events = entry.messaging || [];
-      for (const event of events) {
-        await handleEvent(event, env, ctx).catch(e => console.error("Event error:", e && e.message));
-      }
-    }
+    // ═══════════════════════════════════════════════════════════
+    // 🔴 نرد على فيسبوك **فوراً** قبل المعالجة.
+    //
+    // فيسبوك بيتوقع رد خلال ثوانٍ. والمعالجة عندنا بتنادي الذكاء
+    // الاصطناعي وممكن تاخد 10-30 ثانية. لما كنا نرد بعدها، فيسبوك
+    // بيعتبر الويبهوك بطيء وبيعيد إرسال نفس الحدث — فبيتضاعف الرد
+    // على الزبون، وبتكرار الفشل بيوقف الويبهوك عن الصفحة كلياً.
+    //
+    // المعالجة بتكمّل بالخلفية. وبنحافظ على await **جوّا** الحلقة
+    // عشان أحداث نفس الزبون تنعالج بالترتيب ولا تتسابق على الجلسة.
+    // ═══════════════════════════════════════════════════════════
     res.send("EVENT_RECEIVED");
+
+    (async () => {
+      for (const entry of entries) {
+        for (const event of entry.messaging || []) {
+          await handleEvent(event, env, ctx)
+            .catch(e => console.error("Event error:", e && e.message));
+        }
+      }
+    })().catch(e => console.error("Webhook background error:", e && e.message));
   } catch (e) {
     console.error("Handler error:", e && e.message);
-    res.send("OK");   // نرجع 200 حتى فيسبوك ما يوقف الويبهوك
+    // بنرد بس لو ما رددنا قبل — بعد الرد الفوري فوق، أي رد تاني
+    // بيرمي "Cannot set headers after they are sent"
+    if (!res.headersSent) res.send("OK");   // 200 حتى فيسبوك ما يوقف الويبهوك
   }
 });
 

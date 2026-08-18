@@ -240,7 +240,8 @@ router.get("/churn", (req, res) => {
     const list = customerStats(from).filter(c => c.orders >= 2 && c.daysSinceOrder != null);
 
     const rows = list.map(c => {
-      const expected = c.avgGapDays || 45;
+      // حد أدنى 3 أيام: إيقاع أقصر من هيك غالباً ضجيج مش نمط شراء
+      const expected = Math.max(3, c.avgGapDays || 45);
       const overdueRatio = round(c.daysSinceOrder / expected, 2);
       let risk, label;
       if (overdueRatio >= 3) { risk = 95; label = "مفقود"; }

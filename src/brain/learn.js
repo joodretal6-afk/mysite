@@ -150,13 +150,20 @@ export function evaluateExperiment(experimentId) {
   const n1 = best.exposures, n2 = second.exposures;
   const x1 = best.conversions, x2 = second.conversions;
 
-  let z = 0, significant = false, pooled = 0;
+  let z = 0, significant = false, pooled = 0, underpowered = true;
   if (n1 >= 1 && n2 >= 1) {
     pooled = (x1 + x2) / (n1 + n2);
     const se = Math.sqrt(pooled * (1 - pooled) * (1 / n1 + 1 / n2));
     if (se > 0) {
       z = ((x1 / n1) - (x2 / n2)) / se;
-      significant = Math.abs(z) >= 1.96;   // ثقة 95%
+      // 🔴 اختبار z ما بيصحّ على عيّنة صغيرة. بلا حد أدنى كان النظام
+      // بيعلن فائزاً من 10 مشاهدات و3 تحويلات — والتاجر بيغيّر
+      // استراتيجيته بناءً على ضجيج. الشروط المتعارف عليها:
+      // 30 مشاهدة لكل ذراع، و5 نجاحات و5 إخفاقات على الأقل بكل ذراع.
+      const enough = n1 >= 30 && n2 >= 30 &&
+        x1 >= 5 && (n1 - x1) >= 5 && x2 >= 5 && (n2 - x2) >= 5;
+      underpowered = !enough;
+      significant = enough && Math.abs(z) >= 1.96;   // ثقة 95%
     }
   }
 
@@ -167,6 +174,9 @@ export function evaluateExperiment(experimentId) {
   let verdict;
   if (totalN < 40) {
     verdict = `لسه بدري. ${totalN} مشاهدة فقط — استنى توصل 100 على الأقل قبل ما تقرر.`;
+  } else if (underpowered) {
+    verdict = `الأرقام لسه تحت الحد الأدنى للحكم (${n1} مقابل ${n2} مشاهدة). ` +
+              `بدنا 30 مشاهدة و5 تحويلات لكل ذراع على الأقل — كمّل التجربة.`;
   } else if (significant) {
     verdict = `${best.label} أفضل فعلياً — الفرق مش صدفة (ثقة 95%).` +
               (lift != null ? ` تحسّن ${lift}% عن ${second.label}.` : "");
@@ -178,6 +188,7 @@ export function evaluateExperiment(experimentId) {
   return {
     experiment: exp, arms,
     best: significant ? best.label : null,
+    underpowered,
     lift, z: round(z, 2), significant, confidence: conf, verdict,
     basis: {
       طريقة: "اختبار z لنسبتين، عتبة 95%",

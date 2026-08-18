@@ -31,7 +31,7 @@ import { getStudy, updateStudyData, studiesToday } from "../db/database.js";
 import fs from "node:fs";
 import { WEB, CONFIG } from "../config.js";
 import { sendText, openReplyWindow, closeReplyWindow } from "../bot/messenger.js";
-import { requireAuth, setAuthCookie, clearAuthCookie } from "./auth.js";
+import { requireAuth, requireAdmin, setAuthCookie, clearAuthCookie } from "./auth.js";
 import { inboxUrl } from "../brain/links.js";
 import { PAGES } from "../bot/brain.js";
 import { fetchConversations, fetchMessages, collectConversationsInRange } from "../bot/inbox.js";
@@ -256,7 +256,7 @@ adminRouter.get("/api/page-tokens", requireAuth, (req, res) => {
     }))
   });
 });
-adminRouter.post("/api/page-tokens", requireAuth, async (req, res) => {
+adminRouter.post("/api/page-tokens", requireAuth, requireAdmin, async (req, res) => {
   const pageId = String(req.body?.page_id || "").trim();
   const token = String(req.body?.token || "").trim();
   if (!pageId || !token) return res.status(400).json({ error: "معرّف الصفحة والتوكن مطلوبان" });
@@ -690,7 +690,7 @@ adminRouter.get("/api/profit", requireAuth, (req, res) => {
 adminRouter.get("/api/team", requireAuth, (req, res) => {
   res.json({ users: listUsers(), me: req.user });
 });
-adminRouter.post("/api/team", requireAuth, async (req, res) => {
+adminRouter.post("/api/team", requireAuth, requireAdmin, async (req, res) => {
   const username = String(req.body?.username || "").trim();
   const password = String(req.body?.password || "");
   const role = ["admin", "staff"].includes(req.body?.role) ? req.body.role : "staff";
@@ -701,13 +701,13 @@ adminRouter.post("/api/team", requireAuth, async (req, res) => {
   logActivity(req.user, "إضافة مستخدم", `${username} (${role})`);
   res.json({ ok: true });
 });
-adminRouter.post("/api/team/:username/role", requireAuth, (req, res) => {
+adminRouter.post("/api/team/:username/role", requireAuth, requireAdmin, (req, res) => {
   const role = ["admin", "staff"].includes(req.body?.role) ? req.body.role : "staff";
   setUserRole(req.params.username, role);
   logActivity(req.user, "تغيير دور", `${req.params.username} → ${role}`);
   res.json({ ok: true });
 });
-adminRouter.delete("/api/team/:username", requireAuth, (req, res) => {
+adminRouter.delete("/api/team/:username", requireAuth, requireAdmin, (req, res) => {
   if (req.params.username === req.user) return res.status(400).json({ error: "لا يمكنك حذف نفسك" });
   deleteUser(req.params.username);
   logActivity(req.user, "حذف مستخدم", req.params.username);
@@ -826,14 +826,14 @@ adminRouter.get("/api/prices", requireAuth, (req, res) => {
   const overrides = {}; for (const r of listPriceOverrides(pageId)) overrides[r.product] = r.price;
   res.json({ page_id: pageId, base, overrides });
 });
-adminRouter.post("/api/prices", requireAuth, (req, res) => {
+adminRouter.post("/api/prices", requireAuth, requireAdmin, (req, res) => {
   const { page_id, product, price } = req.body || {};
   if (!page_id || !product) return res.status(400).json({ error: "الصفحة والمنتج مطلوبان" });
   setPriceOverride(page_id, product, price);
   logActivity(req.user, "تعديل سعر", `${product} → ${price}د`);
   res.json({ ok: true });
 });
-adminRouter.delete("/api/prices", requireAuth, (req, res) => {
+adminRouter.delete("/api/prices", requireAuth, requireAdmin, (req, res) => {
   const { page_id, product } = req.query;
   deletePriceOverride(page_id, product);
   res.json({ ok: true });

@@ -140,10 +140,24 @@ export function scanText(text) {
 // كل رسائل الفترة مجمّعة حسب المحادث
 export function conversations(from, opts = {}) {
   const limit = Math.min(200000, opts.limit || 60000);
+  // 🔴 كان ASC مع LIMIT: يعني لما الرسائل تتجاوز الحد بترجع **الأقدم**
+  // وبتنقطع الأحدث. فالتاجر بيقرأ تحليل الشهر الماضي على إنه اليوم،
+  // والمشكلة بتسوء كل ما كبرت البيانات. منجيب الأحدث ثم منعكس الترتيب
+  // (لأن بناء المحادثة بيفترض تصاعدي).
   const rows = retryDb(() => db.prepare(
     `SELECT page_id, page_name, sender_id, direction, body, created_at
-     FROM messages WHERE created_at >= ? ORDER BY created_at ASC LIMIT ?`
-  ).all(from, limit));
+     FROM messages WHERE created_at >= ? ORDER BY created_at DESC LIMIT ?`
+  ).all(from, limit)).reverse();
+
+  // نكشف القطع بدل ما نخفيه — تحليل على عيّنة مقطوعة لازم يُعلن
+  let truncated = null;
+  if (rows.length >= limit) {
+    try {
+      const t = retryDb(() => db.prepare(
+        "SELECT COUNT(*) n FROM messages WHERE created_at >= ?").get(from));
+      truncated = { total: Number(t && t.n) || rows.length, used: rows.length };
+    } catch { truncated = { total: null, used: rows.length }; }
+  }
 
   const map = new Map();
   for (const r of rows) {
@@ -161,7 +175,10 @@ export function conversations(from, opts = {}) {
     else { c.outCount++; if (!c.first_out_at) c.first_out_at = at; }
     if (at > c.last_at) c.last_at = at;
   }
-  return [...map.values()];
+  const list = [...map.values()];
+  // نعلّق علم القطع على المصفوفة نفسها — المحركات بتقرأه وبتعرضه بالأساس
+  if (truncated) Object.defineProperty(list, "truncated", { value: truncated, enumerable: false });
+  return list;
 }
 
 // طلبات الفترة (غير الملغاة افتراضياً)
@@ -312,10 +329,19 @@ export function customerStats(from) {
     const scan = conv ? scanConversation(conv) : { intent: 0, objections: [], stage: "لم يتحدث" };
     const gaps = c.gaps.sort((a, b) => a - b);
     let avgGapDays = null;
+    // 🔴 طلبان بنفس اليوم مش "إيقاع شراء" — هدول طلب واحد اتقسم.
+    // احتسابهم كان بينزّل الفجوة لكسر يوم، وكاشف المفقودين بيعتبر
+    // الزبون "متأخر ×30" بعد يومين، فيغرق التاجر بتنبيهات كاذبة.
     if (gaps.length > 1) {
-      let sum = 0;
-      for (let i = 1; i < gaps.length; i++) sum += gaps[i] - gaps[i - 1];
-      avgGapDays = round(sum / (gaps.length - 1) / DAY_MS, 1);
+      const daily = [];
+      for (const g of gaps) {
+        if (!daily.length || (g - daily[daily.length - 1]) >= DAY_MS) daily.push(g);
+      }
+      if (daily.length > 1) {
+        let sum = 0;
+        for (let i = 1; i < daily.length; i++) sum += daily[i] - daily[i - 1];
+        avgGapDays = round(sum / (daily.length - 1) / DAY_MS, 1);
+      }
     }
     const spend = round(c.spend);
     return {
