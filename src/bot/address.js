@@ -375,19 +375,124 @@ export function scoreAddress(c) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════
+// 🔎 هل التنسيق فقد معلومة من الأصل؟
+//
+// لما نعيد تنسيق عنوان، ممكن يضيع جزء ما عرفناه (اسم منطقة مش
+// بالفهرس مثلاً). فبنقارن كلمات الأصل بكلمات التنسيق: إذا في كلمة
+// مفيدة بالأصل وضاعت، منرجّعها. وإذا ما ضاع إشي، **منستخدم التنسيق
+// لحاله** — لأن إضافة الأصل بين قوسين بتطبع العنوان مرتين بالفاتورة.
+// ═══════════════════════════════════════════════════════════
+const NOISE = new Set(["في", "من", "على", "الى", "إلى", "مع", "عند", "انا", "أنا",
+  "ساكن", "ساكنه", "ساكنة", "العنوان", "عنواني", "منطقة", "منطقه", "منطقتي",
+  "توصيل", "التوصيل", "بدي", "بدنا", "لو", "سمحت", "و", "يا"]);
+
+export function missingFromFormatted(original, formatted) {
+  const fWords = new Set(normalizeAr(formatted).split(/[\s،,.\-()]+/).filter(Boolean));
+  return normalizeAr(original).split(/[\s،,.\-()]+/)
+    .filter(w => w.length >= 3 && !NOISE.has(w) && !fWords.has(w) &&
+                 // كلمة موجودة كجزء من كلمة بالتنسيق = مش ضايعة
+                 ![...fWords].some(f => f.includes(w) || w.includes(f)));
+}
+
+// النص النهائي للفاتورة.
+//
+// 🔴 بنعتمد على المكوّنات المستخرَجة حصراً (منطقة، حي، شارع، معلم،
+// بناية...). ما بنضيف "الكلمات الضائعة" من النص الخام، لأنها بتجرّ
+// معها نص الطلب: "نصيتين غنم وانا..." كانت بتطلع بالعنوان.
+//
+// الاستثناء الوحيد: إذا ما قدرنا نستخرج ولا مكوّن (منطقة مجهولة تماماً)،
+// وقتها نرجّع النص الخام مقصوصاً — أحسن من فراغ.
+export function bestAddressText(original, components) {
+  const formatted = formatAddress(components);
+  const hasStructured = !!(components.area || components.governorate ||
+    components.street || components.landmark || components.building ||
+    components.district || components.gps || components.coords);
+  if (hasStructured) return formatted;
+  return String(original || "").trim().slice(0, 200);
+}
+
 // ── نص العنوان المنسّق للفاتورة ──
 export function formatAddress(c) {
   const parts = [];
-  if (c.governorate && c.governorate !== c.area) parts.push(c.governorate);
-  if (c.area) parts.push(c.area);
-  if (c.district) parts.push("حي " + c.district);
-  if (c.street) parts.push("شارع " + c.street);
-  if (c.landmark) parts.push(c.landmark);
-  if (c.building) parts.push("بناية " + c.building);
-  if (c.floor) parts.push("طابق " + c.floor);
-  if (c.apartment) parts.push("شقة " + c.apartment);
+  const seen = new Set();
+  // بنمنع تكرار أي مقطع — "حي معصوم" منطقة وحي بنفس الوقت كانت
+  // بتطلع مرتين. المطابقة بالنص المطبّع عشان "معصوم" و"حي معصوم"
+  // ما ينحسبوا مختلفين.
+  const add = (val) => {
+    const v = String(val || "").trim();
+    if (!v) return;
+    const key = normalizeAr(v).replace(/^(?:حي|شارع|بنايه|طابق|شقه)\s+/, "");
+    if (!key || seen.has(key)) return;
+    // إذا مقطع سابق بيحتوي هالمقطع (أو العكس)، منتخطاه
+    for (const s of seen) if (s.includes(key) || key.includes(s)) return;
+    seen.add(key);
+    parts.push(v);
+  };
+  if (c.governorate && c.governorate !== c.area) add(c.governorate);
+  if (c.area) add(c.area);
+  if (c.district) add("حي " + c.district);
+  if (c.street) add("شارع " + c.street);
+  if (c.landmark) add(c.landmark);
+  if (c.building) add("بناية " + c.building);
+  if (c.floor) add("طابق " + c.floor);
+  if (c.apartment) add("شقة " + c.apartment);
   const line = parts.join("، ");
   return line || (c.raw || "").slice(0, 200);
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🔒 بوابة التأريض — العنوان لازم يكون من كلام الزبون فعلاً
+//
+// 🔴 هاي أهم دالة بالملف كله.
+//
+// الذكاء الاصطناعي (Gemini) مأمور "يستنتج" العنوان ويجمّع أجزاءه،
+// وأحياناً بيخترع منطقة الزبون ما قالها إطلاقاً — وبتروح للفاتورة،
+// فالطلب بيوصل لعنوان غلط أو بينرفض. هاد "بحط العناوين من راسه".
+//
+// الحل: أي عنوان من الذكاء الاصطناعي بنمرّره من هون. كل كلمة فيه
+// لازم تكون موجودة فعلياً بكلام الزبون (بعد التطبيع). الكلمة اللي
+// الزبون ما كتبها بتتشال. إذا ما ضل منطقة مؤرّضة، بنرفض العنوان كله
+// ونرجّع "" — يعني نسأل الزبون بدل ما نخترع.
+//
+// groundedText: كل رسائل الزبون الفعلية مجموعة.
+// ═══════════════════════════════════════════════════════════
+export function groundAddress(aiArea, customerText) {
+  const ai = String(aiArea || "").trim();
+  if (!ai) return { grounded: "", ok: false, reason: "ما في عنوان" };
+
+  const custWords = new Set(normalizeAr(customerText).split(/[\s،,.\-()/]+/).filter(Boolean));
+  if (!custWords.size) return { grounded: "", ok: false, reason: "الزبون ما كتب أي نص" };
+
+  // كلمات هيكلية مسموحة حتى لو الزبون ما كتبها (روابط، بادئات)
+  const STRUCT = new Set(["شارع", "بنايه", "عماره", "طابق", "شقه", "حي", "دوار", "جنب",
+    "مقابل", "خلف", "قرب", "بجانب", "عند", "بعد", "قبل", "مسجد", "مدرسه", "بناء", "رقم"]);
+
+  const kept = [], dropped = [];
+  for (const raw of ai.split(/[\s،,.\-()/]+/).filter(Boolean)) {
+    const w = normalizeAr(raw);
+    if (!w) continue;
+    // مقبولة إذا: الزبون كتبها، أو كتب كلمة قريبة منها، أو كلمة هيكلية، أو رقم
+    const inCust = custWords.has(w) ||
+      [...custWords].some(c => c.length >= 3 && (c.includes(w) || w.includes(c))) ||
+      (w.length >= 4 && [...custWords].some(c => c.length >= 4 && editDistance(w, c, 1) <= 1));
+    if (inCust || STRUCT.has(w) || /^\d+$/.test(w)) kept.push(raw);
+    else dropped.push(raw);
+  }
+
+  const grounded = kept.join(" ").trim();
+  // لازم يكون في منطقة معروفة أو GPS بالنص المؤرّض — وإلا مرفوض
+  const parsed = parseAddress(grounded);
+  const hasRealPlace = !!(parsed.components.area || parsed.components.gps || parsed.components.coords);
+
+  return {
+    grounded: hasRealPlace ? grounded : "",
+    ok: hasRealPlace,
+    dropped,
+    reason: hasRealPlace ? "مؤرّض بكلام الزبون"
+      : dropped.length ? `الذكاء الاصطناعي اخترع: ${dropped.join(" ")} — مرفوض`
+      : "ما في منطقة معروفة بكلام الزبون"
+  };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -396,7 +501,7 @@ export function formatAddress(c) {
 export function parseAddress(text) {
   const c = extractComponents(text);
   const s = scoreAddress(c);
-  return { components: c, formatted: formatAddress(c), ...s };
+  return { components: c, formatted: bestAddressText(text, c), ...s };
 }
 
 // ── هل هالنص أصلاً محاولة عنوان؟ (بديل الفلترة الضعيفة القديمة) ──
@@ -428,10 +533,38 @@ export function looksLikeAddressAttempt(text, opts = {}) {
 // ✏️ نية التصحيح — "لأ أنا بالجبيهة مش بصويلح"
 // العلة القديمة: ما كان في تصحيح إطلاقاً.
 // ═══════════════════════════════════════════════════════════
-export const CORRECTION = /(غلط|خطا|خطأ|مش هيك|مو هيك|لا مش|لأ مش|صحح|عدل|بدل العنوان|العنوان الصح|قصدي|اقصد|أقصد|بالغلط)/;
+// كل الصيغ اللي بيصحّح فيها الأردني عنوانه فعلياً — مش الصيغة
+// الرسمية بس. الزبون بيقول "خليها على صويلح" أو "انقلنا"، وإذا
+// ما مسكناها بيضل العنوان القديم بالفاتورة والطلب بيروح غلط.
+export const CORRECTION = new RegExp([
+  // تصريح بالخطأ
+  "غلط", "خطا", "خطأ", "بالغلط", "مش هيك", "مو هيك", "لا مش", "لأ مش", "مش صح",
+  // تصحيح صريح
+  "صحح", "التصحيح", "قصدي", "اقصد", "أقصد", "يعني قصدي",
+  // تعديل العنوان
+  "عدل", "تعديل", "بدل", "بدّل", "غيّر", "غير العنوان", "غيرت",
+  // عنوان بديل
+  "العنوان الصح", "العنوان الصحيح", "العنوان الجديد", "عنوان جديد",
+  "العنوان صار", "صار عنواني", "خليها على", "خليه على", "خليها ع",
+  // انتقال سكن
+  "انقلنا", "انتقلنا", "نقلنا", "بدلت البيت", "غيرت البيت",
+  "سكن جديد", "بمكان جديد", "بيت جديد"
+].join("|"));
 
 export function isCorrection(text) {
-  return CORRECTION.test(normalizeAr(text));
+  const t = normalizeAr(text);
+  if (!CORRECTION.test(t)) return false;
+  // "بدل" و"غيّر" وحدهم ما بيكفوا — لازم يكونوا مرتبطين بالعنوان أو
+  // بمكان معروف، وإلا "بدي أبدل الصنف" بتنحسب تصحيح عنوان.
+  // "بدل/غيّر" لحالهم غامضين: ممكن يقصد الصنف أو الكمية.
+  // فمنطلب قرينة: كلمة مكان، أو منطقة معروفة بنفس الرسالة.
+  if (/(بدل|بدّل|غيّر|غير|عدل|تعديل|غيرت)/.test(t)) {
+    if (/(صنف|طلب|كميه|كمية|نوع|رقم|تلفون)/.test(t)) return false;   // مش عنوان
+    if (/(عنوان|منطقه|موقع|مكان|بيت|سكن)/.test(t)) return true;
+    // إلا إذا الرسالة نفسها فيها منطقة معروفة — وقتها القصد واضح
+    return !!matchArea(t);
+  }
+  return true;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -462,10 +595,22 @@ export function mergeAddress(existing, incomingText, opts = {}) {
     if (inc.typo) merged.typo = inc.typo; else delete merged.typo;
     if (inc.governorate) merged.governorate = inc.governorate;
   }
-  // النص الخام: منجمّع المفيد بدل ما ندعس
-  merged.raw = [prev.raw, String(incomingText || "").trim()]
-    .filter(Boolean).join(" ").slice(0, 400);
+  // ═══════════════════════════════════════════════════════════
+  // 🔴 النص الخام عند التصحيح: منبدأ من جديد، ما منراكم.
+  //
+  // التراكم كان بيخلّي العنوان القديم ملزوق بالجديد:
+  //   "صويلح" ثم "خليها على الجبيهة"
+  //   ⇒ "عمان، الجبيهه، ... بصويلح جنب خليها علي"
+  // والسائق بيقرأ منطقتين بنفس العنوان وما بيعرف وين يروح.
+  //
+  // لما الزبون بيصحّح، هو بيلغي اللي قبله — فمنعامله هيك.
+  // ═══════════════════════════════════════════════════════════
+  merged.raw = correcting
+    ? String(incomingText || "").trim().slice(0, 400)
+    : [prev.raw, String(incomingText || "").trim()]
+        .filter(Boolean).join(" ").slice(0, 400);
 
   const s = scoreAddress(merged);
-  return { components: merged, formatted: formatAddress(merged), corrected: correcting, ...s };
+  return { components: merged, formatted: bestAddressText(merged.raw || incomingText, merged),
+           corrected: correcting, ...s };
 }

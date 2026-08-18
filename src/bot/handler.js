@@ -6,7 +6,7 @@ import { PAGES } from "./brain.js";
 import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64, openReplyWindow, closeReplyWindow } from "./messenger.js";
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
-import { parseAddress } from "./address.js";
+import { parseAddress, groundAddress } from "./address.js";
 import { inboxUrl } from "../brain/links.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
 import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting, lastCompletedOrder, setCancelReason, db, retryDb } from "../db/database.js";
@@ -341,8 +341,27 @@ async function _handleEvent(event, env, ctx) {
           memory.cart = {};
           ai.items.forEach(it => { memory.cart[it.product] = it.qty; });
         }
-        // نحدّث العنوان/الرقم فقط لو الذكاء رجّع قيمة فعلية (لا نمسحهم)
-        if (ai.area) memory.area = ai.area;
+        // 🔴 ممنوع نثق بعنوان الذكاء الاصطناعي أعمى — ممكن يكون مخترعاً.
+        // بنمرّره من بوابة التأريض: كل كلمة لازم تكون من كلام الزبون
+        // الفعلي. إذا اخترع منطقة، بترفض ونضل نسأل الزبون بدل ما نطبع
+        // عنوان غلط بالفاتورة.
+        if (ai.area) {
+          const g = groundAddress(ai.area, convText);
+          if (g.ok) {
+            const checked = parseAddress(g.grounded);
+            // ما نستبدل عنواناً أقوى بأضعف
+            if (!memory.addr || checked.score >= (memory.addressScore || 0)) {
+              memory.addr = checked;
+              memory.area = checked.formatted;
+              memory.addressScore = checked.score;
+              memory.addressLevel = checked.level;
+              memory.addressReady = checked.deliverable;
+              memory.addressQuestion = checked.nextQuestion;
+            }
+          } else {
+            console.warn(`🛑 عنوان الذكاء الاصطناعي مرفوض (${g.reason}): "${ai.area}"`);
+          }
+        }
         if (ai.phone) { memory.phone = ai.phone; memory.invalidPhoneProvided = false; }
       }
       // لو فشل الذكاء (ai.ok=false) نُبقي نتائج الرادار كما هي
@@ -399,13 +418,10 @@ async function _handleEvent(event, env, ctx) {
       const original = String(memory.area).trim();
       const checked = parseAddress(original);
       memory.addr = checked;
-      // 🔴 ممنوع نخسر معلومة: لو التنسيق طلع أقصر من الأصل (يعني في جزء
-      // ما عرفناه، مثل اسم منطقة مش بالفهرس)، منحتفظ بالأصل. عنوان فيه
-      // معلومة زيادة أنفع للسائق من عنوان "نظيف" بس ناقص.
-      memory.area = checked.formatted.length >= original.length
-        ? checked.formatted
-        : (checked.formatted && !original.includes(checked.formatted)
-            ? `${checked.formatted} (${original})` : original);
+      // parseAddress بترجّع التنسيق + أي جزء مفيد ضاع منه، بلا تكرار.
+      // (المنطق القديم هون كان بيضيف الأصل بين قوسين فيطبع العنوان
+      //  مرتين بالفاتورة: "عمان، البيادر (عمان - البيادر)")
+      memory.area = checked.formatted;
       memory.addressScore = checked.score;
       memory.addressLevel = checked.level;
       memory.addressReady = checked.deliverable;
