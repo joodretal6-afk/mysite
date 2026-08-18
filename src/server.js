@@ -29,7 +29,7 @@ import { whatsappEnabled, handleWhatsAppMessage } from "./bot/whatsapp.js";
 //    متغيّر البيئة بيضل بلوحة الاستضافة وما بينرفع لأي مكان.
 //
 // مثال على Render → Environment:
-//    PAGE_TOKEN_1097322276797532 = EAAR...
+//    PAGE_TOKEN_618622274665182 = EAAR...
 // ═══════════════════════════════════════════════════════════
 (async function applyTokens() {
   // (2) قاعدة البيانات

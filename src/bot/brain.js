@@ -48,18 +48,10 @@ export const COMMON_KNOWLEDGE = `
 
 [الأوزان]
 - وزن عبوة أجبان فلفل: 3.200 كيلو غرام.
-- وزن جبنة المهيري: من 3200 إلى 3300 غرام (أي من 3.2 إلى 3.3 كيلو).
 - باقي الصفحات (غزة، المعتمد، وغيرها): النصية = 4 كيلو صافي (4200 غرام).
 
 [دليل أسعار الصفحات الحصري - يمنع الخلط]
-1. صفحة (أجبان المهيري):
-   - الترحيب: "أهلاً وسهلاً أخي العزيز تفضل".
-   - الأسعار: غنم ملوكية 12د / مشمولة 13د (شامل التوصيل، الوزن من 3200 إلى 3300 غرام).
-   - خصم العبوتين: النصيتين 21د شامل التوصيل.
-   - إذا سأل عن عرض الـ10 دنانير: هاد عرض قديم انتهى. السعر الحالي 12د شامل التوصيل.
-   - الرقم: أرسل رقمك لنتواصل معك.
-
-2. صفحة (أجبان فلفل):
+1. صفحة (أجبان فلفل):
    - العرض الحصري: غنم أو ملوكية 13د للنصية / نصيتين 24د شامل التوصيل.
    - الوزن الصافي 3 كيلو و200 غرام.
 
@@ -216,19 +208,6 @@ export const PAGES = {
       `✅ فاتورة أجبان غزة\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
   },
 
-  "446086435262675": {
-    name: "الحلال الابيض",
-    PAGE_TOKEN: "EAARu8DdiVZAwBSChqZBVGmZCztTRqZAh1rS74JUAxNegTP4nNYP0KKcAOSZCFS4QnVoTXjSsufAo1Jc9ZB3mpMlYtEPM1SOz9qsFZAeIIf6ozael10UCAtt8hZCpP12ZAsZBLZAJf2dvw1aZAwiUXZAXhUZB499SiiZCOColJgZAAEJTTNhJPouji3ZBg4Qq4iiZAUZAqtkcpCZBV4bppQZDZD",
-    DELIVERY: 0,
-    DEFAULT_UNIT: "نصية",
-    PRICES: { "ملوكية": 12, "غنم": 12, "مشمولة": 13 },
-    OFFERS: { "ملوكية": { 2: 21 }, "غنم": { 2: 21 }, "مشمولة": { 2: 24 } },
-    PRODUCT_KEYWORDS: { "غنم": /غنم|نعاج/i, "ملوكية": /ملوكية/i, "مشمولة": /مشمولة|اكسترا|أكسترا|سوبر/i },
-    INFO: "الأسعار: غنم ملوكية 12د والعدد 2 بـ 21د، الوزن من 3200 إلى 3300 غرام. الأكسترا سوبر العدد 2 بـ 24د.",
-    INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة الحلال الابيض\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
-  },
-
   "907535882452054": {
     name: "اجبان المعتمد",
     PAGE_TOKEN: "EAARu8DdiVZAwBSHnSCh10a9vKSRBZCeWRmUv3iKMnteYdZC29i8BvkU05GfZC4JmILDe0veBAKkpHZBoWZAbARuw2DInPfLmZCozGlsdKvZBZBaiCqlLW6oC7hoV6umjxv6eYPVRtJKrbZBJzRjc4Do3lLszIFxspiZBYNUZCZCZCoZBj9JcHSHs67mkcajRuIWR0IhD7QxHCMCmAhrZBAZDZD",
@@ -240,19 +219,6 @@ export const PAGES = {
     INFO: "جبنة غنم بلدية 15د، جبنة الشخل 17د، جبنة ماعز 20د. كلها منتجات منزلية أصلية على التواصي فقط. الوزن 4 كيلو صافي (4200 غرام). التوصيل مجاناً. للطلبات 0779175042.\n🔴 كل مرة بتذكر فيها سعر، اذكر معه بنفس الجملة الوزن وإنه شامل التوصيل — مثال: \"الغنم البلدية 15 دينار للنصية 4 كيلو صافي والتوصيل مجاني\". ما تذكر السعر مجرّد رقم أبداً.",
     INVOICE_TEMPLATE: (orderString, p, a, phone) =>
       `✅ فاتورة اجبان المعتمد\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
-  },
-
-  "1097322276797532": {
-    name: "اجبان المهيري",
-    PAGE_TOKEN: "EAARu8DdiVZAwBSP9jEMlsWj7C0SUghGGlfW0EAZB1d9JoY4FZAkNzQXwT562WntZCq2RZBDjldl8s7LPOfudWCUetWZBvKbb9N4dLbtQNKlnCbAeDQrInXsOQU27uMv2LujMa8xaStwJ8dJw40mxpr7ozZCNaoa2bb52wq3RRbny6ZCUwY5ljmHvLDDdSy0Ga0IiK9wZBMQZDZD",
-    DELIVERY: 0,
-    DEFAULT_UNIT: "نصية",
-    PRICES: { "ملوكية": 12, "غنم": 12, "مشمولة": 13 },
-    OFFERS: { "ملوكية": { 2: 21 }, "غنم": { 2: 21 }, "مشمولة": { 2: 24 } },
-    PRODUCT_KEYWORDS: { "غنم": /غنم|نعاج/i, "ملوكية": /ملوكية/i, "مشمولة": /مشمولة|اكسترا|أكسترا|سوبر/i },
-    INFO: "الأسعار: غنم ملوكية 12د والعدد 2 بـ 21د، الوزن من 3200 إلى 3300 غرام. الأكسترا سوبر العدد 2 بـ 24د.",
-    INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة اجبان المهيري\n▪️ الطلب: ${orderString}\n▪️ الحساب: ${p}\n▪️ العنوان: ${a}\n▪️ التلفون: ${phone}\nصحتين وعافية 🌹`
   },
 
   "1271513032713402": {
