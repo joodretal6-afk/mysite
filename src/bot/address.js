@@ -173,13 +173,20 @@ function applyOrdinals(t) {
 
 // البادئات العربية الملتصقة: "بالجبيهة" = بـ + الجبيهة.
 // هاي كانت أكبر سبب فشل مطابقة — الكلمة موجودة بس ملتصقة ببادئة.
-const PREFIX = "(?:ب|و|ف|ل|ك|بال|وال|فال|لل|ولل)?";
+// و"ع"/"عال" عامّية = على: "عالرصيفة" = ع + الرصيفة، "التوصيل عالزرقاء".
+const PREFIX = "(?:ع|ب|و|ف|ل|ك|بال|وال|فال|لل|ولل)?";
 
 function keyRegex(key) {
-  const esc = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // النص الداخل منطبّع دايماً، فلازم نطبّع المفتاح كمان — وإلا مفتاح
+  // فيه ألف مقصورة ("وادي موسى") ما بيطابق النص المطبّع ("وادي موسي").
+  const esc = normalizeAr(key).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   // البادئة ممكن تجي قبل الـ"ال" أو بدلها
   const withoutAl = esc.startsWith("ال") ? esc.slice(2) : null;
-  const alt = withoutAl ? `(?:${esc}|${PREFIX}ال${withoutAl})` : `${PREFIX}${esc}`;
+  // إدغام اللام: "لـ" + "الـ" بتصير "لل" ("للبيادر" = لـ + البيادر)،
+  // ونفس الشي "وللبيادر". لازم نمسكها بالمطابقة المباشرة مش بالتقريب.
+  const alt = withoutAl
+    ? `(?:${esc}|${PREFIX}ال${withoutAl}|و?لل${withoutAl})`
+    : `${PREFIX}${esc}`;
   return new RegExp(BD + alt + AD);
 }
 const KEY_RE = new Map(GAZ_KEYS.map(k => [k, keyRegex(k)]));
@@ -192,7 +199,7 @@ const NEG = /(?:مش|مو|ليس|لا|بدون|غير)\s*$/;
 // بترجّع أفضل ترشيح غير منفي. المنفي بينحفظ عشان نعرف
 // إن الزبون استثناه صراحةً — وهاد بيفرق كثير بالتصحيح.
 // ═══════════════════════════════════════════════════════════
-export function matchArea(normText) {
+export function matchArea(normText, opts = {}) {
   let t = " " + normText + " ";
   for (const [re, rep] of ALIASES) t = t.replace(re, rep);
   t = applyOrdinals(t);
@@ -222,26 +229,31 @@ export function matchArea(normText) {
       return { area: null, governorate: g, match: "محافظة فقط", typo: false };
   }
 
-  // 3) مطابقة تقريبية — للأخطاء الإملائية. منشيل البادئات قبل المقارنة.
+  // ═══════════════════════════════════════════════════════════
+  // 3) مطابقة تقريبية — 🔴 خطر: هون بالضبط اخترع البوت "الضليل" من
+  //    كلمة "الغسيل" و"العبدلي" من "العبد". مسافة تحرير على كلمات
+  //    قصيرة بتطابق كلمات منتج بريئة على مناطق، والطلب بيروح للعقبة
+  //    والزبون بالزرقاء.
+  //
+  //    التشديد: مسافة تحرير 1 فقط (مش 2)، وطول أدنى 5 حروف، والفرق
+  //    لازم يكون <20% من طول الكلمة. وإذا الكلمة نفسها موجودة كاسم
+  //    منطقة مباشرة ما بنجرّب التقريب أصلاً.
+  //
+  //    وبشكل جذري: المطابقة التقريبية بتنطفي افتراضياً، وبتشتغل بس
+  //    لما نكون واثقين إنه النص محاولة عنوان (opts.fuzzy = true) —
+  //    يعني بعد ما البوت يسأل الزبون عن عنوانه صراحةً.
+  // ═══════════════════════════════════════════════════════════
+  if (!opts.fuzzy) return null;
+
   const strip = w => w.replace(/^(?:بال|وال|فال|لل|ولل|ب|و|ف|ل|ك)(?=ال)/, "")
                       .replace(/^(?:ب|و|ف|ل|ك)(?=[^ا])/, "");
-  const words = normText.split(/[\s،,.]+/).map(strip).filter(w => w.length >= 4);
+  const words = normText.split(/[\s،,.]+/).map(strip).filter(w => w.length >= 5);
   for (const w of words) {
     for (const key of GAZ_KEYS) {
-      if (Math.abs(key.length - w.length) > 2) continue;
-      const max = key.length <= 5 ? 1 : 2;
-      if (editDistance(w, key, max) <= max)
+      if (key.length < 5 || Math.abs(key.length - w.length) > 1) continue;
+      // فرق حرف واحد فقط، وبنسبة أقل من خمس طول الكلمة
+      if (editDistance(w, key, 1) <= 1 && (1 / w.length) < 0.2)
         return { area: key, governorate: GAZETTEER[key], match: "تقريبية", typo: true, wrote: w };
-    }
-  }
-  // 4) كلمتين متجاورتين (لأسماء المناطق المركّبة)
-  const ws = normText.split(/[\s،,.]+/).map(strip).filter(Boolean);
-  for (let i = 0; i < ws.length - 1; i++) {
-    const pair = ws[i] + " " + ws[i + 1];
-    for (const key of GAZ_KEYS) {
-      if (!key.includes(" ")) continue;
-      if (editDistance(pair, key, 2) <= 2)
-        return { area: key, governorate: GAZETTEER[key], match: "تقريبية", typo: true, wrote: pair };
     }
   }
   return null;
@@ -256,7 +268,7 @@ const LANDMARK_WORDS = "مسجد|جامع|كنيسه|مدرسه|جامعه|مس�
 
 const NEAR_WORDS = "جنب|بجانب|جمب|حد|مقابل|قدام|امام|خلف|ورا|وراء|قرب|بالقرب|عند|تحت|فوق|بعد|قبل|فوق|نص";
 
-export function extractComponents(raw) {
+export function extractComponents(raw, opts = {}) {
   const norm = normalizeAr(raw);
   const c = { raw: String(raw || "").trim() };
 
@@ -267,7 +279,7 @@ export function extractComponents(raw) {
   if (coords) c.coords = `${coords[1]},${coords[2]}`;
 
   // المنطقة والمحافظة
-  const m = matchArea(norm);
+  const m = matchArea(norm, opts);
   if (m) { c.area = m.area; c.governorate = m.governorate; c.areaMatch = m.match; if (m.typo) c.typo = m.wrote; }
 
   // الشارع
@@ -498,8 +510,8 @@ export function groundAddress(aiArea, customerText) {
 // ═══════════════════════════════════════════════════════════
 // 🚦 الواجهة الرئيسية: حلّل نصاً وقرّر
 // ═══════════════════════════════════════════════════════════
-export function parseAddress(text) {
-  const c = extractComponents(text);
+export function parseAddress(text, opts = {}) {
+  const c = extractComponents(text, opts);
   const s = scoreAddress(c);
   return { components: c, formatted: bestAddressText(text, c), ...s };
 }
@@ -514,7 +526,10 @@ export function looksLikeAddressAttempt(text, opts = {}) {
   const norm = normalizeAr(t);
   if (FILLER.test(norm)) return false;
 
-  const c = extractComponents(t);
+  // لما نكون سألنا الزبون صراحة عن عنوانه، منسمح بالمطابقة التقريبية
+  // هون كمان — عشان ردّ من كلمة وحدة فيها خطأ إملائي ("الجبيها" بدل
+  // "الجبيهة") ينمسك بدل ما يضيع. برّا هالحالة التقريب بيضل مطفي.
+  const c = extractComponents(t, { fuzzy: !!opts.wasAsked });
   // إشارة قوية = منطقة معروفة أو GPS أو مكوّن عنوان صريح
   const strong = !!(c.area || c.governorate || c.gps || c.coords ||
                     c.building || c.street || c.apartment || c.floor || c.district);
@@ -574,7 +589,7 @@ export function isCorrection(text) {
 // وأي تصحيح صريح من الزبون بيغلب كل شي.
 // ═══════════════════════════════════════════════════════════
 export function mergeAddress(existing, incomingText, opts = {}) {
-  const inc = extractComponents(incomingText);
+  const inc = extractComponents(incomingText, { fuzzy: !!(opts.fuzzy || isCorrection(incomingText)) });
   const correcting = isCorrection(incomingText) || opts.force;
   const prev = existing && existing.components ? existing.components : {};
 

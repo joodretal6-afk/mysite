@@ -150,7 +150,10 @@ export function extractArea(memory, text) {
   if (!correcting && !looksLikeAddressAttempt(stripped, { wasAsked })) return;
 
   const before = memory.addr || null;
-  const next = mergeAddress(before, stripped, { force: correcting });
+  // المطابقة التقريبية بتشتغل بس لما نكون واثقين إنه النص عنوان:
+  // البوت سأل صراحةً، أو الزبون بيصحّح. غير هيك، ممنوع نخترع منطقة
+  // من كلمة منتج زي "الغسيل" (اللي كانت بتطابق "الضليل").
+  const next = mergeAddress(before, stripped, { force: correcting, fuzzy: wasAsked || correcting });
 
   // ما منستبدل عنوان أقوى بأضعف إلا لو الزبون بيصحّح صراحةً
   if (before && !correcting && next.score < before.score) return;

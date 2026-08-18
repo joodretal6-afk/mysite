@@ -30,13 +30,15 @@ for (const [txt, area, gov] of [
      `"${txt}" ⇒ ${r.components.area} / ${r.components.governorate}`);
 }
 
-console.log("\n── المناطق: أخطاء إملائية ──");
+// المطابقة التقريبية مطفية افتراضياً (عشان ما يخترع البوت مناطق من
+// كلمات المنتجات)، وبتشتغل بس لما نكون سألنا الزبون عن عنوانه صراحةً.
+console.log("\n── المناطق: أخطاء إملائية (بعد سؤال البوت عن العنوان) ──");
 for (const [txt, area] of [
   ["انا بالجبيها", "الجبيهه"], ["الجبيهه", "الجبيهه"],
   ["الشميسني", "الشميساني"], ["الرابيه", "الرابيه"],
   ["القويسمه", "القويسمه"], ["ابو نصير", "ابو نصير"]
 ]) {
-  const r = parseAddress(txt);
+  const r = parseAddress(txt, { fuzzy: true });
   if (r.components.area === area) console.log(`✅ "${txt}" ⇒ ${area}`);
   else { console.log(`❌ "${txt}" ⇒ ${r.components.area || "لا شيء"} (متوقّع ${area})`); fail++; }
 }
