@@ -102,7 +102,9 @@ ok(acc.components.area === "الجبيهه", `وانتحدّث فعلاً: ${acc
 
 console.log("\n── التراكم عبر رسائل ──");
 acc = mergeAddress(null, "انا بالجبيهة");
-ok(!acc.deliverable, `رسالة 1: ${acc.level} (${acc.score}) — لسه ناقص`);
+// منطقة معروفة لحالها = قابلة للتوصيل (السائق معه رقم الزبون)،
+// بس معلَّمة "خشنة" عشان تنطلب تفاصيل أكثر بلا ما نوقف الطلب.
+ok(acc.deliverable && acc.coarse, `رسالة 1: ${acc.level} (${acc.score}) — يوصل بس خشن`);
 acc = mergeAddress(acc, "جنب مسجد الحسين");
 ok(acc.components.area === "الجبيهه" && acc.components.landmark, "رسالة 2: ضاف المعلم بلا ما يمسح المنطقة");
 acc = mergeAddress(acc, "بناية 15 طابق الثاني");
@@ -140,8 +142,9 @@ ok(!mem.area, "رسالة طلب بلا عنوان ⇒ ما بينحفظ عنو�
 mem = {};
 extractArea(mem, "انا بالجبيهة");
 ok(mem.area === "عمان، الجبيهه", `العنوان منسّق: "${mem.area}"`);
-ok(mem.addressReady === false, "منطقة لحالها ⇒ مش جاهز");
-ok(!!mem.addressQuestion, `والسؤال: "${mem.addressQuestion}"`);
+ok(mem.addressReady === true && mem.addr.coarse,
+   "منطقة لحالها ⇒ يوصل بس خشن (ما بيوقف الطلب)");
+ok(!!mem.addressQuestion, `ومعه سؤال تحسين: "${mem.addressQuestion}"`);
 
 extractArea(mem, "جنب مسجد الحسين بناية 15");
 ok(mem.addressReady === true, `بعد التفاصيل ⇒ جاهز (${mem.addressScore})`);
@@ -167,6 +170,14 @@ const strong = mem.area, strongScore = mem.addressScore;
 extractArea(mem, "عمان");
 ok(mem.area === strong && mem.addressScore === strongScore,
    "ذكر المحافظة لحالها ما دعس العنوان الكامل");
+
+console.log("\n── حدّ التوصيل: بنعرف وين؟ ──");
+for (const [t, want] of [["البيادر", true], ["الجبيهة", true],
+                         ["عمان", false], ["بيت أبو أحمد", false], ["جنب المسجد", false]]) {
+  const x = parseAddress(t);
+  ok(x.deliverable === want,
+     `"${t}" ⇒ ${x.deliverable ? "يوصل" : "ما بيوصل"} (${x.score}%) — ${want ? "منطقة معروفة" : "ما بنعرف وين"}`);
+}
 
 console.log(`\n${"═".repeat(52)}`);
 console.log(`   ${fail ? `فشل ${fail}` : "كل الفحوصات نجحت"}${soft ? ` · ${soft} ملاحظة` : ""}`);

@@ -396,9 +396,16 @@ async function _handleEvent(event, env, ctx) {
   if (memory.area && !memory.addr) {
     // عنوان جا من الذكاء الاصطناعي أو من طلب سابق — منقيسه بنفس المسطرة
     try {
-      const checked = parseAddress(memory.area);
+      const original = String(memory.area).trim();
+      const checked = parseAddress(original);
       memory.addr = checked;
-      memory.area = checked.formatted;
+      // 🔴 ممنوع نخسر معلومة: لو التنسيق طلع أقصر من الأصل (يعني في جزء
+      // ما عرفناه، مثل اسم منطقة مش بالفهرس)، منحتفظ بالأصل. عنوان فيه
+      // معلومة زيادة أنفع للسائق من عنوان "نظيف" بس ناقص.
+      memory.area = checked.formatted.length >= original.length
+        ? checked.formatted
+        : (checked.formatted && !original.includes(checked.formatted)
+            ? `${checked.formatted} (${original})` : original);
       memory.addressScore = checked.score;
       memory.addressLevel = checked.level;
       memory.addressReady = checked.deliverable;
@@ -407,24 +414,41 @@ async function _handleEvent(event, env, ctx) {
   }
 
   const cartItemsCount = memory.cart ? Object.keys(memory.cart).length : 0;
-  const addressOk = !!memory.area && memory.addressReady !== false;
-  const complete = cartItemsCount > 0 && addressOk && memory.phone && !memory.invalidPhoneProvided;
-  const readyForInvoice = complete && !memory.sent;
 
-  // 🔴 عنده كل شي إلا إن العنوان ناقص → منسأل سؤال واحد محدّد، ما منطلّع فاتورة.
-  // هاي النقطة اللي كانت بتطلّع فواتير بعناوين غلط.
-  if (cartItemsCount > 0 && memory.phone && memory.area && memory.addressReady === false
-      && memory.addressQuestion && !memory.sent) {
-    const q = memory.addressQuestion;
-    if (memory._lastAddrQ !== q) {           // ما منكرّر نفس السؤال
-      memory._lastAddrQ = q;
-      memory.lastReply = q;
-      const ask = `تمام 👌 ضلّ إشي واحد بس عشان يوصلك الطلب صح:\n${q}`;
-      logMessage({ page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
-                   direction: "out", body: ask, created_at: Date.now() });
-      await sendText(senderId, ask, pageConfig);
-      return;
-    }
+  // ═══════════════════════════════════════════════════════════
+  // 🔴 قاعدة فوق كل شي: البوت ما بيسكت أبداً.
+  //
+  // نسخة سابقة كانت بتوقف الفاتورة لما العنوان ناقص، وإذا الزبون
+  // ما حسّن العنوان بتضل واقفة للأبد — فالزبون بيعطي رقمه وبيستنى
+  // ولا إشي بيجي. هاد أسوأ من عنوان ناقص بكثير: طلب جاهز بيضيع كامل.
+  //
+  // القاعدة الصح: نسأل **مرة وحدة** عن اللي ناقص. إذا الزبون ما زوّدنا،
+  // بنكمّل الطلب عادي ومنعلّمه للمراجعة البشرية + تنبيه تيليجرام.
+  // موظف بيتصل ويسأل أرخص بكثير من زبون ضاع وهو جاهز يدفع.
+  // ═══════════════════════════════════════════════════════════
+  // العنوان "خشن" = عرفنا المنطقة بس بلا تفاصيل (مثل "البيادر").
+  // هاد **بيوصل** — السائق معه رقم الزبون. فما بنوقف الطلب عشانه،
+  // بس بنضيف سطر لطيف بالفاتورة بيطلب معلم، وبننبّه للمراجعة.
+  const addrCoarse = !!(memory.addr && memory.addr.coarse);
+  // ما عرفنا وين أصلاً (محافظة لحالها أو وصف بلا مكان) = مش جاهز
+  const addrUnknown = !!memory.area && memory.addressReady === false;
+
+  const complete = cartItemsCount > 0 && !!memory.area && !addrUnknown
+                   && memory.phone && !memory.invalidPhoneProvided;
+  const readyForInvoice = complete && !memory.sent;
+  const needsAddressReview = complete && addrCoarse;
+
+  // معه صنف ورقم، بس ما بنعرف وين ⇒ سؤال واحد محدّد، مرة وحدة بس.
+  // بعدها بيكمّل مع الذكاء الاصطناعي عادي — ما بنسكت ولا بنعلّق الطلب.
+  if (cartItemsCount > 0 && memory.phone && addrUnknown
+      && memory.addressQuestion && !memory._addrAsked && !memory.sent) {
+    memory._addrAsked = true;
+    memory.lastReply = memory.addressQuestion;
+    const ask = `تمام 👌 ضلّ إشي واحد بس عشان يوصلك الطلب صح:\n${memory.addressQuestion}`;
+    logMessage({ page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
+                 direction: "out", body: ask, created_at: Date.now() });
+    await sendText(senderId, ask, pageConfig);
+    return;
   }
 
   const messengerUrl = inboxUrl(recipientId, senderId);
@@ -486,6 +510,10 @@ async function _handleEvent(event, env, ctx) {
   if (readyForInvoice) {
     const { total, orderString, detailedString, priceString } = computeOrder(effConfig, memory.cart, memory.coupon);
     reply = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, memory.area, memory.phone);
+    // العنوان خشن: منطلب المعلم **مع** الفاتورة مش بدالها.
+    // الطلب بيمشي، والزبون بيقدر يزوّدنا بلا ما يستنى ولا يضيع.
+    if (needsAddressReview)
+      reply += "\n\n📍 لو بتقدر تبعتلي أقرب معلم بيسهّل على السائق يوصلك أسرع.";
     memory.sent = true;
     justSentInvoice = true;
 
@@ -500,7 +528,13 @@ async function _handleEvent(event, env, ctx) {
     } catch (e) { console.error("loyalty check:", e && e.message); }
 
     ctx.waitUntil(notifyTelegram(
-      `🔔 طلب جديد من (${pageConfig.name})!\n\n🧀 الطلب: ${orderString}\n💰 الحساب: ${total}د\n📍 العنوان: ${memory.area}\n📞 التلفون: ${memory.phone}\n🔗 رابط الماسنجر: ${messengerUrl}`
+      `🔔 طلب جديد من (${pageConfig.name})!\n\n🧀 الطلب: ${orderString}\n💰 الحساب: ${total}د\n` +
+      `📍 العنوان: ${memory.area}` +
+      // 🔴 تنبيه صريح: الطلب مشى بس عنوانه ناقص — لازم مكالمة تأكيد
+      (needsAddressReview
+        ? `\n⚠️ العنوان ناقص (${memory.addressLevel || "—"} ${memory.addressScore ?? "—"}%) — اتصل وأكّده قبل التوصيل`
+        : "") +
+      `\n📞 التلفون: ${memory.phone}\n🔗 رابط الماسنجر: ${messengerUrl}`
     ));
 
     ctx.waitUntil(env.SESSIONS_KV.put(crmKey, JSON.stringify({
