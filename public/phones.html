@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>البحث عن الأرقام — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1000px; margin:0 auto; padding:18px; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.05); padding:18px; margin-bottom:16px; }
+    .filters { display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; }
+    .field { display:flex; flex-direction:column; gap:6px; }
+    .field label { font-size:13px; color:var(--mut); font-weight:600; }
+    .field input, .field select { padding:10px 12px; border-radius:9px; border:1px solid var(--line); font-family:inherit; font-size:14px; min-width:160px; }
+    .btn { background:var(--green); color:#fff; border:none; padding:11px 22px; border-radius:9px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
+    .btn:hover { background:var(--green2); }
+    .btn.sec { background:#eceff1; color:#37474f; }
+    .quick { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .quick button { background:#e8f5e9; color:var(--green2); border:1px solid #c8e6c9; padding:6px 12px; border-radius:20px; font-size:12px; cursor:pointer; font-family:inherit; }
+    .summary { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+    .summary b { color:var(--green2); font-size:17px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { padding:11px 12px; text-align:right; border-bottom:1px solid var(--line); }
+    th { background:#f6faf6; color:var(--green2); font-size:13px; position:sticky; top:0; }
+    td .num { font-weight:700; font-size:15px; direction:ltr; unicode-bidi:embed; letter-spacing:.5px; }
+    .sample { color:var(--mut); font-size:12px; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pill { background:#eceff1; border-radius:12px; padding:2px 9px; font-size:11px; color:#546e7a; }
+    .copybtn { background:none; border:1px solid var(--line); border-radius:7px; padding:4px 9px; cursor:pointer; font-size:12px; }
+    .hint { padding:40px 20px; text-align:center; color:var(--mut); }
+    .tablewrap { max-height:60vh; overflow:auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📞 البحث عن أرقام الهاتف</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="card">
+      <div class="filters">
+        <div class="field">
+          <label>من تاريخ</label>
+          <input type="date" id="from">
+        </div>
+        <div class="field">
+          <label>إلى تاريخ</label>
+          <input type="date" id="to">
+        </div>
+        <div class="field">
+          <label>الصفحة (اختياري)</label>
+          <select id="pageSel"><option value="">كل الصفحات</option></select>
+        </div>
+        <button class="btn" id="searchBtn">🔍 بحث عن الأرقام</button>
+      </div>
+      <div class="quick">
+        <button onclick="quick(0)">اليوم</button>
+        <button onclick="quick(1)">أمس</button>
+        <button onclick="quick(7)">آخر 7 أيام</button>
+        <button onclick="quick(30)">آخر 30 يوم</button>
+      </div>
+    </div>
+
+    <div class="card" id="resultsCard" style="display:none">
+      <div class="summary">
+        <div><b id="cnt">0</b> رقم مختلف</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn sec" id="copyAll">📋 نسخ كل الأرقام</button>
+          <button class="btn sec" id="csvBtn">⬇️ تصدير CSV</button>
+        </div>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr>
+            <th>الرقم</th><th>عدد المرات</th><th>الصفحة</th><th>آخر ظهور</th><th>مقتطف</th><th></th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" id="emptyCard"><div class="hint">حدّد التاريخ واضغط «بحث عن الأرقام» لعرض كل الأرقام المذكورة بالدردشات.</div></div>
+  </div>
+
+  <script>
+    let DATA = [];
+    function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function fmt(t){ try{ return new Date(t).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}); }catch{ return ''; } }
+    function ymd(d){ return d.toISOString().slice(0,10); }
+
+    function quick(daysBack){
+      const now = new Date();
+      const to = new Date(now); const from = new Date(now);
+      if(daysBack===1){ from.setDate(from.getDate()-1); to.setDate(to.getDate()-1); }
+      else if(daysBack>1){ from.setDate(from.getDate()-daysBack+1); }
+      document.getElementById('from').value = ymd(from);
+      document.getElementById('to').value = ymd(to);
+      search();
+    }
+
+    async function loadPages(){
+      try{
+        const r = await fetch('/admin/api/pages-all');
+        if(r.status===401){ location.href='/admin/login'; return; }
+        const pages = await r.json();
+        document.getElementById('pageSel').innerHTML = '<option value="">كل الصفحات</option>' + pages.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+      }catch{}
+    }
+
+    async function search(){
+      const from = document.getElementById('from').value;
+      const to = document.getElementById('to').value;
+      const pid = document.getElementById('pageSel').value;
+      const btn = document.getElementById('searchBtn');
+      btn.textContent = '⏳ جاري البحث...'; btn.disabled = true;
+      try{
+        const q = new URLSearchParams(); if(from) q.set('from',from); if(to) q.set('to',to); if(pid) q.set('page_id',pid);
+        const r = await fetch('/admin/api/phones?'+q.toString());
+        if(r.status===401){ location.href='/admin/login'; return; }
+        const d = await r.json();
+        DATA = d.results||[];
+        render();
+      }catch(e){ alert('تعذّر البحث'); }
+      finally{ btn.textContent = '🔍 بحث عن الأرقام'; btn.disabled = false; }
+    }
+
+    function render(){
+      document.getElementById('emptyCard').style.display = 'none';
+      document.getElementById('resultsCard').style.display = 'block';
+      document.getElementById('cnt').textContent = DATA.length;
+      if(!DATA.length){ document.getElementById('rows').innerHTML = '<tr><td colspan="6" class="hint">ولا رقم بهالفترة</td></tr>'; return; }
+      document.getElementById('rows').innerHTML = DATA.map(x=>`
+        <tr>
+          <td><span class="num">${esc(x.phone)}</span></td>
+          <td>${x.count}</td>
+          <td><span class="pill">${esc((x.pages||[]).join('، '))}</span></td>
+          <td>${fmt(x.last_at)}</td>
+          <td class="sample" title="${esc(x.sample)}">${esc(x.sample)}</td>
+          <td><button class="copybtn" onclick="copyOne('${esc(x.phone)}',this)">نسخ</button></td>
+        </tr>`).join('');
+    }
+
+    function copyOne(p, btn){ navigator.clipboard.writeText(p).then(()=>{ btn.textContent='✓'; setTimeout(()=>btn.textContent='نسخ',1200); }); }
+    document.getElementById('copyAll').addEventListener('click',()=>{
+      const txt = DATA.map(x=>x.phone).join('\n');
+      navigator.clipboard.writeText(txt).then(()=>alert('اننسخت '+DATA.length+' رقم'));
+    });
+    document.getElementById('csvBtn').addEventListener('click',()=>{
+      const rows = [['الرقم','عدد المرات','عدد العملاء','الصفحات','أول ظهور','آخر ظهور']].concat(
+        DATA.map(x=>[x.phone,x.count,x.customers,(x.pages||[]).join(' | '),fmt(x.first_at),fmt(x.last_at)]));
+      const csv = '﻿' + rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+      a.download = 'phones.csv'; a.click();
+    });
+
+    document.getElementById('searchBtn').addEventListener('click', search);
+    loadPages();
+    quick(0);   // افتراضياً: اليوم
+  </script>
+</body>
+</html>
