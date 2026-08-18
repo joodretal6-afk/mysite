@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>عمليات الطلبات — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1050px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; -webkit-overflow-scrolling:touch; }
+    .tabs button { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:20px; cursor:pointer; font-family:inherit; font-size:13.5px; color:#37474f; white-space:nowrap; }
+    .tabs button.on { background:var(--green); border-color:var(--green); color:#fff; font-weight:bold; }
+    .card { background:var(--card); border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:18px; }
+    .card h3 { color:var(--green2); font-size:16px; margin-bottom:14px; }
+    .tab-page { display:none; }
+    .tab-page.on { display:block; }
+    .form { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+    .fld { display:flex; flex-direction:column; gap:5px; }
+    .fld label { font-size:12px; color:var(--mut); }
+    .fld input, .fld select, .fld textarea { padding:10px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14px; font-family:inherit; min-width:120px; }
+    .fld textarea { min-width:240px; }
+    .btn { padding:11px 20px; background:var(--green); color:#fff; border:none; border-radius:9px; font-weight:bold; cursor:pointer; font-family:inherit; font-size:14px; }
+    .btn:hover { background:var(--green2); }
+    .btn.gray { background:#607d8b; }
+    .btn.small { padding:7px 12px; font-size:12.5px; }
+    .btn.danger { background:var(--red); }
+    .tbl-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th,td { padding:10px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    td.wrapcell { white-space:normal; min-width:160px; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    .empty { text-align:center; padding:28px; color:var(--mut); }
+    .muted { color:var(--mut); font-size:12.5px; }
+    .pill { display:inline-block; padding:3px 10px; border-radius:12px; font-size:12px; background:#e8f5e9; color:var(--green2); }
+    .pill.red { background:#ffebee; color:var(--red); }
+    .late-row { background:#fff5f5; }
+    .age { color:var(--red); font-weight:800; }
+    .labels-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; }
+    .label-card { border:2px dashed #9e9e9e; border-radius:10px; padding:14px; background:#fff; font-size:13.5px; line-height:1.9; page-break-inside:avoid; break-inside:avoid; }
+    .label-card b { color:var(--green2); }
+    .label-total { font-size:16px; font-weight:800; color:var(--green2); border-top:1px solid var(--line); margin-top:6px; padding-top:6px; }
+    .tl { list-style:none; border-right:2px solid var(--green); padding-right:16px; margin-right:8px; }
+    .tl li { position:relative; padding:8px 0; }
+    .tl li::before { content:''; position:absolute; right:-22px; top:14px; width:10px; height:10px; border-radius:50%; background:var(--green); }
+    .note-item { border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px; }
+    .route-group { border:1px solid var(--line); border-radius:10px; margin-bottom:12px; overflow:hidden; }
+    .route-head { background:#f0f4f1; padding:11px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; font-weight:700; color:var(--green2); }
+    .route-body { display:none; padding:6px 12px 12px; }
+    .route-group.open .route-body { display:block; }
+    .dup-group { border:1px solid #ffcdd2; border-radius:10px; margin-bottom:12px; overflow:hidden; }
+    .dup-head { background:#ffebee; padding:10px 14px; font-weight:700; color:var(--red); }
+    .msg { padding:10px 14px; border-radius:9px; margin:10px 0; font-size:13.5px; display:none; }
+    .msg.ok { display:block; background:#e8f5e9; color:var(--green2); }
+    .msg.err { display:block; background:#ffebee; color:var(--red); }
+    .checkcell { text-align:center; }
+    @media (max-width:640px) { .wrap { padding:10px; } .card { padding:14px; } .fld input, .fld select { min-width:100px; } }
+    @media print {
+      body * { visibility:hidden; }
+      .printable, .printable * { visibility:visible; }
+      .printable { position:absolute; top:0; right:0; left:0; width:100%; box-shadow:none; }
+      .no-print { display:none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="no-print">
+    <h1>📦 عمليات الطلبات</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+
+  <div class="wrap">
+    <nav class="tabs no-print" id="tabs">
+      <button data-tab="bulk" class="on">🧰 إجراءات جماعية</button>
+      <button data-tab="prep">🧀 ورقة التحضير</button>
+      <button data-tab="labels">🏷️ بوليصات الشحن</button>
+      <button data-tab="route">🗺️ جولة التوصيل</button>
+      <button data-tab="drivers">🛵 السائقون</button>
+      <button data-tab="dupes">👥 كشف التكرار</button>
+      <button data-tab="timeline">🕒 خط زمني</button>
+      <button data-tab="notes">📝 ملاحظات</button>
+      <button data-tab="late">⏰ المتأخرة</button>
+      <button data-tab="manual">✍️ طلب يدوي</button>
+    </nav>
+
+    <!-- 1) إجراءات جماعية -->
+    <section class="tab-page on" id="tab-bulk">
+      <div class="card">
+        <h3>🧰 إجراءات جماعية على الطلبات</h3>
+        <div class="form">
+          <div class="fld"><label>فلترة بالحالة</label>
+            <select id="bulkFilter">
+              <option value="">الكل</option>
+              <option>ناقص</option><option>جديد</option><option>تم التواصل</option>
+              <option>تم الشحن</option><option>تم التسليم</option><option>ملغي</option>
+            </select>
+          </div>
+          <div class="fld"><label>بحث</label><input id="bulkSearch" placeholder="هاتف / منطقة / صنف"></div>
+          <button class="btn" onclick="loadBulk()">تحميل</button>
+        </div>
+        <div class="msg" id="bulkMsg"></div>
+        <div class="form" style="margin:12px 0">
+          <div class="fld"><label>الحالة الجديدة للمحدد</label>
+            <select id="bulkStatus">
+              <option>جديد</option><option>تم التواصل</option><option>تم الشحن</option>
+              <option>تم التسليم</option><option>ملغي</option><option>ناقص</option>
+            </select>
+          </div>
+          <button class="btn" onclick="applyBulk()">تطبيق على المحدد</button>
+          <span class="muted" id="bulkCount"></span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th class="checkcell"><input type="checkbox" id="bulkAll" onchange="toggleAll(this)"></th>
+              <th>#</th><th>الصفحة</th><th>الطلب</th><th>المبلغ</th><th>المنطقة</th><th>الهاتف</th><th>الحالة</th></tr></thead>
+            <tbody id="bulkRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="bulkEmpty" style="display:none">لا توجد طلبات مطابقة — جرّب فلترة أخرى 🌿</div>
+      </div>
+    </section>
+
+    <!-- 2) ورقة التحضير -->
+    <section class="tab-page" id="tab-prep">
+      <div class="card" id="prepCard">
+        <h3>🧀 ورقة تحضير اليوم <span class="muted" id="prepDateLabel"></span></h3>
+        <div class="form no-print">
+          <div class="fld"><label>التاريخ</label><input type="date" id="prepDate"></div>
+          <button class="btn" onclick="loadPrep()">عرض</button>
+          <button class="btn gray" onclick="printSection('prepCard')">🖨️ طباعة</button>
+        </div>
+        <div class="msg" id="prepMsg"></div>
+        <p class="muted" id="prepSummary" style="margin:10px 0"></p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>الصنف</th><th>الوحدة</th><th>الكمية المطلوبة</th><th>عدد الطلبات</th></tr></thead>
+            <tbody id="prepRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="prepEmpty" style="display:none">لا توجد طلبات لهذا اليوم بعد ☀️</div>
+      </div>
+    </section>
+
+    <!-- 3) بوليصات الشحن -->
+    <section class="tab-page" id="tab-labels">
+      <div class="card" id="labelsCard">
+        <h3>🏷️ بوليصات الشحن</h3>
+        <div class="form no-print">
+          <div class="fld"><label>حالة الطلبات</label>
+            <select id="labelsStatus">
+              <option>جديد</option><option>تم التواصل</option><option>تم الشحن</option>
+              <option>تم التسليم</option><option>ناقص</option>
+            </select>
+          </div>
+          <button class="btn" onclick="loadLabels()">توليد البوليصات</button>
+          <button class="btn gray" onclick="printSection('labelsCard')">🖨️ طباعة الكل</button>
+        </div>
+        <div class="msg" id="labelsMsg"></div>
+        <div class="labels-grid" id="labelsGrid" style="margin-top:14px"></div>
+        <div class="empty" id="labelsEmpty" style="display:none">لا توجد طلبات بهذه الحالة 📭</div>
+      </div>
+    </section>
+
+    <!-- 4) جولة التوصيل -->
+    <section class="tab-page" id="tab-route">
+      <div class="card">
+        <h3>🗺️ جولة التوصيل — تجميع حسب المنطقة</h3>
+        <p class="muted" style="margin-bottom:12px">طلبات «جديد» و«تم التواصل» مجمّعة حسب أول كلمة من العنوان، الأكثر طلبات أولاً.</p>
+        <button class="btn" onclick="loadRoute()">تحديث الجولة</button>
+        <div class="msg" id="routeMsg"></div>
+        <div id="routeGroups" style="margin-top:14px"></div>
+        <div class="empty" id="routeEmpty" style="display:none">لا توجد طلبات جاهزة للتوصيل حالياً 🛻</div>
+      </div>
+    </section>
+
+    <!-- 5) السائقون -->
+    <section class="tab-page" id="tab-drivers">
+      <div class="card">
+        <h3>🛵 إضافة سائق</h3>
+        <div class="form">
+          <div class="fld"><label>الاسم</label><input id="drvName" placeholder="اسم السائق"></div>
+          <div class="fld"><label>الهاتف</label><input id="drvPhone" placeholder="07xxxxxxxx"></div>
+          <button class="btn" onclick="addDriver()">إضافة</button>
+        </div>
+        <div class="msg" id="drvMsg"></div>
+      </div>
+      <div class="card">
+        <h3>قائمة السائقين</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>#</th><th>الاسم</th><th>الهاتف</th><th>طلبات معيّنة</th><th></th></tr></thead>
+            <tbody id="drvRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="drvEmpty" style="display:none">لا يوجد سائقون بعد — أضف أول سائق 🛵</div>
+      </div>
+      <div class="card">
+        <h3>تعيين طلب لسائق</h3>
+        <div class="form">
+          <div class="fld"><label>رقم الطلب</label><input id="asgOrder" type="number" min="1" placeholder="مثال: 15"></div>
+          <div class="fld"><label>السائق</label><select id="asgDriver"></select></div>
+          <button class="btn" onclick="assignOrder()">تعيين</button>
+        </div>
+        <div class="msg" id="asgMsg"></div>
+      </div>
+      <div class="card">
+        <h3>طلبات سائق معيّن</h3>
+        <div class="form">
+          <div class="fld"><label>اختر السائق</label><select id="viewDriver"></select></div>
+          <button class="btn" onclick="loadDriverOrders()">عرض الطلبات</button>
+        </div>
+        <div class="tbl-wrap" style="margin-top:12px">
+          <table>
+            <thead><tr><th>#</th><th>الطلب</th><th>المبلغ</th><th>المنطقة</th><th>الهاتف</th><th>الحالة</th><th></th></tr></thead>
+            <tbody id="drvOrdRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="drvOrdEmpty" style="display:none">لا توجد طلبات معيّنة لهذا السائق</div>
+      </div>
+    </section>
+
+    <!-- 6) كشف التكرار -->
+    <section class="tab-page" id="tab-dupes">
+      <div class="card">
+        <h3>👥 كشف الطلبات المكررة</h3>
+        <p class="muted" style="margin-bottom:12px">مجموعات طلبات بنفس رقم الهاتف خلال 24 ساعة (آخر 7 أيام) — قد تكون تكراراً بالخطأ.</p>
+        <button class="btn" onclick="loadDupes()">فحص التكرار</button>
+        <div class="msg" id="dupMsg"></div>
+        <div id="dupGroups" style="margin-top:14px"></div>
+        <div class="empty" id="dupEmpty" style="display:none">ممتاز! لا يوجد تكرار مشتبه به ✅</div>
+      </div>
+    </section>
+
+    <!-- 7) خط زمني -->
+    <section class="tab-page" id="tab-timeline">
+      <div class="card">
+        <h3>🕒 الخط الزمني لطلب</h3>
+        <div class="form">
+          <div class="fld"><label>رقم الطلب</label><input id="tlOrder" type="number" min="1" placeholder="مثال: 15"></div>
+          <button class="btn" onclick="loadTimeline()">عرض</button>
+        </div>
+        <div class="msg" id="tlMsg"></div>
+        <div id="tlOrderInfo" class="muted" style="margin:12px 0"></div>
+        <div class="form" id="tlAddForm" style="display:none">
+          <div class="fld"><label>حدث جديد</label><input id="tlEvent" placeholder="مثال: الزبون طلب التوصيل مساءً"></div>
+          <button class="btn" onclick="addTimelineEvent()">تسجيل الحدث</button>
+        </div>
+        <ul class="tl" id="tlList" style="margin-top:14px"></ul>
+        <div class="empty" id="tlEmpty" style="display:none">اكتب رقم طلب لعرض خطه الزمني 🕒</div>
+      </div>
+    </section>
+
+    <!-- 8) ملاحظات -->
+    <section class="tab-page" id="tab-notes">
+      <div class="card">
+        <h3>📝 ملاحظات داخلية على الطلبات</h3>
+        <div class="form">
+          <div class="fld"><label>رقم الطلب</label><input id="ntOrder" type="number" min="1" placeholder="مثال: 15"></div>
+          <button class="btn" onclick="loadNotes()">عرض الملاحظات</button>
+        </div>
+        <div class="msg" id="ntMsg"></div>
+        <div id="ntOrderInfo" class="muted" style="margin:12px 0"></div>
+        <div class="form" id="ntAddForm" style="display:none">
+          <div class="fld"><label>ملاحظة جديدة</label><textarea id="ntText" rows="2" placeholder="مثال: الزبون يفضّل الاتصال قبل التوصيل"></textarea></div>
+          <div class="fld"><label>الكاتب (اختياري)</label><input id="ntAuthor" placeholder="اسمك"></div>
+          <button class="btn" onclick="addNote()">إضافة</button>
+        </div>
+        <div id="ntList" style="margin-top:14px"></div>
+        <div class="empty" id="ntEmpty" style="display:none">اكتب رقم طلب لعرض ملاحظاته 📝</div>
+      </div>
+    </section>
+
+    <!-- 9) المتأخرة -->
+    <section class="tab-page" id="tab-late">
+      <div class="card">
+        <h3>⏰ الطلبات المتأخرة</h3>
+        <p class="muted" style="margin-bottom:12px">طلبات بحالة «جديد» مضى عليها أكثر من 24 ساعة بدون متابعة — الأقدم أولاً.</p>
+        <button class="btn" onclick="loadLate()">تحديث</button>
+        <div class="msg" id="lateMsg"></div>
+        <div class="tbl-wrap" style="margin-top:12px">
+          <table>
+            <thead><tr><th>#</th><th>العمر</th><th>الصفحة</th><th>الطلب</th><th>المبلغ</th><th>المنطقة</th><th>الهاتف</th></tr></thead>
+            <tbody id="lateRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="lateEmpty" style="display:none">رائع! لا توجد طلبات متأخرة 🎉</div>
+      </div>
+    </section>
+
+    <!-- 10) طلب يدوي -->
+    <section class="tab-page" id="tab-manual">
+      <div class="card">
+        <h3>✍️ إضافة طلب يدوي سريع</h3>
+        <p class="muted" style="margin-bottom:12px">لطلبات الهاتف أو الواتساب — يُسجَّل مباشرة في جدول الطلبات باسم «طلب يدوي».</p>
+        <div class="form">
+          <div class="fld" style="flex:1;min-width:240px"><label>تفاصيل الطلب</label>
+            <input id="mnOrder" placeholder="غنم (2 نصية) + لبنة (1 كيلو)"></div>
+          <div class="fld"><label>المبلغ الإجمالي</label><input id="mnTotal" type="number" step="0.5" min="0" placeholder="28"></div>
+        </div>
+        <div class="form" style="margin-top:10px">
+          <div class="fld" style="flex:1;min-width:200px"><label>العنوان / المنطقة</label><input id="mnArea" placeholder="عمان - صويلح"></div>
+          <div class="fld"><label>الهاتف</label><input id="mnPhone" placeholder="07xxxxxxxx"></div>
+          <div class="fld"><label>الحالة</label>
+            <select id="mnStatus"><option>جديد</option><option>تم التواصل</option><option>تم الشحن</option><option>تم التسليم</option></select>
+          </div>
+          <button class="btn" onclick="addManual()">💾 حفظ الطلب</button>
+        </div>
+        <div class="msg" id="mnMsg"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    var API = '/admin/f-api/ordersops';
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    function fmtDate(ms){ var d=new Date(Number(ms)); return d.toLocaleDateString('ar-EG')+' '+d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}); }
+    function showMsg(id, text, ok){ var el=document.getElementById(id); el.textContent=text; el.className='msg '+(ok?'ok':'err'); if(ok) setTimeout(function(){ el.className='msg'; }, 3500); }
+
+    async function api(path, opts){
+      var r = await fetch(API+path, opts||{});
+      if (r.status===401){ location.href='/admin/login'; throw new Error('unauthorized'); }
+      var j = await r.json().catch(function(){ return {}; });
+      if (!r.ok) throw new Error(j.error || 'حدث خطأ غير متوقع');
+      return j;
+    }
+
+    // ── تبويبات ──
+    document.getElementById('tabs').addEventListener('click', function(e){
+      var b = e.target.closest('button'); if(!b) return;
+      document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('on'); });
+      document.querySelectorAll('.tab-page').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      document.getElementById('tab-'+b.dataset.tab).classList.add('on');
+      var loaders = { bulk:loadBulk, prep:loadPrep, labels:loadLabels, route:loadRoute, drivers:loadDrivers, dupes:loadDupes, late:loadLate };
+      if (loaders[b.dataset.tab]) loaders[b.dataset.tab]();
+    });
+
+    // ── طباعة قسم معيّن فقط ──
+    function printSection(id){
+      var el = document.getElementById(id);
+      el.classList.add('printable');
+      window.print();
+      setTimeout(function(){ el.classList.remove('printable'); }, 600);
+    }
+    window.onafterprint = function(){ document.querySelectorAll('.printable').forEach(function(x){ x.classList.remove('printable'); }); };
+
+    // ═══ 1) إجراءات جماعية ═══
+    async function loadBulk(){
+      try {
+        var st = document.getElementById('bulkFilter').value;
+        var q = document.getElementById('bulkSearch').value.trim();
+        var j = await api('/orders?limit=200'+(st?'&status='+encodeURIComponent(st):'')+(q?'&search='+encodeURIComponent(q):''));
+        var tb = document.getElementById('bulkRows'); tb.innerHTML='';
+        document.getElementById('bulkAll').checked = false;
+        var empty = document.getElementById('bulkEmpty');
+        empty.style.display = j.orders.length ? 'none' : 'block';
+        document.getElementById('bulkCount').textContent = j.orders.length ? ('المعروض: '+j.orders.length+' طلب') : '';
+        j.orders.forEach(function(o){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td class="checkcell"><input type="checkbox" class="bulkChk" value="'+Number(o.id)+'"></td>'+
+            '<td>'+Number(o.id)+'</td><td>'+esc(o.page_name)+'</td><td class="wrapcell">'+esc(o.order_string)+'</td>'+
+            '<td>'+esc(o.total)+'د</td><td class="wrapcell">'+esc(o.area)+'</td><td>'+esc(o.phone)+'</td>'+
+            '<td><span class="pill'+(o.status==='ملغي'?' red':'')+'">'+esc(o.status)+'</span></td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('bulkMsg', e.message, false); }
+    }
+    function toggleAll(cb){ document.querySelectorAll('.bulkChk').forEach(function(x){ x.checked = cb.checked; }); }
+    async function applyBulk(){
+      var ids = [].slice.call(document.querySelectorAll('.bulkChk:checked')).map(function(x){ return Number(x.value); });
+      if (!ids.length){ showMsg('bulkMsg','اختر طلباً واحداً على الأقل', false); return; }
+      var status = document.getElementById('bulkStatus').value;
+      if (!confirm('تغيير حالة '+ids.length+' طلب إلى «'+status+'»؟')) return;
+      try {
+        var j = await api('/bulk-status', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ids: ids, status: status }) });
+        showMsg('bulkMsg','تم تحديث '+j.updated+' طلب بنجاح ✅', true);
+        loadBulk();
+      } catch(e){ if(e.message!=='unauthorized') showMsg('bulkMsg', e.message, false); }
+    }
+
+    // ═══ 2) ورقة التحضير ═══
+    async function loadPrep(){
+      try {
+        var d = document.getElementById('prepDate').value;
+        var j = await api('/prep-sheet'+(d?'?date='+encodeURIComponent(d):''));
+        document.getElementById('prepDateLabel').textContent = '— '+j.date;
+        document.getElementById('prepSummary').textContent = j.ordersCount ? ('إجمالي طلبات اليوم (غير الملغية): '+j.ordersCount) : '';
+        var tb = document.getElementById('prepRows'); tb.innerHTML='';
+        document.getElementById('prepEmpty').style.display = j.items.length ? 'none' : 'block';
+        j.items.forEach(function(it){
+          tb.insertAdjacentHTML('beforeend', '<tr><td class="wrapcell"><b>'+esc(it.name)+'</b></td><td>'+esc(it.unit||'—')+'</td><td><b>'+Number(it.qty)+'</b></td><td>'+Number(it.orders)+'</td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('prepMsg', e.message, false); }
+    }
+
+    // ═══ 3) بوليصات الشحن ═══
+    async function loadLabels(){
+      try {
+        var st = document.getElementById('labelsStatus').value;
+        var j = await api('/labels?status='+encodeURIComponent(st));
+        var g = document.getElementById('labelsGrid'); g.innerHTML='';
+        document.getElementById('labelsEmpty').style.display = j.labels.length ? 'none' : 'block';
+        j.labels.forEach(function(o){
+          g.insertAdjacentHTML('beforeend',
+            '<div class="label-card">'+
+            '<div><b>طلب #'+Number(o.id)+'</b> — '+esc(o.page_name)+'</div>'+
+            '<div>📦 '+esc(o.order_string)+'</div>'+
+            '<div>📍 '+esc(o.area||'بدون عنوان')+'</div>'+
+            '<div>📞 '+esc(o.phone||'—')+'</div>'+
+            '<div class="label-total">المبلغ: '+esc(o.total)+' دينار</div>'+
+            '</div>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('labelsMsg', e.message, false); }
+    }
+
+    // ═══ 4) جولة التوصيل ═══
+    async function loadRoute(){
+      try {
+        var j = await api('/route');
+        var box = document.getElementById('routeGroups'); box.innerHTML='';
+        document.getElementById('routeEmpty').style.display = j.groups.length ? 'none' : 'block';
+        j.groups.forEach(function(g, i){
+          var rows = g.orders.map(function(o){
+            return '<tr><td>'+Number(o.id)+'</td><td class="wrapcell">'+esc(o.order_string)+'</td><td>'+esc(o.total)+'د</td>'+
+              '<td class="wrapcell">'+esc(o.area)+'</td><td>'+esc(o.phone)+'</td><td><span class="pill">'+esc(o.status)+'</span></td></tr>';
+          }).join('');
+          box.insertAdjacentHTML('beforeend',
+            '<div class="route-group" id="rg'+i+'">'+
+            '<div class="route-head" onclick="document.getElementById(\'rg'+i+'\').classList.toggle(\'open\')">'+
+            '<span>📍 '+esc(g.region)+'</span><span>'+Number(g.count)+' طلب — '+Number(g.total)+'د</span></div>'+
+            '<div class="route-body"><div class="tbl-wrap"><table>'+
+            '<thead><tr><th>#</th><th>الطلب</th><th>المبلغ</th><th>العنوان</th><th>الهاتف</th><th>الحالة</th></tr></thead>'+
+            '<tbody>'+rows+'</tbody></table></div></div></div>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('routeMsg', e.message, false); }
+    }
+
+    // ═══ 5) السائقون ═══
+    async function loadDrivers(){
+      try {
+        var j = await api('/drivers');
+        var tb = document.getElementById('drvRows'); tb.innerHTML='';
+        document.getElementById('drvEmpty').style.display = j.drivers.length ? 'none' : 'block';
+        var sel1 = document.getElementById('asgDriver'), sel2 = document.getElementById('viewDriver');
+        sel1.innerHTML=''; sel2.innerHTML='';
+        j.drivers.forEach(function(d){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td>'+Number(d.id)+'</td><td>'+esc(d.name)+'</td><td>'+esc(d.phone||'—')+'</td><td>'+Number(d.assigned)+'</td>'+
+            '<td><button class="btn small gray" onclick="editDriver('+Number(d.id)+',\''+esc(d.name).replace(/'/g,"\\'")+'\',\''+esc(d.phone||'').replace(/'/g,"\\'")+'\')">✏️</button> '+
+            '<button class="btn small danger" onclick="delDriver('+Number(d.id)+')">🗑</button></td></tr>');
+          var opt = '<option value="'+Number(d.id)+'">'+esc(d.name)+'</option>';
+          sel1.insertAdjacentHTML('beforeend', opt);
+          sel2.insertAdjacentHTML('beforeend', opt);
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('drvMsg', e.message, false); }
+    }
+    async function addDriver(){
+      var name = document.getElementById('drvName').value.trim();
+      var phone = document.getElementById('drvPhone').value.trim();
+      if (!name){ showMsg('drvMsg','اكتب اسم السائق', false); return; }
+      try {
+        await api('/drivers', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name:name, phone:phone }) });
+        document.getElementById('drvName').value=''; document.getElementById('drvPhone').value='';
+        showMsg('drvMsg','تمت إضافة السائق ✅', true); loadDrivers();
+      } catch(e){ if(e.message!=='unauthorized') showMsg('drvMsg', e.message, false); }
+    }
+    async function editDriver(id, name, phone){
+      var nn = prompt('اسم السائق:', name); if (nn===null) return;
+      var np = prompt('هاتف السائق:', phone); if (np===null) return;
+      try {
+        await api('/drivers/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name:nn.trim(), phone:np.trim() }) });
+        loadDrivers();
+      } catch(e){ if(e.message!=='unauthorized') showMsg('drvMsg', e.message, false); }
+    }
+    async function delDriver(id){
+      if (!confirm('حذف السائق وإلغاء كل تعييناته؟')) return;
+      try { await api('/drivers/'+id, { method:'DELETE' }); loadDrivers(); }
+      catch(e){ if(e.message!=='unauthorized') showMsg('drvMsg', e.message, false); }
+    }
+    async function assignOrder(){
+      var oid = document.getElementById('asgOrder').value;
+      var did = document.getElementById('asgDriver').value;
+      if (!oid || !did){ showMsg('asgMsg','اكتب رقم الطلب واختر السائق', false); return; }
+      try {
+        await api('/assign', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ order_id:Number(oid), driver_id:Number(did) }) });
+        showMsg('asgMsg','تم تعيين السائق للطلب ✅', true);
+        document.getElementById('asgOrder').value='';
+        loadDrivers();
+      } catch(e){ if(e.message!=='unauthorized') showMsg('asgMsg', e.message, false); }
+    }
+    async function loadDriverOrders(){
+      var did = document.getElementById('viewDriver').value;
+      if (!did){ showMsg('asgMsg','لا يوجد سائقون بعد', false); return; }
+      try {
+        var j = await api('/drivers/'+did+'/orders');
+        var tb = document.getElementById('drvOrdRows'); tb.innerHTML='';
+        document.getElementById('drvOrdEmpty').style.display = j.orders.length ? 'none' : 'block';
+        j.orders.forEach(function(o){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td>'+Number(o.id)+'</td><td class="wrapcell">'+esc(o.order_string)+'</td><td>'+esc(o.total)+'د</td>'+
+            '<td class="wrapcell">'+esc(o.area)+'</td><td>'+esc(o.phone)+'</td><td><span class="pill">'+esc(o.status)+'</span></td>'+
+            '<td><button class="btn small danger" onclick="unassign('+Number(o.id)+')">إلغاء التعيين</button></td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('asgMsg', e.message, false); }
+    }
+    async function unassign(orderId){
+      try { await api('/assign/'+orderId, { method:'DELETE' }); loadDriverOrders(); loadDrivers(); }
+      catch(e){ if(e.message!=='unauthorized') showMsg('asgMsg', e.message, false); }
+    }
+
+    // ═══ 6) كشف التكرار ═══
+    async function loadDupes(){
+      try {
+        var j = await api('/duplicates');
+        var box = document.getElementById('dupGroups'); box.innerHTML='';
+        document.getElementById('dupEmpty').style.display = j.groups.length ? 'none' : 'block';
+        j.groups.forEach(function(g){
+          var rows = g.orders.map(function(o){
+            return '<tr><td>'+Number(o.id)+'</td><td>'+fmtDate(o.created_at)+'</td><td class="wrapcell">'+esc(o.order_string)+'</td>'+
+              '<td>'+esc(o.total)+'د</td><td><span class="pill'+(o.status==='ملغي'?' red':'')+'">'+esc(o.status)+'</span></td></tr>';
+          }).join('');
+          box.insertAdjacentHTML('beforeend',
+            '<div class="dup-group"><div class="dup-head">📞 '+esc(g.phone)+' — '+g.orders.length+' طلبات خلال 24 ساعة</div>'+
+            '<div class="tbl-wrap"><table><thead><tr><th>#</th><th>الوقت</th><th>الطلب</th><th>المبلغ</th><th>الحالة</th></tr></thead>'+
+            '<tbody>'+rows+'</tbody></table></div></div>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('dupMsg', e.message, false); }
+    }
+
+    // ═══ 7) الخط الزمني ═══
+    async function loadTimeline(){
+      var oid = document.getElementById('tlOrder').value;
+      if (!oid){ showMsg('tlMsg','اكتب رقم الطلب', false); return; }
+      try {
+        var j = await api('/timeline/'+Number(oid));
+        document.getElementById('tlEmpty').style.display='none';
+        document.getElementById('tlAddForm').style.display='flex';
+        document.getElementById('tlOrderInfo').innerHTML =
+          '<b>طلب #'+Number(j.order.id)+'</b> — '+esc(j.order.order_string)+' — <span class="pill">'+esc(j.order.status)+'</span>';
+        var ul = document.getElementById('tlList'); ul.innerHTML='';
+        j.events.forEach(function(ev){
+          ul.insertAdjacentHTML('beforeend', '<li><b>'+esc(ev.event)+'</b><br><span class="muted">'+fmtDate(ev.created_at)+'</span></li>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('tlMsg', e.message, false); }
+    }
+    async function addTimelineEvent(){
+      var oid = document.getElementById('tlOrder').value;
+      var ev = document.getElementById('tlEvent').value.trim();
+      if (!oid || !ev){ showMsg('tlMsg','اكتب نص الحدث', false); return; }
+      try {
+        await api('/timeline', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ order_id:Number(oid), event:ev }) });
+        document.getElementById('tlEvent').value='';
+        loadTimeline();
+      } catch(e){ if(e.message!=='unauthorized') showMsg('tlMsg', e.message, false); }
+    }
+
+    // ═══ 8) الملاحظات ═══
+    async function loadNotes(){
+      var oid = document.getElementById('ntOrder').value;
+      if (!oid){ showMsg('ntMsg','اكتب رقم الطلب', false); return; }
+      try {
+        var j = await api('/notes/'+Number(oid));
+        document.getElementById('ntEmpty').style.display='none';
+        document.getElementById('ntAddForm').style.display='flex';
+        document.getElementById('ntOrderInfo').innerHTML =
+          '<b>طلب #'+Number(j.order.id)+'</b> — '+esc(j.order.order_string)+' — '+esc(j.order.phone||'');
+        var box = document.getElementById('ntList'); box.innerHTML='';
+        if (!j.notes.length) box.innerHTML = '<div class="empty">لا توجد ملاحظات بعد على هذا الطلب</div>';
+        j.notes.forEach(function(n){
+          box.insertAdjacentHTML('beforeend',
+            '<div class="note-item"><div>'+esc(n.note)+'</div>'+
+            '<div class="muted" style="margin-top:6px">'+(n.author?('✍️ '+esc(n.author)+' — '):'')+fmtDate(n.created_at)+
+            ' &nbsp; <button class="btn small gray" onclick="editNote('+Number(n.id)+')">✏️ تعديل</button> '+
+            '<button class="btn small danger" onclick="delNote('+Number(n.id)+')">🗑 حذف</button></div></div>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('ntMsg', e.message, false); }
+    }
+    async function addNote(){
+      var oid = document.getElementById('ntOrder').value;
+      var note = document.getElementById('ntText').value.trim();
+      var author = document.getElementById('ntAuthor').value.trim();
+      if (!oid || !note){ showMsg('ntMsg','اكتب نص الملاحظة', false); return; }
+      try {
+        await api('/notes', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ order_id:Number(oid), note:note, author:author }) });
+        document.getElementById('ntText').value='';
+        loadNotes();
+      } catch(e){ if(e.message!=='unauthorized') showMsg('ntMsg', e.message, false); }
+    }
+    async function editNote(id){
+      var nn = prompt('نص الملاحظة الجديد:'); if (!nn || !nn.trim()) return;
+      try {
+        await api('/notes/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ note:nn.trim() }) });
+        loadNotes();
+      } catch(e){ if(e.message!=='unauthorized') showMsg('ntMsg', e.message, false); }
+    }
+    async function delNote(id){
+      if (!confirm('حذف الملاحظة؟')) return;
+      try { await api('/notes/'+id, { method:'DELETE' }); loadNotes(); }
+      catch(e){ if(e.message!=='unauthorized') showMsg('ntMsg', e.message, false); }
+    }
+
+    // ═══ 9) المتأخرة ═══
+    async function loadLate(){
+      try {
+        var j = await api('/late');
+        var tb = document.getElementById('lateRows'); tb.innerHTML='';
+        document.getElementById('lateEmpty').style.display = j.orders.length ? 'none' : 'block';
+        j.orders.forEach(function(o){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr class="late-row"><td>'+Number(o.id)+'</td><td class="age">'+Number(o.age_hours)+' ساعة</td>'+
+            '<td>'+esc(o.page_name)+'</td><td class="wrapcell">'+esc(o.order_string)+'</td><td>'+esc(o.total)+'د</td>'+
+            '<td class="wrapcell">'+esc(o.area)+'</td><td>'+esc(o.phone)+'</td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('lateMsg', e.message, false); }
+    }
+
+    // ═══ 10) طلب يدوي ═══
+    async function addManual(){
+      var order_string = document.getElementById('mnOrder').value.trim();
+      var total = document.getElementById('mnTotal').value;
+      if (!order_string){ showMsg('mnMsg','اكتب تفاصيل الطلب', false); return; }
+      if (total==='' || Number(total)<0){ showMsg('mnMsg','اكتب المبلغ الإجمالي', false); return; }
+      try {
+        var j = await api('/manual', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            order_string: order_string,
+            total: Number(total),
+            area: document.getElementById('mnArea').value.trim(),
+            phone: document.getElementById('mnPhone').value.trim(),
+            status: document.getElementById('mnStatus').value
+          }) });
+        showMsg('mnMsg','تم حفظ الطلب اليدوي برقم #'+j.id+' ✅', true);
+        document.getElementById('mnOrder').value=''; document.getElementById('mnTotal').value='';
+        document.getElementById('mnArea').value=''; document.getElementById('mnPhone').value='';
+      } catch(e){ if(e.message!=='unauthorized') showMsg('mnMsg', e.message, false); }
+    }
+
+    // تحميل أولي
+    document.getElementById('prepDate').value = new Date().toISOString().slice(0,10);
+    loadBulk();
+  </script>
+</body>
+</html>

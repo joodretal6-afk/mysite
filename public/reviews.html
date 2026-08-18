@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>التقييمات — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:900px; margin:0 auto; padding:22px; }
+    .summary { display:flex; gap:14px; margin-bottom:20px; flex-wrap:wrap; }
+    .sc { background:var(--card); border-radius:14px; padding:20px 26px; box-shadow:0 2px 8px rgba(0,0,0,.05); text-align:center; flex:1; min-width:150px; }
+    .sc .n { font-size:30px; font-weight:800; color:var(--green2); }
+    .sc .l { font-size:13px; color:var(--mut); margin-top:4px; }
+    .rev { background:var(--card); border-radius:12px; padding:16px 18px; margin-bottom:12px; box-shadow:0 2px 8px rgba(0,0,0,.04); }
+    .rev .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px; }
+    .rev .stars { font-size:16px; }
+    .rev .who { font-size:13px; color:var(--mut); }
+    .rev .cmt { font-size:15px; line-height:1.6; }
+    .rev .pg { font-size:12px; color:var(--green); }
+    .empty { text-align:center; padding:40px; color:var(--mut); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⭐ تقييمات الزبائن</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="summary" id="summary"></div>
+    <div id="list"></div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function stars(n){ return '⭐'.repeat(Math.max(0,Math.min(5,n))) + '☆'.repeat(Math.max(0,5-n)); }
+    async function load(){
+      const r=await fetch('/admin/api/reviews');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const {reviews,stats}=await r.json();
+      document.getElementById('summary').innerHTML=`
+        <div class="sc"><div class="n">${stats.c}</div><div class="l">إجمالي التقييمات</div></div>
+        <div class="sc"><div class="n">${(+stats.avg).toFixed(1)} ⭐</div><div class="l">متوسط التقييم</div></div>`;
+      const list=document.getElementById('list');
+      if(!reviews.length){ list.innerHTML='<div class="empty">لا يوجد تقييمات بعد — رح تظهر تلقائياً لما الزبائن يقيّموا بالماسنجر</div>'; return; }
+      list.innerHTML=reviews.map(v=>`<div class="rev">
+        <div class="top"><span class="stars">${stars(v.rating)}</span><span class="who">📞 ${esc(v.phone)||'زبون'} • ${new Date(v.created_at).toLocaleDateString('ar-EG')}</span></div>
+        <div class="cmt">${esc(v.comment)}</div>
+        <div class="pg">🧀 ${esc(v.page_name)}</div>
+      </div>`).join('');
+    }
+    load();
+  </script>
+</body>
+</html>

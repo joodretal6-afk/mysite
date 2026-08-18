@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>فحص الصفحات والتوكنات — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; } header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:980px; margin:0 auto; padding:22px; }
+    .note { background:#fff8e1; border-radius:10px; padding:12px 16px; font-size:13px; color:#8d6e00; margin-bottom:16px; line-height:1.8; }
+    .status { border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:14px; font-weight:600; }
+    .status.on { background:#e8f5e9; color:var(--green2); } .status.off { background:#ffebee; color:var(--red); }
+    .page { background:var(--card); border-radius:14px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:14px; }
+    .top { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+    .pname { font-weight:800; font-size:15px; }
+    .pname small { color:var(--mut); font-weight:400; }
+    .ok { color:var(--green2); font-weight:700; } .bad { color:var(--red); font-weight:700; }
+    .detail { font-size:12.5px; color:var(--mut); margin-bottom:10px; }
+    .tokrow { display:flex; gap:8px; flex-wrap:wrap; }
+    .tokrow input { flex:1; min-width:220px; padding:10px; border:1.5px solid var(--line); border-radius:9px; font-family:inherit; font-size:13px; direction:ltr; }
+    .btn { padding:10px 16px; background:var(--green); color:#fff; border:none; border-radius:9px; cursor:pointer; font-family:inherit; font-size:13px; font-weight:700; }
+    .btn:disabled { opacity:.5; }
+    .msg { font-size:13px; margin-top:8px; min-height:16px; }
+    .msg.ok2 { color:var(--green2); } .msg.err { color:var(--red); }
+    .tag { font-size:11px; padding:2px 8px; border-radius:12px; background:#e3f2fd; color:#1565c0; }
+    .refresh { margin-bottom:14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🩺 فحص الصفحات والتوكنات</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="note">
+      💡 من هون بتدير توكنات صفحاتك بنفسك: لما ينبطل توكن صفحة، جيب التوكن الجديد والصقه بخانتها واضغط <b>حفظ وتفعيل</b>.
+      النظام بيفحصه مع فيسبوك، بيحفظه، <b>بيفعّله فوراً بدون إعادة تشغيل</b>، وبيشترك بالويبهوك تلقائياً.
+    </div>
+    <div id="botstatus"></div>
+    <button class="btn refresh" onclick="load()">🔄 إعادة الفحص</button>
+    <div id="pages"><div style="text-align:center;color:#78909c;padding:30px">⏳ جاري الفحص مع فيسبوك...</div></div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    async function load(){
+      const box=document.getElementById('pages');
+      box.innerHTML='<div style="text-align:center;color:#78909c;padding:30px">⏳ جاري الفحص مع فيسبوك...</div>';
+      const [hr,tr]=await Promise.all([fetch('/admin/api/page-health'),fetch('/admin/api/page-tokens')]);
+      if(hr.status===401){ location.href='/admin/login'; return; }
+      const h=await hr.json(); const t=await tr.json();
+      const tok={}; (t.pages||[]).forEach(p=>tok[p.id]=p);
+      document.getElementById('botstatus').innerHTML = h.botPaused
+        ? '<div class="status off">🛑 البوت موقوف بالكامل حالياً — لن يرد على أي صفحة.</div>'
+        : '<div class="status on">✅ البوت مُفعّل ويرد داخل المحادثة.</div>';
+      box.innerHTML=(h.pages||[]).map(p=>{
+        const info=tok[p.id]||{};
+        return `<div class="page">
+          <div class="top">
+            <span class="pname">${esc(p.name)} <small>(${esc(p.id)})</small>
+              ${info.savedFromSite?'<span class="tag">توكن من الموقع</span>':''}</span>
+            <span class="${p.ok?'ok':'bad'}">${p.ok?'✅ شغّالة':'❌ التوكن معطّل'}</span>
+          </div>
+          <div class="detail">${esc(p.detail)} ${info.tokenTail?(' | نهاية التوكن الحالي: <b dir="ltr">'+esc(info.tokenTail)+'</b>'):''}</div>
+          <div class="tokrow">
+            <input id="tk_${esc(p.id)}" placeholder="الصق التوكن الجديد لهذه الصفحة هنا (EAAR...)">
+            <button class="btn" onclick="save('${esc(p.id)}',this)">💾 حفظ وتفعيل</button>
+          </div>
+          <div class="msg" id="ms_${esc(p.id)}"></div>
+        </div>`;
+      }).join('');
+    }
+    async function save(id,btn){
+      const inp=document.getElementById('tk_'+id), msg=document.getElementById('ms_'+id);
+      const token=inp.value.trim();
+      if(!token){ msg.className='msg err'; msg.textContent='الصق التوكن أولاً'; return; }
+      btn.disabled=true; msg.className='msg'; msg.textContent='⏳ فحص مع فيسبوك...';
+      try{
+        const r=await fetch('/admin/api/page-tokens',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page_id:id,token})});
+        const d=await r.json();
+        if(r.ok){ msg.className='msg ok2'; msg.textContent='✅ تم الحفظ والتفعيل فوراً'+(d.webhook?' + الويبهوك مشترك':''); inp.value=''; setTimeout(load,1200); }
+        else { msg.className='msg err'; msg.textContent=d.error||'فشل'; }
+      }catch{ msg.className='msg err'; msg.textContent='خطأ بالاتصال'; }
+      btn.disabled=false;
+    }
+    load();
+  </script>
+</body>
+</html>

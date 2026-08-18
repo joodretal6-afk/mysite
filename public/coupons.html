@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الكوبونات — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:900px; margin:0 auto; padding:22px; }
+    .card { background:var(--card); border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:18px; }
+    .card h3 { color:var(--green2); font-size:16px; margin-bottom:14px; }
+    .form { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+    .fld { display:flex; flex-direction:column; gap:5px; }
+    .fld label { font-size:12px; color:var(--mut); }
+    .fld input, .fld select { padding:10px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14px; font-family:inherit; }
+    .btn { padding:11px 20px; background:var(--green); color:#fff; border:none; border-radius:9px; font-weight:bold; cursor:pointer; font-family:inherit; }
+    .btn:hover { background:var(--green2); }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { padding:11px 12px; text-align:right; border-bottom:1px solid var(--line); }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    .code { font-weight:800; letter-spacing:1px; color:var(--green2); }
+    .off { opacity:.5; }
+    .del { color:#c62828; cursor:pointer; background:none; border:none; font-size:16px; }
+    .tog { cursor:pointer; background:none; border:none; font-size:14px; }
+    .empty { text-align:center; padding:30px; color:var(--mut); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎟️ الكوبونات وأكواد الخصم</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="card">
+      <h3>➕ إنشاء كوبون جديد</h3>
+      <div class="form">
+        <div class="fld"><label>الكود</label><input id="code" placeholder="مثال: EID10" style="text-transform:uppercase"></div>
+        <div class="fld"><label>النوع</label>
+          <select id="type"><option value="percent">نسبة مئوية %</option><option value="fixed">مبلغ ثابت (دينار)</option></select>
+        </div>
+        <div class="fld"><label>القيمة</label><input id="value" type="number" step="0.5" placeholder="10"></div>
+        <button class="btn" onclick="add()">إضافة</button>
+      </div>
+      <div style="color:var(--mut);font-size:13px;margin-top:12px">💡 مثال: كود <b>EID10</b> نسبة <b>10%</b>، أو <b>SUMMER2</b> مبلغ <b>2 دينار</b>.</div>
+    </div>
+
+    <div class="card">
+      <h3>الكوبونات الحالية</h3>
+      <table><thead><tr><th>الكود</th><th>الخصم</th><th>مرات الاستخدام</th><th>الحالة</th><th></th></tr></thead>
+        <tbody id="rows"></tbody></table>
+      <div class="empty" id="empty" style="display:none">لا يوجد كوبونات بعد</div>
+    </div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    async function load(){
+      const r=await fetch('/admin/api/coupons');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const {coupons}=await r.json();
+      const tb=document.getElementById('rows'), empty=document.getElementById('empty');
+      tb.innerHTML='';
+      if(!coupons.length){ empty.style.display='block'; return; }
+      empty.style.display='none';
+      coupons.forEach(c=>{
+        const disc=c.type==='percent'?c.value+'%':c.value+'د';
+        tb.insertAdjacentHTML('beforeend',`<tr class="${c.active?'':'off'}">
+          <td class="code">${esc(c.code)}</td>
+          <td>${disc}</td>
+          <td>${c.uses}</td>
+          <td>${c.active?'🟢 فعّال':'⚪ موقوف'}</td>
+          <td>
+            <button class="tog" title="تفعيل/إيقاف" onclick="tog('${esc(c.code)}',${c.active?0:1})">${c.active?'⏸️':'▶️'}</button>
+            <button class="del" title="حذف" onclick="del('${esc(c.code)}')">🗑</button>
+          </td></tr>`);
+      });
+    }
+    async function add(){
+      const code=document.getElementById('code').value.trim();
+      if(!code){ alert('اكتب كود'); return; }
+      await fetch('/admin/api/coupons',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,type:document.getElementById('type').value,value:document.getElementById('value').value})});
+      document.getElementById('code').value=''; document.getElementById('value').value='';
+      load();
+    }
+    async function tog(code,active){ await fetch('/admin/api/coupons/'+encodeURIComponent(code)+'/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({active:!!active})}); load(); }
+    async function del(code){ if(!confirm('حذف الكوبون؟'))return; await fetch('/admin/api/coupons/'+encodeURIComponent(code),{method:'DELETE'}); load(); }
+    load();
+  </script>
+</body>
+</html>

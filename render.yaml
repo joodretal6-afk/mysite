@@ -1,0 +1,26 @@
+# إعداد النشر على Render (Blueprint)
+# ملاحظة: القرص الدائم (Disk) متاح على الخطة المدفوعة Starter، وهو ضروري
+# حتى ما تنمسح الأوردرات مع كل تحديث. لو استخدمت الخطة المجانية احذف قسم disk
+# واعرف إن قاعدة البيانات بتنمسح مع كل إعادة نشر.
+services:
+  - type: web
+    name: ajban-bot
+    runtime: node
+    plan: starter
+    branch: claude/separate-complete-project-blta9i
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: DB_PATH
+        value: /data/platform.db
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASS
+        generateValue: true      # Render بيولّد كلمة سر قوية (شوفها بتبويب Environment)
+      - key: SESSION_SECRET
+        generateValue: true
+    disk:
+      name: ajban-data
+      mountPath: /data
+      sizeGB: 1

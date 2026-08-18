@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>التحليلات — منصة الأجبان</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1200px; margin:0 auto; padding:22px; }
+    .report { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:20px; }
+    .rc { background:var(--card); border-radius:14px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.05); text-align:center; }
+    .rc .n { font-size:24px; font-weight:800; color:var(--green2); }
+    .rc .m { font-size:16px; font-weight:700; color:var(--green); margin-top:2px; }
+    .rc .l { font-size:12px; color:var(--mut); margin-top:4px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:800px){ .grid{ grid-template-columns:1fr; } }
+    .chart-card { background:var(--card); border-radius:14px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .chart-card h3 { font-size:15px; color:var(--green2); margin-bottom:12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📊 تحليلات المبيعات</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="report" id="report"></div>
+    <div class="grid">
+      <div class="chart-card"><h3>المبيعات آخر 14 يوم</h3><canvas id="dayChart" height="180"></canvas></div>
+      <div class="chart-card"><h3>الطلبات حسب الصفحة</h3><canvas id="pageChart" height="180"></canvas></div>
+      <div class="chart-card"><h3>ذروة الطلبات حسب الساعة</h3><canvas id="hourChart" height="180"></canvas></div>
+      <div class="chart-card"><h3>حالات الطلبات</h3><canvas id="statusChart" height="180"></canvas></div>
+    </div>
+  </div>
+  <script>
+    const GREEN='#2e7d32', SHADES=['#2e7d32','#43a047','#66bb6a','#81c784','#a5d6a7','#c8e6c9','#1b5e20','#388e3c','#4caf50'];
+    async function load(){
+      const r = await fetch('/admin/api/analytics');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const d = await r.json();
+      const a = d.analytics || {}; const rep = d.report || {};
+      a.byDay = a.byDay || []; a.byPage = a.byPage || []; a.byHour = a.byHour || []; a.byStatus = a.byStatus || [];
+      rep.today = rep.today || {c:0,s:0}; rep.week = rep.week || {c:0,s:0}; rep.month = rep.month || {c:0,s:0}; rep.all = rep.all || {c:0,s:0};
+      document.getElementById('report').innerHTML = `
+        <div class="rc"><div class="n">${rep.today.c}</div><div class="m">${(+rep.today.s).toFixed(0)}د</div><div class="l">اليوم</div></div>
+        <div class="rc"><div class="n">${rep.week.c}</div><div class="m">${(+rep.week.s).toFixed(0)}د</div><div class="l">آخر 7 أيام</div></div>
+        <div class="rc"><div class="n">${rep.month.c}</div><div class="m">${(+rep.month.s).toFixed(0)}د</div><div class="l">آخر 30 يوم</div></div>
+        <div class="rc"><div class="n">${rep.all.c}</div><div class="m">${(+rep.all.s).toFixed(0)}د</div><div class="l">الإجمالي</div></div>`;
+
+      const days=[...a.byDay].reverse().slice(-14);
+      new Chart(dayChart,{type:'line',data:{labels:days.map(d=>d.d.slice(5)),datasets:[{label:'مبيعات (د)',data:days.map(d=>d.s),borderColor:GREEN,backgroundColor:'rgba(46,125,50,.1)',fill:true,tension:.3}]},options:opt()});
+      new Chart(pageChart,{type:'bar',data:{labels:a.byPage.map(p=>p.page_name),datasets:[{label:'طلبات',data:a.byPage.map(p=>p.c),backgroundColor:SHADES}]},options:opt()});
+      const hours=Array.from({length:24},(_,h)=>{const f=a.byHour.find(x=>x.h===h);return f?f.c:0;});
+      new Chart(hourChart,{type:'bar',data:{labels:hours.map((_,h)=>h+':00'),datasets:[{label:'طلبات',data:hours,backgroundColor:'#66bb6a'}]},options:opt()});
+      new Chart(statusChart,{type:'doughnut',data:{labels:a.byStatus.map(s=>s.status),datasets:[{data:a.byStatus.map(s=>s.c),backgroundColor:SHADES}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{family:'Tahoma'}}}}}});
+    }
+    function opt(){ return {responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{family:'Tahoma'}}},y:{beginAtZero:true}}}; }
+    load();
+  </script>
+</body>
+</html>

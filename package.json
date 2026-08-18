@@ -7,16 +7,29 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "create-admin": "node scripts/create-admin.js"
+    "create-admin": "node scripts/create-admin.js",
+    "test:brain": "node scripts/smoke-brain.js",
+    "test:brain-ui": "node scripts/smoke-brain-ui.js",
+    "test:links": "node scripts/smoke-links.js",
+    "test:venture": "node scripts/smoke-venture.js",
+    "test:radar": "node scripts/smoke-radar.js",
+    "test:address": "node scripts/smoke-address.js",
+    "test:isolation": "node scripts/smoke-isolation.js",
+    "test:flow": "node scripts/smoke-flow.js",
+    "test:send": "node scripts/smoke-send.js",
+    "test:window": "node scripts/smoke-window.js",
+    "tokens": "node scripts/migrate-tokens.js",
+    "tokens:check": "node scripts/migrate-tokens.js --check",
+    "test": "node scripts/smoke-window.js && node scripts/smoke-send.js && node scripts/smoke-flow.js && node scripts/smoke-address.js && node scripts/smoke-isolation.js && node scripts/smoke-links.js && node scripts/smoke-brain-ui.js && node scripts/smoke-brain.js && node scripts/smoke-venture.js && node scripts/smoke-radar.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^11.8.1",
     "cookie-parser": "^1.4.7",
     "exceljs": "^4.4.0",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "libsql": "^0.5.29"
   },
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   }
 }

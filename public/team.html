@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>فريق العمل — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1000px; margin:0 auto; padding:22px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:800px){ .grid2{grid-template-columns:1fr;} }
+    .card { background:var(--card); border-radius:14px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:16px; }
+    .card h3 { font-size:15px; color:var(--green2); margin-bottom:14px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { padding:10px; text-align:right; border-bottom:1px solid var(--line); }
+    th { color:var(--green2); }
+    .badge { padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+    .badge.admin { background:#e3f2fd; color:#1565c0; }
+    .badge.staff { background:#f1f8e9; color:#558b2f; }
+    .btn { padding:7px 13px; background:var(--green); color:#fff; border:none; border-radius:8px; cursor:pointer; font-family:inherit; font-size:13px; }
+    .btn.del { background:#c62828; }
+    select.rs { padding:6px; border:1.5px solid var(--line); border-radius:7px; font-family:inherit; }
+    .form input, .form select { width:100%; padding:11px; border:1.5px solid var(--line); border-radius:9px; font-family:inherit; margin-bottom:10px; }
+    .form label { display:block; font-size:13px; font-weight:700; color:var(--green2); margin-bottom:5px; }
+    .msg { font-size:13px; margin-top:8px; }
+    .msg.ok{color:var(--green2);} .msg.err{color:#c62828;}
+    .act { font-size:13px; }
+    .act td { padding:8px 10px; }
+    .act .t { color:var(--mut); font-size:12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>👥 فريق العمل</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="grid2">
+      <div class="card">
+        <h3>المستخدمون</h3>
+        <table><thead><tr><th>المستخدم</th><th>الدور</th><th></th></tr></thead><tbody id="users"></tbody></table>
+      </div>
+      <div class="card">
+        <h3>إضافة مستخدم جديد</h3>
+        <div class="form">
+          <label>اسم المستخدم</label><input id="nu" placeholder="اسم المستخدم">
+          <label>كلمة السر</label><input id="np" type="password" placeholder="4 أحرف على الأقل">
+          <label>الدور</label>
+          <select id="nr"><option value="staff">موظف (staff)</option><option value="admin">مدير (admin)</option></select>
+          <button class="btn" onclick="addUser()">+ إضافة مستخدم</button>
+          <div class="msg" id="msg"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📋 سجل النشاط (آخر 300 عملية)</h3>
+      <table class="act"><thead><tr><th>المستخدم</th><th>العملية</th><th>التفاصيل</th><th>الوقت</th></tr></thead><tbody id="activity"></tbody></table>
+    </div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    let ME='';
+    async function load(){
+      const r=await fetch('/admin/api/team');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const {users,me}=await r.json(); ME=me;
+      const tb=document.getElementById('users'); tb.innerHTML='';
+      (users||[]).forEach(u=>{
+        const role=u.role||'admin';
+        const self=u.username===ME;
+        tb.insertAdjacentHTML('beforeend',`<tr>
+          <td>${esc(u.username)}${self?' <small style="color:#78909c">(أنت)</small>':''}</td>
+          <td>
+            <select class="rs" onchange="setRole('${esc(u.username).replace(/'/g,"&#39;")}',this.value)">
+              <option value="staff"${role==='staff'?' selected':''}>موظف</option>
+              <option value="admin"${role==='admin'?' selected':''}>مدير</option>
+            </select>
+          </td>
+          <td>${self?'':`<button class="btn del" onclick="delUser('${esc(u.username).replace(/'/g,"&#39;")}')">حذف</button>`}</td>
+        </tr>`);
+      });
+      loadActivity();
+    }
+    async function loadActivity(){
+      const r=await fetch('/admin/api/activity'); const {activity}=await r.json();
+      const tb=document.getElementById('activity'); tb.innerHTML='';
+      (activity||[]).forEach(a=>{
+        tb.insertAdjacentHTML('beforeend',`<tr>
+          <td>${esc(a.username)}</td><td>${esc(a.action)}</td><td>${esc(a.detail)}</td>
+          <td class="t">${new Date(a.created_at).toLocaleString('ar-EG')}</td></tr>`);
+      });
+      if(!(activity||[]).length) tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:#78909c;padding:20px">ما في نشاط بعد</td></tr>';
+    }
+    async function addUser(){
+      const username=document.getElementById('nu').value.trim();
+      const password=document.getElementById('np').value;
+      const role=document.getElementById('nr').value;
+      const msg=document.getElementById('msg');
+      const r=await fetch('/admin/api/team',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,role})});
+      const d=await r.json();
+      if(r.ok){ msg.className='msg ok'; msg.textContent='✅ تمت الإضافة'; document.getElementById('nu').value=''; document.getElementById('np').value=''; load(); }
+      else { msg.className='msg err'; msg.textContent=d.error||'فشل'; }
+    }
+    async function setRole(username,role){
+      await fetch('/admin/api/team/'+encodeURIComponent(username)+'/role',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role})});
+      loadActivity();
+    }
+    async function delUser(username){
+      if(!confirm('حذف المستخدم '+username+'؟')) return;
+      await fetch('/admin/api/team/'+encodeURIComponent(username),{method:'DELETE'});
+      load();
+    }
+    load();
+  </script>
+</body>
+</html>

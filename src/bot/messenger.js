@@ -17,11 +17,38 @@ export async function graphSend(pageToken, payload) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+// 🔒 قفل صارم: ممنوع إرسال أي رسالة للزبون إلا داخل "نافذة رد" مفتوحة
+// (رد مباشر على رسالة واردة، أو رد يدوي من موظف). أي إرسال استباقي/مجدول
+// يُرفض تلقائياً — ضمان قاطع بعدم مراسلة أو تذكير الزبون من تلقاء النظام.
+// ═══════════════════════════════════════════════════════════
+let _replyDepth = 0;
+export function openReplyWindow() { _replyDepth++; }
+export function closeReplyWindow() { _replyDepth = Math.max(0, _replyDepth - 1); }
+export function replyWindowOpen() { return _replyDepth > 0; }
+
 export async function sendText(pageToken, senderId, text) {
-  if (!text || !text.trim()) return;
+  // 🔴 حارس ترتيب المعاملات: (pageToken, senderId, text).
+  // عكسها سابقاً مرّر كائن مكان النص، فرمت .trim() خطأً وانهار المعالج
+  // كاملاً — والزبون ما وصله ولا رد. الصمت أسوأ من رسالة خطأ، فمنكشف
+  // الغلط بصوت عالي بدل ما ينهار كل شي بهدوء.
+  if (typeof text !== "string") {
+    console.error(`🔴 sendText: النص لازم يكون سلسلة، وصل ${typeof text}. ` +
+                  `الترتيب الصحيح: sendText(pageToken, senderId, text)`);
+    return;
+  }
+  if (typeof pageToken !== "string" || !pageToken) {
+    console.error("🔴 sendText: توكن الصفحة ناقص أو مش سلسلة — تأكد من ترتيب المعاملات");
+    return;
+  }
+  if (!text.trim()) return;
+  if (_replyDepth <= 0) {
+    console.warn("🛑 إرسال استباقي مرفوض (خارج نافذة الرد) — لم تُرسل أي رسالة للزبون.");
+    return;   // 🔒 لا إرسال إطلاقاً خارج نافذة الرد
+  }
   await graphSend(pageToken, {
     recipient: { id: senderId },
-    messaging_type: "RESPONSE",
+    messaging_type: "RESPONSE",   // رد داخل نافذة 24 ساعة فقط
     message: { text: text.slice(0, 1900) }
   });
 }

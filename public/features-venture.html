@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🏗️ باني المشاريع الغذائية</title><link rel="stylesheet" href="/brain-ui.css">
+<style>
+  .proj { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .num { text-align:left; direction:ltr; }
+  .warnbox { background:rgba(255,176,32,.08); border-right:4px solid var(--amber);
+             border-radius:10px; padding:14px 18px; margin-bottom:16px; font-size:13.5px; line-height:1.9; }
+  .okbox { background:rgba(61,220,132,.08); border-right:4px solid var(--green);
+           border-radius:10px; padding:14px 18px; margin-bottom:16px; font-size:13.5px; line-height:1.9; }
+  .redbox { background:rgba(255,92,92,.08); border-right:4px solid var(--red);
+            border-radius:10px; padding:14px 18px; margin-bottom:16px; font-size:13.5px; line-height:1.9; }
+  .linkcard { display:block; background:var(--card2); border:1px solid var(--line); border-radius:10px;
+              padding:12px 15px; margin-bottom:9px; text-decoration:none; color:var(--txt); }
+  .linkcard:hover { border-color:var(--acc); }
+  .linkcard .why { font-size:12px; color:var(--mut); margin-top:4px; }
+  pre.rep { white-space:pre-wrap; font-family:inherit; font-size:13.5px; line-height:1.9;
+            background:var(--card2); padding:16px; border-radius:10px; }
+</style>
+</head>
+<body>
+<header><h1>🏗️ باني المشاريع الغذائية</h1><div class="r">
+  <select id="proj"></select>
+  <a href="/admin/features">→ مركز الميزات</a></div></header>
+<div class="wrap"><div id="tabs"></div><div id="out"></div></div>
+<script src="/brain-ui.js"></script>
+<script>
+const B = window.BUI, A = "/admin/f-api/venture";
+let UI, P = null;                 // المشروع الحالي
+const g = id => document.querySelector("#" + id);
+const v = id => { const e = g(id); return e ? e.value : ""; };
+const nv = id => Number(v(id)) || 0;
+
+// مدخلات الاقتصاديات — مصدر واحد لكل الحاسبات
+function econ() {
+  return {
+    project_id: P && P.id, category: P && P.category,
+    sellPrice: nv("sellPrice"), unitCost: nv("unitCost"), packaging: nv("packaging"),
+    shipping: nv("shipping"), delivery: nv("delivery"), deliveryCharged: nv("deliveryCharged"),
+    adCostPerOrder: nv("adCost"), spoilageRate: nv("spoilage"), returnRate: nv("returnRate"),
+    codFee: nv("codFee"), monthlyFixed: nv("monthlyFixed"), targetOrders: nv("targetOrders")
+  };
+}
+function econForm(i = {}) {
+  const f = (id, lbl, val, hint) => `<div class="fld"><label>${lbl}</label>
+    <input id="${id}" type="number" step="0.01" value="${val ?? 0}" class="num">
+    ${hint ? `<span class="mut">${hint}</span>` : ""}</div>`;
+  return `<div class="box"><h3>أرقامك — كل حساب بعدها بيعتمد عليها</h3>
+    <div class="grid2">
+      ${f("sellPrice", "سعر البيع", i.sellPrice)}
+      ${f("unitCost", "تكلفة الوحدة", i.unitCost, "سعر الجملة")}
+      ${f("packaging", "التغليف", i.packaging, "غذائي آمن")}
+      ${f("shipping", "شحن الجملة/وحدة", i.shipping)}
+      ${f("delivery", "أجرة التوصيل", i.delivery)}
+      ${f("deliveryCharged", "الزبون بيدفع منها", i.deliveryCharged)}
+      ${f("adCost", "كلفة الإعلان/طلب", i.adCostPerOrder)}
+      ${f("spoilage", "الفاقد %", i.spoilageRate, "بند الأغذية المنسي")}
+      ${f("returnRate", "المرتجعات %", i.returnRate)}
+      ${f("codFee", "عمولة التحصيل", i.codFee)}
+      ${f("monthlyFixed", "ثابت شهري", i.monthlyFixed, "تبريد، إيجار، تراخيص")}
+      ${f("targetOrders", "طلبات مستهدفة/شهر", i.targetOrders)}
+    </div>
+    <div style="margin-top:14px"><button class="btn" id="calc">احسب</button>
+      <button class="btn gray" id="save">احفظ بالمشروع</button></div>
+    <div class="mut" style="margin-top:10px">🔴 كل رقم تحت محسوب من هالمدخلات بمعادلات صريحة.
+      ولا رقم منها من ذكاء اصطناعي.</div>
+  </div><div id="calcout"></div>`;
+}
+
+async function api(m, p, body) {
+  const r = await fetch(A + p, { method: m,
+    headers: body ? { "content-type": "application/json" } : {},
+    body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return j;
+}
+
+// ── شريط المشاريع ──
+async function loadProjects(selectId) {
+  const j = await api("GET", "/projects");
+  const sel = g("proj");
+  sel.innerHTML = `<option value="">— اختر مشروع —</option>` +
+    j.projects.map(p => `<option value="${p.id}">${B.esc(p.product)} · ${B.esc(p.categoryLabel)}</option>`).join("") +
+    `<option value="__new">➕ مشروع جديد</option>`;
+  if (selectId) sel.value = String(selectId);
+  P = j.projects.find(p => String(p.id) === sel.value) || null;
+}
+g("proj").addEventListener("change", async () => {
+  const val = g("proj").value;
+  if (val === "__new") {
+    const name = prompt("اسم الصنف اللي بدك تدرسه:");
+    if (!name) { g("proj").value = P ? P.id : ""; return; }
+    const c = await api("POST", "/projects", { product: name });
+    await loadProjects(c.id);
+    alert(`انفتح المشروع. الفئة المكتشفة: ${c.category.label}\nالفاقد الافتراضي: ${c.category.spoilage}%`);
+  } else {
+    const j = await api("GET", "/projects");
+    P = j.projects.find(p => String(p.id) === val) || null;
+  }
+  UI.reload();
+});
+
+const needProject = () => `<div class="warnbox">اختر مشروع أو أنشئ واحد من القائمة فوق —
+  كل الخدمات بتشتغل على مشروع محدّد.</div>`;
+
+UI = B.mount([
+// ═══ 1) التشخيص ═══
+{
+  label: "1️⃣ الصنف والفئة",
+  url: () => P ? `${A}/1/classify?product=${encodeURIComponent(P.product)}` : `${A}/services`,
+  render: (j) => {
+    if (!P) return needProject();
+    const c = j.category;
+    return `<div class="${c.coldChain ? "warnbox" : "okbox"}">
+      <b>${B.esc(P.product)}</b> ⇐ <b>${B.esc(c.label)}</b><br>
+      ${B.esc(c.why)}<br>
+      ${c.guessed ? "" : "⚠️ ما قدرنا نحدد الفئة من الاسم — صحّحها يدوياً."}
+    </div>` +
+    B.kpis([
+      { lbl: "الفاقد المتوقع", val: c.spoilage, suffix: "%", tone: c.spoilage > 10 ? "red" : "amber" },
+      { lbl: "يحتاج تبريد", val: c.coldChain ? "نعم" : "لا", raw: true, tone: c.coldChain ? "red" : "green" },
+      { lbl: "الصلاحية", val: c.shelfLife, raw: true },
+      { lbl: "مستوى الخطر", val: c.riskLevel, raw: true, tone: c.riskLevel.includes("عالي") ? "red" : "green" }
+    ]) +
+    `<div class="box"><h3>⚠️ انتبه لهدول</h3>
+      ${c.watchOut.map(w => `<div class="item"><div class="w">${B.esc(w)}</div></div>`).join("")}</div>
+    <div class="box"><h3>غيّر الفئة لو التخمين غلط</h3>
+      <div class="form"><select id="cat">
+        ${j.allCategories.map(x => `<option value="${x.key}" ${x.key === c.key ? "selected" : ""}>
+          ${B.esc(x.label)} — ${B.esc(x.examples)}</option>`).join("")}
+      </select><button class="btn" id="setcat">احفظ الفئة</button></div>
+      <div class="mut">الفئة بتحدد الفاقد الافتراضي والتبريد والامتثال — يعني بتغيّر كل الأرقام بعدها.</div>
+    </div>`;
+  },
+  after: () => {
+    const b = g("setcat");
+    if (b) b.addEventListener("click", async () => {
+      await api("POST", `/projects/${P.id}`, { category: v("cat") });
+      await loadProjects(P.id); UI.reload();
+    });
+  }
+},
+
+// ═══ 2) المنافسون ═══
+{
+  label: "2️⃣ المنافسون",
+  url: () => P ? `${A}/2/competitors/discover?product=${encodeURIComponent(P.product)}` : `${A}/services`,
+  render: (j) => {
+    if (!P) return needProject();
+    return `<div class="redbox"><b>🔴 اقرأ هاد قبل ما تكمّل — الصراحة أهم من الوعد:</b><br><br>
+      <b>اللي بنقدر عليه:</b><br>${j.limits.ما_نقدر_عليه.map(x => "• " + B.esc(x)).join("<br>")}<br><br>
+      <b>اللي ما بنقدر عليه:</b><br>${j.limits.ما_ما_نقدر_عليه.map(x => B.esc(x)).join("<br>")}<br><br>
+      <b>البديل العملي:</b> ${B.esc(j.limits.البديل_العملي)}</div>
+    <div class="box"><h3>🔗 مكتبة إعلانات ميتا — اضغط وشوف منافسينك بعينك</h3>
+      ${j.adLibrary.map(l => `<a class="linkcard" href="${B.esc(l.url)}" target="_blank" rel="noopener">
+        <b>${B.esc(l.label)}</b><div class="why">${B.esc(l.why)}</div></a>`).join("")}
+      <div class="mut" style="margin-top:10px">هاي أداة شفافية رسمية من ميتا — علنية ومجانية،
+        وبتعرض كل إعلان نشط. أغلب التجار ما بيعرفوا إنها موجودة.</div>
+    </div>
+    <div class="box"><h3>📋 كيف تشتغل</h3>
+      ${j.howTo.map(h => `<div class="item"><div class="w">${B.esc(h)}</div></div>`).join("")}</div>
+    <div class="box"><h3>➕ سجّل منافس</h3>
+      <div class="form">
+        <div class="fld"><label>الاسم</label><input id="cn" placeholder="اسم الصفحة"></div>
+        <div class="fld"><label>السعر</label><input id="cp" type="number" step="0.01" class="num"></div>
+        <div class="fld"><label>التوصيل</label><input id="cd" type="number" step="0.01" class="num"></div>
+        <div class="fld"><label>عرضه</label><input id="co" placeholder="خصم / توصيل مجاني"></div>
+        <div class="fld"><label>زاويته</label><input id="ca" placeholder="بلدي / صحي / رخيص"></div>
+        <div class="fld"><label>نقطة ضعفه</label><input id="cw" placeholder="بطء رد / صور سيئة"></div>
+        <button class="btn" id="addc">أضف</button>
+      </div></div>
+    <div id="clist"></div>`;
+  },
+  after: () => {
+    if (!P) return;
+    const refresh = async () => {
+      const j = await api("GET", `/3/competitors?project_id=${P.id}`);
+      g("clist").innerHTML = (j.insight ? B.headline(j.insight, "amber") : "") +
+        (j.priceStats ? B.kpis([
+          { lbl: "منافسين", val: j.total },
+          { lbl: "أرخص سعر", val: j.priceStats.min },
+          { lbl: "وسيط السوق", val: j.priceStats.median, tone: "amber" },
+          { lbl: "أغلى سعر", val: j.priceStats.max }
+        ]) : "") +
+        `<div class="box"><h3>المنافسون المرصودون ${B.conf(j.confidence)}</h3>` +
+        B.table(["المنافس", "السعر", "التوصيل", "عرضه", "زاويته", "ضعفه", ""], j.rows, r => [
+          `<b>${B.esc(r.name)}</b>`, B.num(r.price),
+          Number(r.delivery) === 0 ? '<span class="tag green">مجاني</span>' : B.num(r.delivery),
+          B.esc(r.offer) || "—", B.esc(r.angle) || "—", B.esc(r.weakness) || "—",
+          `<button class="btn gray" onclick="delComp(${r.id})">حذف</button>`
+        ]) + `</div>`;
+    };
+    g("addc").addEventListener("click", async () => {
+      if (!v("cn").trim()) return alert("أدخل اسم المنافس");
+      await api("POST", "/3/competitors", { project_id: P.id, name: v("cn"), price: nv("cp"),
+        delivery: nv("cd"), offer: v("co"), angle: v("ca"), weakness: v("cw") });
+      ["cn", "cp", "cd", "co", "ca", "cw"].forEach(x => { if (g(x)) g(x).value = ""; });
+      refresh();
+    });
+    window.delComp = async id => { await fetch(`${A}/3/competitors/${id}`, { method: "DELETE" }); refresh(); };
+    refresh();
+  }
+},
+
+// ═══ 3) الأرقام ═══
+{
+  label: "3️⃣ الأرقام",
+  url: () => P ? `${A}/projects` : `${A}/services`,
+  render: (j) => {
+    if (!P) return needProject();
+    const cur = (j.projects.find(x => x.id === P.id) || {}).inputs || {};
+    return econForm(cur);
+  },
+  after: () => {
+    if (!P) return;
+    g("save").addEventListener("click", async () => {
+      await api("POST", `/projects/${P.id}`, { inputs: econ() });
+      alert("انحفظت الأرقام بالمشروع");
+    });
+    g("calc").addEventListener("click", async () => {
+      const out = g("calcout");
+      out.innerHTML = '<div class="load">⏳ بنحسب…</div>';
+      try {
+        const e = econ();
+        const [u, be, sc, bud, fix] = await Promise.all([
+          api("POST", "/7/unit", e), api("POST", "/8/breakeven", e),
+          api("POST", "/10/scenarios", e), api("POST", "/11/budget", e),
+          api("POST", "/12/fix", e)
+        ]);
+        const tone = u.verdict.level === "خاسر" ? "redbox"
+                   : u.verdict.level === "قوي" || u.verdict.level === "صحي" ? "okbox" : "warnbox";
+        out.innerHTML =
+          `<div class="${tone}"><b>${B.esc(u.verdict.level)}:</b> ${B.esc(u.verdict.text)}</div>` +
+          B.kpis([
+            { lbl: "ربح الطلب", val: u.perOrder, tone: u.perOrder > 0 ? "green" : "red" },
+            { lbl: "الهامش", val: u.margin, suffix: "%", tone: u.margin >= 20 ? "green" : "red" },
+            { lbl: "مضاعف السعر", val: u.multiple, suffix: "×" },
+            { lbl: "تكلفة الطلب", val: u.successCost }
+          ]) +
+          `<div class="box"><h3>وين بتروح فلوسك — من كل ${B.num(u.sell)}</h3>` +
+          B.table(["البند", "المبلغ", "% من السعر", "ملاحظة"], u.breakdown, r => [
+            `<b>${B.esc(r.بند)}</b>`, B.num(r.value), r.share + "%",
+            `<span class="mut">${B.esc(r.note || "")}</span>`
+          ]) + `</div>` +
+
+          `<div class="box"><h3>⚖️ نقطة التعادل</h3>` +
+          (be.impossible
+            ? `<div class="redbox">${B.esc(be.text)}</div>` +
+              `<h3>محاولات الإصلاح</h3>` +
+              B.table(["الإجراء", "ربح الطلب", "الهامش", "بيحل؟"], be.fixes || [], f => [
+                B.esc(f.الإجراء) + (f.ملاحظة ? `<div class="mut">${B.esc(f.ملاحظة)}</div>` : ""),
+                `<b style="color:${f.ربح_الطلب > 0 ? "var(--green)" : "var(--red)"}">${B.num(f.ربح_الطلب)}</b>`,
+                B.num(f.الهامش) + "%",
+                f.يحل_المشكلة ? '<span class="tag green">نعم</span>' : '<span class="tag red">لأ</span>'
+              ])
+            : B.kpis([
+                { lbl: "طلبات للتعادل", val: be.ordersToBreakEven, tone: "amber" },
+                { lbl: "طلبات باليوم", val: be.ordersPerDay },
+                { lbl: "ربح بالهدف", val: be.targetProfit, tone: be.targetProfit > 0 ? "green" : "red" },
+                { lbl: "هامش الأمان", val: be.marginOfSafety, suffix: "%" }
+              ]) + `<div class="item"><div class="w">${B.esc(be.text)}<br><b>${B.esc(be.verdict)}</b></div></div>`
+          ) + `</div>` +
+
+          `<div class="box"><h3>🎬 السيناريوهات</h3>
+            <div class="${sc.verdict.includes("🟢") ? "okbox" : "redbox"}">${B.esc(sc.verdict)}</div>` +
+          B.table(["السيناريو", "الافتراض", "طلبات", "ربح الطلب", "الإيراد", "الربح الشهري"], sc.rows, r => [
+            `<b>${B.esc(r.name)}</b>`, `<span class="mut">${B.esc(r.why)}</span>`,
+            B.num(r.orders), B.num(r.perOrder), B.num(r.revenue),
+            `<b style="color:${r.monthlyProfit > 0 ? "var(--green)" : "var(--red)"}">${B.num(r.monthlyProfit)}</b>`
+          ]) + `</div>` +
+
+          `<div class="box"><h3>💸 كم لازم يكون معك قبل ما تبدأ</h3>` +
+          B.kpis([
+            { lbl: "تكاليف الإطلاق", val: bud.total },
+            { lbl: "رأس مال عامل", val: bud.workingCapital, tone: "amber" },
+            { lbl: "الإجمالي المطلوب", val: bud.totalNeeded, tone: "red" },
+            { lbl: "شهور الاسترداد", val: bud.monthsToRecover ?? "—", raw: bud.monthsToRecover == null }
+          ]) +
+          B.table(["البند", "المبلغ", "ملاحظة"], bud.items, r => [
+            B.esc(r.بند), B.num(r.value), `<span class="mut">${B.esc(r.note || "")}</span>`
+          ]) +
+          `<div class="redbox" style="margin-top:14px">${B.esc(bud.basis["🔴_الفجوة_النقدية"])}</div></div>` +
+
+          (fix.advice ? `<div class="warnbox"><b>التشخيص:</b> ${B.esc(fix.advice)}</div>` : "") +
+          B.basis(u.basis);
+      } catch (e) { out.innerHTML = `<div class="err">${B.esc(e.message)}</div>`; }
+    });
+  }
+},
+
+// ═══ 4) الامتثال الغذائي ═══
+{
+  label: "4️⃣ الامتثال",
+  url: () => `${A}/13/compliance?category=${P ? P.category : "dry_shelf"}`,
+  render: (j) => {
+    if (!P) return needProject();
+    return `<div class="redbox">${B.esc(j.disclaimer)}</div>` +
+      B.kpis([{ lbl: "بنود حرجة", val: j.criticalCount, tone: "red" },
+              { lbl: "إجمالي البنود", val: j.items.length },
+              { lbl: "الفئة", val: j.category, raw: true }]) +
+      `<div class="box"><h3>قائمة الامتثال</h3>` +
+      B.table(["البند", "ليش", "حرج؟"], j.items, i => [
+        `<b>${B.esc(i.بند)}</b>`, `<span class="mut">${B.esc(i.لماذا)}</span>`,
+        i.حرج ? '<span class="tag red">حرج</span>' : '<span class="tag">مهم</span>'
+      ]) + `</div><div id="extra"></div>`;
+  },
+  after: async () => {
+    if (!P) return;
+    try {
+      const [ad, cold, risks] = await Promise.all([
+        api("GET", `/14/adpolicy?category=${P.category}`),
+        api("GET", `/15/coldchain?category=${P.category}&monthlyFixed=${(P.inputs || {}).monthlyFixed || 0}`),
+        api("GET", `/28/risks?category=${P.category}&project_id=${P.id}`)
+      ]);
+      g("extra").innerHTML =
+        `<div class="box"><h3>📋 سياسة إعلانات ميتا لفئتك</h3>
+          ${ad.notes.map(n => `<div class="item"><div class="w">${B.esc(n)}</div></div>`).join("")}</div>
+        <div class="box"><h3>❄️ التخزين والتبريد</h3>
+          <div class="${cold.coldChain ? "warnbox" : "okbox"}">${B.esc(cold.costImpact)}</div>
+          ${cold.requirements.map(r => `<div class="item"><div class="w">${B.esc(r)}</div></div>`).join("")}</div>
+        <div class="box"><h3>⚠️ سجل المخاطر (${risks.criticalCount} حرجة)</h3>` +
+        B.table(["الخطر", "الاحتمال", "الأثر", "التخفيف"], risks.risks, r => [
+          `<b>${B.esc(r.خطر)}</b>`,
+          `<span class="tag ${String(r.احتمال).includes("عالي") ? "red" : "amber"}">${B.esc(r.احتمال)}</span>`,
+          B.esc(r.الأثر), `<span class="mut">${B.esc(r.التخفيف)}</span>`
+        ]) + `</div>`;
+    } catch (e) { g("extra").innerHTML = `<div class="err">${B.esc(e.message)}</div>`; }
+  }
+},
+
+// ═══ 5) الموقع والعرض ═══
+{
+  label: "5️⃣ الموقع والعرض",
+  url: () => P ? `${A}/17/positioning?project_id=${P.id}&sellPrice=${(P.inputs || {}).sellPrice || 0}`
+              : `${A}/services`,
+  render: (j) => {
+    if (!P) return needProject();
+    if (!j.enough) return `<div class="warnbox">سجّل منافسين أول من تبويب "المنافسون" —
+      الموقع التنافسي ما بينبنى بلا سوق تقارن فيه.</div>`;
+    return B.kpis([
+      { lbl: "سعرك", val: j.myPrice },
+      { lbl: "وسيط السوق", val: j.market.median, tone: "amber" },
+      { lbl: "موقعك", val: j.position, raw: true },
+      { lbl: "منافسين", val: j.market.competitors }
+    ]) +
+    `<div class="warnbox"><b>${B.esc(j.position)}:</b> ${B.esc(j.strategy)}</div>
+    <div class="box"><h3>كيف تميّز حالك</h3>
+      ${j.differentiators.map(d => `<div class="item"><div class="w">${B.esc(d)}</div></div>`).join("")}</div>
+    <div id="offers"></div><div id="gaps"></div>`;
+  },
+  after: async () => {
+    if (!P) return;
+    const i = P.inputs || {};
+    try {
+      const [off, gap] = await Promise.all([
+        api("GET", `/18/offer?project_id=${P.id}&sellPrice=${i.sellPrice || 0}&unitCost=${i.unitCost || 0}`),
+        api("GET", `/4/gap?project_id=${P.id}`)
+      ]);
+      if (g("offers")) g("offers").innerHTML = off.offers && off.offers.length
+        ? `<div class="box"><h3>🎁 عروض مقترحة — كل واحد معه شرطه</h3>` +
+          off.offers.map(o => `<div class="item"><div class="t">${B.esc(o.عرض)}</div>
+            <div class="w"><b>ليش:</b> ${B.esc(o.لماذا)}<br>
+            <b>الشرط:</b> ${B.esc(o.الشرط)}</div></div>`).join("") + `</div>`
+        : `<div class="warnbox">املأ سعر البيع والتكلفة بتبويب الأرقام عشان نقترح عروض.</div>`;
+      if (g("gaps")) g("gaps").innerHTML = gap.enough
+        ? `<div class="box"><h3>🕳️ فجوات السوق</h3>` +
+          gap.gaps.map(x => `<div class="item"><div class="t">${B.esc(x.نوع)}</div>
+            <div class="w">${B.esc(x.الفرصة)}<br><span style="opacity:.7">الأساس: ${B.esc(x.الأساس)}</span></div>
+          </div>`).join("") + `</div>` : "";
+    } catch (e) { /* الأقسام الاختيارية بتنتخطى بهدوء */ }
+  }
+},
+
+// ═══ 6) البحث والمحتوى (AI) ═══
+{
+  label: "6️⃣ البحث والمحتوى",
+  url: () => `${A}/services`,
+  render: () => {
+    if (!P) return needProject();
+    return `<div class="warnbox">هالتبويب بيستخدم بحث ويب حقيقي + ذكاء اصطناعي.
+      بياخد وقت (نص دقيقة لدقيقتين) لأنه بيبحث فعلياً وبيقرأ صفحات.
+      🔴 راجع أي رقم قبل ما تبني عليه قرار.</div>
+    <div class="box"><h3>🔎 بحث سوق</h3>
+      <div class="form">
+        <div class="fld"><label>نوع البحث</label><select id="rk">
+          <option value="market">السوق والمنافسة</option>
+          <option value="supply">الموردون وأسعار الجملة</option>
+          <option value="trend">الترند والموسمية</option>
+          <option value="rules">التراخيص والمتطلبات</option>
+        </select></div>
+        <button class="btn" id="dores">ابحث</button>
+      </div></div>
+    <div class="box"><h3>✍️ توليد المحتوى</h3>
+      <div class="form">
+        <div class="fld"><label>المطلوب</label><select id="bk">
+          <option value="identity">اسم الصفحة والهوية</option>
+          <option value="page">صفحة المنتج</option>
+          <option value="bundles">الباقات</option>
+          <option value="content">خطة محتوى 30 يوم</option>
+          <option value="angles">الزوايا الإعلانية</option>
+          <option value="botreplies">ردود البوت</option>
+        </select></div>
+        <button class="btn" id="dobuild">ولّد</button>
+      </div></div>
+    <div id="airesult"></div>`;
+  },
+  after: () => {
+    if (!P) return;
+    const run = async (path, body, label) => {
+      const out = g("airesult");
+      out.innerHTML = `<div class="load">⏳ ${label}… بيبحث فعلياً على الويب، استنى شوي</div>`;
+      try {
+        const j = await api("POST", path, body);
+        const steps = (j.steps || []).map(s =>
+          `<div class="quote">${s.type === "search" ? "🔍 بحث" : "📄 قراءة"}: ${B.esc(s.q)}</div>`).join("");
+        out.innerHTML = `<div class="box"><h3>${label}</h3>
+          ${steps ? `<div style="margin-bottom:12px"><b>خطوات البحث الفعلية:</b>${steps}</div>` : ""}
+          <pre class="rep">${B.esc(j.report || j.output || "")}</pre></div>` + B.basis(j.basis);
+      } catch (e) { out.innerHTML = `<div class="err">${B.esc(e.message)}</div>`; }
+    };
+    g("dores").addEventListener("click", () => run("/6/research",
+      { product: P.product, kind: v("rk"), country: P.country, project_id: P.id },
+      "بحث السوق"));
+    g("dobuild").addEventListener("click", () => run("/19/build",
+      { product: P.product, what: v("bk"), country: P.country, project_id: P.id,
+        sellPrice: (P.inputs || {}).sellPrice },
+      "توليد المحتوى"));
+  }
+},
+
+// ═══ 7) القرار ═══
+{
+  label: "7️⃣ القرار",
+  url: () => `${A}/services`,
+  render: () => P ? `<div id="verdictout"><div class="load">⏳ بنجمع كل شي…</div></div>` : needProject(),
+  after: async () => {
+    if (!P) return;
+    const e = { ...(P.inputs || {}), category: P.category, project_id: P.id };
+    try {
+      const [vd, tp, rm] = await Promise.all([
+        api("POST", "/29/verdict", e), api("POST", "/27/testplan", e), api("POST", "/30/roadmap", e)
+      ]);
+      const tone = vd.verdict.قرار.includes("🟢") ? "okbox"
+                 : vd.verdict.قرار.includes("🟠") ? "warnbox" : "redbox";
+      g("verdictout").innerHTML =
+        `<div class="${tone}"><b style="font-size:17px">${B.esc(vd.verdict.قرار)}</b><br>
+          ${B.esc(vd.verdict.سبب)}</div>` +
+        B.kpis([
+          { lbl: "الدرجة", val: vd.score, suffix: "/100",
+            tone: vd.score >= 70 ? "green" : vd.score >= 50 ? "amber" : "red" },
+          { lbl: "ربح الطلب", val: vd.economics.perOrder, tone: vd.economics.perOrder > 0 ? "green" : "red" },
+          { lbl: "رأس المال المطلوب", val: vd.capital.total, tone: "amber" },
+          { lbl: "أضعف محور", val: vd.weakest.المحور, raw: true, tone: "red" }
+        ]) +
+        `<div class="box"><h3>المحاور — من الأضعف للأقوى</h3>` +
+        B.table(["المحور", "الدرجة", "الوزن", "السبب"], vd.axes, a => [
+          `<b>${B.esc(a.المحور)}</b>`,
+          `<b style="color:${a.الدرجة >= 70 ? "var(--green)" : a.الدرجة >= 40 ? "var(--amber)" : "var(--red)"}">${a.الدرجة}</b>`,
+          Math.round(a.الوزن * 100) + "%", `<span class="mut">${B.esc(a.السبب)}</span>`
+        ]) + `</div>` +
+        `<div class="box"><h3>🧪 خطة اختبار الإعلانات</h3>` +
+        B.table(["المرحلة", "المدة", "الميزانية", "الهدف", "قرار الاستمرار"], tp.phases, p => [
+          `<b>${B.esc(p.المرحلة)}</b>`, B.esc(p.المدة), B.num(p.الميزانية),
+          B.esc(p.الهدف), `<span class="mut">${B.esc(p.القرار)}</span>`
+        ]) +
+        `<div class="redbox" style="margin-top:14px"><b>🛑 متى توقف:</b><br>
+          ${tp.killCriteria.map(k => "• " + B.esc(k)).join("<br>")}</div>
+        <div class="okbox"><b>🚀 متى توسّع:</b><br>
+          ${tp.scaleCriteria.map(k => "• " + B.esc(k)).join("<br>")}</div></div>` +
+        `<div class="box"><h3>🗓️ خطة التنفيذ</h3>` +
+        [["أسبوع 1", rm.week1], ["أسبوع 2", rm.week2], ["أسبوع 3", rm.week3],
+         ["أسبوع 4", rm.week4], ["شهر 2", rm.month2], ["شهر 3", rm.month3]]
+          .map(([t, arr]) => `<div class="item"><div class="t">${t}</div>
+            <div class="w">${arr.map(x => "• " + B.esc(x)).join("<br>")}</div></div>`).join("") +
+        `<div class="warnbox" style="margin-top:12px">${B.esc(rm.note)}</div></div>` +
+        B.basis(vd.basis);
+    } catch (e) {
+      g("verdictout").innerHTML = `<div class="warnbox">املأ أرقامك بتبويب "الأرقام" أول —
+        القرار ما بينبنى بلا تكلفة وسعر. (${B.esc(e.message)})</div>`;
+    }
+  }
+}
+]);
+
+loadProjects();
+</script>
+</body></html>

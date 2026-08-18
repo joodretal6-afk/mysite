@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>📣 استوديو التسويق — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1200px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; -webkit-overflow-scrolling:touch; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .panel { display:none; }
+    .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.7; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    input, textarea, select { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; color:#263238; }
+    input:focus, textarea:focus, select:focus { outline:none; border-color:var(--green); }
+    textarea { width:100%; min-height:70px; resize:vertical; }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:hover { background:var(--green2); }
+    .btn.gray { background:#eceff1; color:#37474f; }
+    .btn.red { background:#c62828; }
+    .btn.sm { padding:5px 10px; font-size:12px; border-radius:8px; }
+    .btn:disabled { opacity:.6; cursor:wait; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:10px 12px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    tr:hover { background:#fafcfa; }
+    .empty { text-align:center; padding:36px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .l { font-size:11.5px; color:var(--mut); margin-top:3px; }
+    .badge { font-size:11px; padding:2px 9px; border-radius:12px; font-weight:700; display:inline-block; }
+    .chip { display:inline-flex; align-items:center; gap:6px; background:#e8f5e9; color:var(--green2); border:1px solid #c8e6c9; padding:4px 11px; border-radius:14px; font-size:12.5px; font-weight:700; margin:3px 2px; }
+    .aiout { white-space:pre-wrap; line-height:1.9; font-size:14px; background:#fafcfa; border:1px solid var(--line); border-radius:10px; padding:14px; margin-top:10px; }
+    .swipe-item { border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+    .swipe-item .t { font-weight:800; color:var(--green2); margin-bottom:5px; }
+    .swipe-item .b { white-space:pre-wrap; line-height:1.8; font-size:13.5px; }
+    .swipe-item .meta { margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; font-size:11.5px; color:var(--mut); }
+    .week { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+    .day-col { background:#fafcfa; border:1px solid var(--line); border-radius:12px; padding:10px; min-height:110px; }
+    .day-col.today { border-color:var(--green); background:#f1f8f2; }
+    .day-col h3 { font-size:12.5px; color:var(--green2); margin-bottom:8px; }
+    .cal-item { background:#fff; border:1px solid var(--line); border-radius:9px; padding:7px 9px; font-size:12px; margin-bottom:6px; }
+    .cal-item .ci-t { font-weight:700; margin-bottom:3px; word-break:break-word; white-space:normal; }
+    .cal-item .ci-a { display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin-top:4px; }
+    .offer { border:1.5px solid var(--line); border-radius:12px; padding:13px; margin-bottom:10px; }
+    .offer.ok { border-color:#a5d6a7; background:#f6fbf6; }
+    .offer.bad { border-color:#ef9a9a; background:#fff8f8; }
+    .offer .o-name { font-weight:800; font-size:15px; color:var(--green2); }
+    .offer .o-line { font-size:13px; margin-top:5px; line-height:1.8; }
+    .mbar { height:8px; background:#eceff1; border-radius:6px; overflow:hidden; margin-top:7px; }
+    .mbar > div { height:100%; border-radius:6px; }
+    .heat td { text-align:center; padding:6px 4px; font-size:11px; min-width:26px; }
+    .heat th { padding:6px 6px; font-size:11px; }
+    #toast { position:fixed; bottom:18px; right:50%; transform:translateX(50%); background:#263238; color:#fff; padding:11px 20px; border-radius:10px; font-size:13.5px; display:none; z-index:50; max-width:90vw; }
+    @media (max-width:600px){ .wrap{padding:10px} .card{padding:12px} th,td{padding:8px 9px} }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📣 استوديو التسويق</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+
+  <div class="wrap">
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-t="tideas">💡 أفكار منشورات</button>
+      <button class="tab" data-t="tcap">✍️ كابشن إعلان</button>
+      <button class="tab" data-t="tvid">🎬 سيناريو فيديو</button>
+      <button class="tab" data-t="tcal">🗓️ تقويم المحتوى</button>
+      <button class="tab" data-t="tswipe">📚 نصوص ناجحة</button>
+      <button class="tab" data-t="treplies">💬 بنك الردود</button>
+      <button class="tab" data-t="toffers">🎁 مولد العروض</button>
+      <button class="tab" data-t="ttimes">⏰ أوقات النشر</button>
+      <button class="tab" data-t="tcamp">📊 أرشيف الحملات</button>
+      <button class="tab" data-t="thash">#️⃣ هاشتاغات</button>
+    </div>
+
+    <!-- (1) أفكار منشورات -->
+    <div class="panel active" id="tideas">
+      <div class="card">
+        <h2>💡 مولد أفكار المنشورات</h2>
+        <div class="hint">اكتب اسم منتج أو مناسبة (مثال: جبنة غنم بلدية، عيد الأضحى، افتتاح الموسم) واحصل على 5 أفكار منشورات بأسلوب أردني جاهزة للتنفيذ.</div>
+        <div class="row">
+          <input id="ideasTopic" placeholder="🧀 المنتج أو المناسبة..." style="flex:1;min-width:200px">
+          <button class="btn" id="ideasBtn" onclick="genIdeas()">✨ ولّد الأفكار</button>
+        </div>
+        <div id="ideasOut"><div class="empty">اكتب موضوعاً واضغط "ولّد الأفكار" 💡</div></div>
+      </div>
+    </div>
+
+    <!-- (2) كابشن إعلان -->
+    <div class="panel" id="tcap">
+      <div class="card">
+        <h2>✍️ كاتب كابشن الإعلان</h2>
+        <div class="hint">3 كابشنات جاهزة بثلاث زوايا مختلفة: السعر والتوفير، الجودة والطعم، والقصة والعاطفة — انسخ اللي بعجبك وانشره.</div>
+        <div class="row" style="margin-bottom:8px">
+          <input id="capProduct" placeholder="🧀 اسم المنتج..." style="flex:1;min-width:200px">
+        </div>
+        <textarea id="capDetails" placeholder="تفاصيل إضافية (اختياري): السعر، الوزن، ميزة خاصة..."></textarea>
+        <div style="margin-top:8px"><button class="btn" id="capBtn" onclick="genCaptions()">✨ اكتب الكابشنات</button></div>
+        <div id="capOut"><div class="empty">اكتب اسم المنتج واضغط "اكتب الكابشنات" ✍️</div></div>
+      </div>
+    </div>
+
+    <!-- (3) سيناريو فيديو -->
+    <div class="panel" id="tvid">
+      <div class="card">
+        <h2>🎬 مولد سيناريو فيديو 30 ثانية</h2>
+        <div class="hint">سيناريو ريلز جاهز بمشاهد مرقّمة وتوقيتات دقيقة، قابل للتصوير بالموبايل داخل المحل.</div>
+        <div class="row">
+          <input id="vidProduct" placeholder="🧀 اسم المنتج..." style="flex:1;min-width:180px">
+          <input id="vidStyle" placeholder="الأسلوب (اختياري): مرح / فخم / وراء الكواليس" style="flex:1;min-width:200px">
+          <button class="btn" id="vidBtn" onclick="genVideo()">✨ ولّد السيناريو</button>
+        </div>
+        <div id="vidOut"><div class="empty">اكتب اسم المنتج واضغط "ولّد السيناريو" 🎬</div></div>
+      </div>
+    </div>
+
+    <!-- (4) تقويم المحتوى -->
+    <div class="panel" id="tcal">
+      <div class="card">
+        <h2 id="calFormTitle">🗓️ إضافة منشور للتقويم</h2>
+        <div class="hint">خطّط منشورات الأسبوع: اليوم، العنوان، القناة، والحالة — وتنقّل بين الأسابيع بالأسهم.</div>
+        <div class="row">
+          <input id="calDay" type="date" style="min-width:150px">
+          <input id="calTitle" placeholder="📝 عنوان المنشور..." style="flex:1;min-width:180px">
+          <select id="calChannel">
+            <option>فيسبوك</option><option>انستغرام</option><option>تيك توك</option><option>واتساب</option><option>أخرى</option>
+          </select>
+          <select id="calStatus">
+            <option>مخطط</option><option>جاهز</option><option>منشور</option><option>ملغي</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input id="calNotes" placeholder="ملاحظات (اختياري)..." style="flex:1;min-width:200px">
+          <button class="btn" id="calSaveBtn" onclick="saveCal()">➕ إضافة</button>
+          <button class="btn gray" id="calCancelBtn" style="display:none" onclick="cancelCalEdit()">إلغاء التعديل</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between;margin-bottom:10px">
+          <button class="btn gray sm" onclick="moveWeek(-1)">◀ الأسبوع السابق</button>
+          <b id="weekLabel" style="font-size:13.5px;color:var(--green2)"></b>
+          <span>
+            <button class="btn gray sm" onclick="moveWeek(0)">هذا الأسبوع</button>
+            <button class="btn gray sm" onclick="moveWeek(1)">الأسبوع التالي ▶</button>
+          </span>
+        </div>
+        <div class="week" id="weekGrid"></div>
+      </div>
+    </div>
+
+    <!-- (5) نصوص ناجحة -->
+    <div class="panel" id="tswipe">
+      <div class="card">
+        <h2>📚 حفظ نص ناجح</h2>
+        <div class="hint">كل منشور جاب طلبات؟ احفظه هنا مع وسوم، وارجع له وانسخه بضغطة وقت ما تحتاج فكرة مضمونة.</div>
+        <div class="row" style="margin-bottom:8px">
+          <input id="swTitle" placeholder="🏷️ عنوان مختصر للنص..." style="flex:1;min-width:180px">
+          <input id="swTags" placeholder="وسوم مفصولة بفواصل: لبنة, عرض, شتوي" style="flex:1;min-width:180px">
+        </div>
+        <textarea id="swBody" placeholder="✍️ الصق نص المنشور الناجح هنا..."></textarea>
+        <div style="margin-top:8px"><button class="btn" onclick="addSwipe()">💾 حفظ بالنصوص الناجحة</button></div>
+      </div>
+      <div class="card">
+        <div class="row" style="margin-bottom:10px">
+          <input id="swSearch" placeholder="🔍 ابحث بالعنوان أو النص أو الوسوم..." style="flex:1;min-width:200px">
+          <button class="btn gray" onclick="loadSwipes()">بحث</button>
+        </div>
+        <div id="swList"><div class="empty">لا توجد نصوص محفوظة بعد — احفظ أول نص ناجح 📚</div></div>
+      </div>
+    </div>
+
+    <!-- (6) بنك الردود -->
+    <div class="panel" id="treplies">
+      <div class="card">
+        <h2 id="repFormTitle">💬 إضافة رد جاهز</h2>
+        <div class="hint">جهّز ردوداً على أشهر التعليقات (بكم السعر؟ في توصيل؟...) وانسخ الرد بضغطة وقت الرد اليدوي على التعليقات — بدون أي إرسال تلقائي.</div>
+        <div class="row" style="margin-bottom:8px">
+          <input id="repTrigger" placeholder="🗨️ نوع التعليق (مثال: بكم السعر؟)" style="flex:1;min-width:200px">
+        </div>
+        <textarea id="repReply" placeholder="✍️ الرد الجاهز..."></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="repSaveBtn" onclick="saveReply()">➕ إضافة الرد</button>
+          <button class="btn gray" id="repCancelBtn" style="display:none" onclick="cancelReplyEdit()">إلغاء التعديل</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row" style="margin-bottom:10px">
+          <input id="repSearch" placeholder="🔍 ابحث في الردود..." style="flex:1;min-width:180px">
+          <button class="btn gray" onclick="loadReplies()">بحث</button>
+        </div>
+        <div class="tbl-scroll"><table><thead><tr><th>التعليق</th><th>الرد الجاهز</th><th></th></tr></thead><tbody id="repRows"></tbody></table></div>
+        <div class="empty" id="repEmpty" style="display:none">لا توجد ردود جاهزة بعد — أضف أول رد 💬</div>
+      </div>
+    </div>
+
+    <!-- (7) مولد العروض -->
+    <div class="panel" id="toffers">
+      <div class="card">
+        <h2>🎁 مولد العروض الذكي</h2>
+        <div class="hint">أدخل سعر البيع والتكلفة، والنظام يقترح 3 عروض (كمية / هدية / خصم) ويحسب الهامش المتبقي لكل عرض — مع تحذير أحمر إذا نزل الهامش عن 25%.</div>
+        <div class="row">
+          <input id="ofPrice" type="number" step="0.01" min="0" placeholder="💰 سعر البيع (دينار)" style="min-width:170px">
+          <input id="ofCost" type="number" step="0.01" min="0" placeholder="🏷️ التكلفة (دينار)" style="min-width:170px">
+          <button class="btn" onclick="genOffers()">🧮 اقترح العروض</button>
+        </div>
+        <div id="ofOut"><div class="empty">أدخل السعر والتكلفة واضغط "اقترح العروض" 🎁</div></div>
+      </div>
+    </div>
+
+    <!-- (8) أوقات النشر -->
+    <div class="panel" id="ttimes">
+      <div class="card">
+        <h2>⏰ أفضل أوقات النشر</h2>
+        <div class="hint">محسوبة من ذروة طلباتك الفعلية (اليوم × الساعة بتوقيت الأردن): انشر قبل أوقات الذروة بساعة أو ساعتين ليكون منشورك قدام الزبون وقت ما يقرر يطلب.</div>
+        <div class="row" style="margin-bottom:10px">
+          <select id="btDays" onchange="loadBestTimes()">
+            <option value="30">آخر 30 يوم</option>
+            <option value="90" selected>آخر 90 يوم</option>
+            <option value="180">آخر 180 يوم</option>
+            <option value="365">آخر سنة</option>
+          </select>
+        </div>
+        <div id="btTop"></div>
+      </div>
+      <div class="card">
+        <h2>🗺️ خريطة الطلبات (اليوم × الساعة)</h2>
+        <div class="tbl-scroll" id="btHeat"><div class="empty">جارٍ التحميل...</div></div>
+      </div>
+    </div>
+
+    <!-- (9) أرشيف الحملات -->
+    <div class="panel" id="tcamp">
+      <div class="card">
+        <h2 id="campFormTitle">📊 تسجيل حملة</h2>
+        <div class="hint">سجّل كل حملة إعلانية يدوياً (الميزانية وعدد الطلبات اللي جابتها) — النظام يحسب تكلفة الطلب الواحد ويوريك أنجح وأسوأ حملاتك لتتعلم منها.</div>
+        <div class="row" style="margin-bottom:8px">
+          <input id="cpName" placeholder="📣 اسم الحملة..." style="flex:1;min-width:170px">
+          <input id="cpProduct" placeholder="🧀 المنتج المروَّج" style="min-width:150px">
+          <input id="cpBudget" type="number" step="0.01" min="0" placeholder="💰 الميزانية (دينار)" style="min-width:150px">
+          <input id="cpGained" type="number" min="0" placeholder="🛒 طلبات مكتسبة" style="min-width:140px">
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <label class="hint" style="margin:0">من <input id="cpStart" type="date"></label>
+          <label class="hint" style="margin:0">إلى <input id="cpEnd" type="date"></label>
+          <select id="cpVerdict">
+            <option value="">الحكم على الحملة...</option>
+            <option>ناجحة</option><option>متوسطة</option><option>فاشلة</option>
+          </select>
+        </div>
+        <textarea id="cpNotes" placeholder="ملاحظات ودروس مستفادة (اختياري)..."></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="cpSaveBtn" onclick="saveCampaign()">💾 تسجيل الحملة</button>
+          <button class="btn gray" id="cpCancelBtn" style="display:none" onclick="cancelCampEdit()">إلغاء التعديل</button>
+        </div>
+      </div>
+      <div id="campSummary"></div>
+      <div class="card">
+        <h2>🗂️ الحملات المسجّلة</h2>
+        <div class="tbl-scroll"><table><thead><tr><th>الحملة</th><th>المنتج</th><th>الميزانية</th><th>طلبات</th><th>تكلفة/طلب</th><th>الفترة</th><th>الحكم</th><th></th></tr></thead><tbody id="campRows"></tbody></table></div>
+        <div class="empty" id="campEmpty" style="display:none">لا توجد حملات مسجّلة بعد — سجّل أول حملة 📊</div>
+      </div>
+    </div>
+
+    <!-- (10) هاشتاغات -->
+    <div class="panel" id="thash">
+      <div class="card">
+        <h2>#️⃣ مولد الهاشتاغات والكلمات الإعلانية</h2>
+        <div class="hint">هاشتاغات عربية وإنجليزية مخصصة للسوق الأردني + كلمات إعلانية قصيرة تصلح كعناوين إعلانات أو اهتمامات استهداف.</div>
+        <div class="row">
+          <input id="hashProduct" placeholder="🧀 اسم المنتج..." style="flex:1;min-width:200px">
+          <button class="btn" id="hashBtn" onclick="genHashtags()">✨ ولّد الهاشتاغات</button>
+        </div>
+        <div id="hashOut"><div class="empty">اكتب اسم المنتج واضغط "ولّد الهاشتاغات" #️⃣</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    var API = "/admin/f-api/marketing";
+
+    function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+    function money(v){ return (Math.round((+v||0)*100)/100).toLocaleString("en-US") + " د"; }
+    function toast(msg, bad){
+      var t = document.getElementById("toast");
+      t.textContent = msg; t.style.background = bad ? "#c62828" : "#2e7d32"; t.style.display = "block";
+      clearTimeout(t._h); t._h = setTimeout(function(){ t.style.display = "none"; }, 3000);
+    }
+    async function api(path, opts){
+      var r;
+      try { r = await fetch(API + path, opts); }
+      catch(e){ toast("تعذّر الاتصال بالخادم", true); throw e; }
+      if (r.status === 401) { location.href = "/admin/login"; throw new Error("401"); }
+      var data = null;
+      try { data = await r.json(); } catch(e){ data = null; }
+      if (!r.ok) { var msg = (data && data.error) || "حدث خطأ غير متوقع"; toast(msg, true); throw new Error(msg); }
+      return data;
+    }
+    function post(body){ return { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) }; }
+
+    // نسخ للنصوص — مخزن داخلي لتفادي مشاكل الاقتباس في onclick
+    var CP = {}, cpSeq = 0;
+    function cpKey(text){ var k = "k" + (++cpSeq); CP[k] = text; return k; }
+    async function copyKey(k){
+      var t = CP[k]; if (t == null) return;
+      try { await navigator.clipboard.writeText(t); toast("تم النسخ ✅"); }
+      catch(e){
+        var ta = document.createElement("textarea");
+        ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try { document.execCommand("copy"); toast("تم النسخ ✅"); } catch(_){ toast("تعذّر النسخ — انسخ يدوياً", true); }
+        ta.remove();
+      }
+    }
+    function copyBtn(text, label){ return '<button class="btn gray sm" onclick="copyKey(\'' + cpKey(text) + '\')">📋 ' + (label || "نسخ") + '</button>'; }
+    function fmtHour(h){
+      h = +h;
+      if (h === 0) return "12 منتصف الليل";
+      if (h === 12) return "12 الظهر";
+      return h < 12 ? h + " صباحاً" : (h - 12) + " مساءً";
+    }
+
+    // ── التبويبات ──
+    var loaded = {};
+    var loaders = { tcal: loadCal, tswipe: loadSwipes, treplies: loadReplies, ttimes: loadBestTimes, tcamp: loadCampaigns };
+    document.getElementById("tabs").addEventListener("click", function(ev){
+      var b = ev.target.closest(".tab"); if (!b) return;
+      document.querySelectorAll(".tab").forEach(function(x){ x.classList.toggle("active", x === b); });
+      document.querySelectorAll(".panel").forEach(function(p){ p.classList.toggle("active", p.id === b.dataset.t); });
+      var fn = loaders[b.dataset.t];
+      if (fn && !loaded[b.dataset.t]) { loaded[b.dataset.t] = 1; fn(); }
+    });
+
+    // ═══════════ أدوات AI مشتركة ═══════════
+    async function runAI(btnId, outId, path, body){
+      var btn = document.getElementById(btnId), out = document.getElementById(outId);
+      btn.disabled = true;
+      out.innerHTML = '<div class="empty">🤖 الذكاء يكتب... (قد يستغرق نصف دقيقة)</div>';
+      try {
+        var d = await api(path, post(body));
+        out.innerHTML = '<div class="aiout">' + esc(d.text) + '</div><div style="margin-top:8px">' + copyBtn(d.text, "نسخ الكل") + '</div>';
+      } catch(e){
+        out.innerHTML = '<div class="empty">😕 ' + esc(e.message === "401" ? "" : e.message || "تعذّر التوليد") + ' — جرّب مرة ثانية</div>';
+      }
+      btn.disabled = false;
+    }
+
+    // (1) أفكار
+    function genIdeas(){
+      var topic = document.getElementById("ideasTopic").value.trim();
+      if (!topic) { toast("اكتب المنتج أو المناسبة أولاً", true); return; }
+      runAI("ideasBtn", "ideasOut", "/ideas", { topic: topic });
+    }
+    // (2) كابشن
+    function genCaptions(){
+      var p = document.getElementById("capProduct").value.trim();
+      if (!p) { toast("اكتب اسم المنتج أولاً", true); return; }
+      runAI("capBtn", "capOut", "/captions", { product: p, details: document.getElementById("capDetails").value.trim() });
+    }
+    // (3) فيديو
+    function genVideo(){
+      var p = document.getElementById("vidProduct").value.trim();
+      if (!p) { toast("اكتب اسم المنتج أولاً", true); return; }
+      runAI("vidBtn", "vidOut", "/video-script", { product: p, style: document.getElementById("vidStyle").value.trim() });
+    }
+    // (10) هاشتاغات
+    function genHashtags(){
+      var p = document.getElementById("hashProduct").value.trim();
+      if (!p) { toast("اكتب اسم المنتج أولاً", true); return; }
+      runAI("hashBtn", "hashOut", "/hashtags", { product: p });
+    }
+
+    // ═══════════ (4) تقويم المحتوى ═══════════
+    var DAY_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+    var calBase = new Date();
+    var calEditId = 0;
+    function isoOf(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+    function weekDays(){
+      var d = new Date(calBase); d.setHours(0,0,0,0);
+      d.setDate(d.getDate() - d.getDay());
+      var arr = [];
+      for (var i = 0; i < 7; i++){ var x = new Date(d); x.setDate(d.getDate() + i); arr.push(x); }
+      return arr;
+    }
+    function moveWeek(dir){
+      if (dir === 0) calBase = new Date();
+      else calBase.setDate(calBase.getDate() + dir * 7);
+      loadCal();
+    }
+    function calStBadge(s){
+      var c = {"مخطط":["#e3f2fd","#1565c0"],"جاهز":["#fff3e0","#e65100"],"منشور":["#e8f5e9","#1b5e20"],"ملغي":["#ffebee","#c62828"]}[s] || ["#eceff1","#37474f"];
+      return '<span class="badge" style="background:'+c[0]+';color:'+c[1]+'">'+esc(s||"—")+'</span>';
+    }
+    async function loadCal(){
+      var days = weekDays();
+      var from = isoOf(days[0]), to = isoOf(days[6]);
+      document.getElementById("weekLabel").textContent = "أسبوع " + from + " ← " + to;
+      var grid = document.getElementById("weekGrid");
+      grid.innerHTML = '<div class="empty">⏳ جارٍ التحميل...</div>';
+      var d;
+      try { d = await api("/calendar?from=" + from + "&to=" + to); } catch(e){ grid.innerHTML = '<div class="empty">😕 تعذّر التحميل</div>'; return; }
+      var byDay = {};
+      d.items.forEach(function(it){ (byDay[it.day] = byDay[it.day] || []).push(it); });
+      var today = isoOf(new Date());
+      var h = "";
+      days.forEach(function(dd, i){
+        var key = isoOf(dd);
+        var items = byDay[key] || [];
+        h += '<div class="day-col' + (key === today ? " today" : "") + '"><h3>' + DAY_AR[i] + ' <span style="color:var(--mut);font-weight:400">' + key.slice(5) + '</span></h3>';
+        if (!items.length) h += '<div class="hint" style="margin:0">لا شيء مخطط</div>';
+        items.forEach(function(it){
+          h += '<div class="cal-item"><div class="ci-t">' + esc(it.title) + '</div>'
+            + '<div>' + calStBadge(it.status) + ' <span class="hint" style="margin:0">' + esc(it.channel) + '</span></div>'
+            + (it.notes ? '<div class="hint" style="margin:3px 0 0;white-space:normal">' + esc(it.notes) + '</div>' : '')
+            + '<div class="ci-a"><button class="btn gray sm" onclick="editCal(' + it.id + ')">✏️</button>'
+            + '<button class="btn red sm" onclick="delCal(' + it.id + ')">🗑️</button></div></div>';
+        });
+        h += '</div>';
+      });
+      grid.innerHTML = h;
+      window._calItems = d.items;
+    }
+    function editCal(id){
+      var it = (window._calItems || []).find(function(x){ return x.id === id; });
+      if (!it) return;
+      calEditId = id;
+      document.getElementById("calDay").value = it.day;
+      document.getElementById("calTitle").value = it.title;
+      document.getElementById("calChannel").value = it.channel;
+      document.getElementById("calStatus").value = it.status;
+      document.getElementById("calNotes").value = it.notes || "";
+      document.getElementById("calFormTitle").textContent = "✏️ تعديل منشور رقم " + id;
+      document.getElementById("calSaveBtn").textContent = "💾 حفظ التعديل";
+      document.getElementById("calCancelBtn").style.display = "";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    function cancelCalEdit(){
+      calEditId = 0;
+      document.getElementById("calTitle").value = ""; document.getElementById("calNotes").value = "";
+      document.getElementById("calFormTitle").textContent = "🗓️ إضافة منشور للتقويم";
+      document.getElementById("calSaveBtn").textContent = "➕ إضافة";
+      document.getElementById("calCancelBtn").style.display = "none";
+    }
+    async function saveCal(){
+      var body = {
+        day: document.getElementById("calDay").value,
+        title: document.getElementById("calTitle").value.trim(),
+        channel: document.getElementById("calChannel").value,
+        status: document.getElementById("calStatus").value,
+        notes: document.getElementById("calNotes").value.trim()
+      };
+      if (!body.day) { toast("اختر اليوم أولاً", true); return; }
+      if (!body.title) { toast("اكتب عنوان المنشور", true); return; }
+      if (calEditId) { body.id = calEditId; await api("/calendar/update", post(body)); toast("تم حفظ التعديل ✅"); cancelCalEdit(); }
+      else { await api("/calendar/add", post(body)); toast("تمت الإضافة للتقويم ✅"); document.getElementById("calTitle").value = ""; document.getElementById("calNotes").value = ""; }
+      loadCal();
+    }
+    async function delCal(id){
+      await api("/calendar/delete", post({ id: id }));
+      toast("تم الحذف"); if (calEditId === id) cancelCalEdit();
+      loadCal();
+    }
+    document.getElementById("calDay").value = isoOf(new Date());
+
+    // ═══════════ (5) النصوص الناجحة ═══════════
+    async function loadSwipes(){
+      var s = document.getElementById("swSearch").value.trim();
+      var box = document.getElementById("swList");
+      box.innerHTML = '<div class="empty">⏳ جارٍ التحميل...</div>';
+      var d;
+      try { d = await api("/swipes" + (s ? "?search=" + encodeURIComponent(s) : "")); } catch(e){ box.innerHTML = '<div class="empty">😕 تعذّر التحميل</div>'; return; }
+      if (!d.swipes.length) { box.innerHTML = '<div class="empty">' + (s ? "لا نتائج لهذا البحث 🔍" : "لا توجد نصوص محفوظة بعد — احفظ أول نص ناجح 📚") + '</div>'; return; }
+      var h = "";
+      d.swipes.forEach(function(x){
+        h += '<div class="swipe-item"><div class="t">' + esc(x.title) + '</div><div class="b">' + esc(x.body) + '</div><div class="meta">';
+        String(x.tags || "").split(",").map(function(t){ return t.trim(); }).filter(Boolean).forEach(function(t){ h += '<span class="chip">#' + esc(t) + '</span>'; });
+        h += '<span style="margin-inline-start:auto"></span>'
+          + copyBtn(x.body, "نسخ النص")
+          + ' <button class="btn red sm" onclick="delSwipe(' + x.id + ')">🗑️ حذف</button>'
+          + '<span>🕐 ' + (x.created_at ? new Date(+x.created_at).toLocaleDateString("ar-EG") : "") + '</span></div></div>';
+      });
+      box.innerHTML = h;
+    }
+    async function addSwipe(){
+      var title = document.getElementById("swTitle").value.trim();
+      var body = document.getElementById("swBody").value.trim();
+      if (!title || !body) { toast("العنوان والنص مطلوبان", true); return; }
+      await api("/swipes/add", post({ title: title, body: body, tags: document.getElementById("swTags").value.trim() }));
+      toast("تم الحفظ بمكتبة النصوص ✅");
+      document.getElementById("swTitle").value = ""; document.getElementById("swBody").value = ""; document.getElementById("swTags").value = "";
+      loadSwipes();
+    }
+    async function delSwipe(id){ await api("/swipes/delete", post({ id: id })); toast("تم الحذف"); loadSwipes(); }
+
+    // ═══════════ (6) بنك الردود ═══════════
+    var repEditId = 0;
+    async function loadReplies(){
+      var s = document.getElementById("repSearch").value.trim();
+      var tb = document.getElementById("repRows"), em = document.getElementById("repEmpty");
+      tb.innerHTML = "";
+      var d;
+      try { d = await api("/replies" + (s ? "?search=" + encodeURIComponent(s) : "")); } catch(e){ return; }
+      window._reps = d.replies;
+      em.style.display = d.replies.length ? "none" : "";
+      d.replies.forEach(function(r){
+        var tr = document.createElement("tr");
+        tr.innerHTML = '<td style="white-space:normal;font-weight:700">' + esc(r.trigger) + '</td>'
+          + '<td style="white-space:normal;max-width:420px;line-height:1.7">' + esc(r.reply) + '</td>'
+          + '<td>' + copyBtn(r.reply, "نسخ الرد")
+          + ' <button class="btn gray sm" onclick="editReply(' + r.id + ')">✏️</button>'
+          + ' <button class="btn red sm" onclick="delReply(' + r.id + ')">🗑️</button></td>';
+        tb.appendChild(tr);
+      });
+    }
+    function editReply(id){
+      var r = (window._reps || []).find(function(x){ return x.id === id; });
+      if (!r) return;
+      repEditId = id;
+      document.getElementById("repTrigger").value = r.trigger;
+      document.getElementById("repReply").value = r.reply;
+      document.getElementById("repFormTitle").textContent = "✏️ تعديل الرد رقم " + id;
+      document.getElementById("repSaveBtn").textContent = "💾 حفظ التعديل";
+      document.getElementById("repCancelBtn").style.display = "";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    function cancelReplyEdit(){
+      repEditId = 0;
+      document.getElementById("repTrigger").value = ""; document.getElementById("repReply").value = "";
+      document.getElementById("repFormTitle").textContent = "💬 إضافة رد جاهز";
+      document.getElementById("repSaveBtn").textContent = "➕ إضافة الرد";
+      document.getElementById("repCancelBtn").style.display = "none";
+    }
+    async function saveReply(){
+      var trigger = document.getElementById("repTrigger").value.trim();
+      var reply = document.getElementById("repReply").value.trim();
+      if (!trigger || !reply) { toast("نوع التعليق ونص الرد مطلوبان", true); return; }
+      if (repEditId) { await api("/replies/update", post({ id: repEditId, trigger: trigger, reply: reply })); toast("تم حفظ التعديل ✅"); cancelReplyEdit(); }
+      else { await api("/replies/add", post({ trigger: trigger, reply: reply })); toast("تمت إضافة الرد ✅"); document.getElementById("repTrigger").value = ""; document.getElementById("repReply").value = ""; }
+      loadReplies();
+    }
+    async function delReply(id){
+      await api("/replies/delete", post({ id: id }));
+      toast("تم الحذف"); if (repEditId === id) cancelReplyEdit();
+      loadReplies();
+    }
+
+    // ═══════════ (7) مولد العروض ═══════════
+    async function genOffers(){
+      var price = document.getElementById("ofPrice").value;
+      var cost = document.getElementById("ofCost").value;
+      var out = document.getElementById("ofOut");
+      if (price === "" || cost === "") { toast("أدخل السعر والتكلفة أولاً", true); return; }
+      out.innerHTML = '<div class="empty">⏳ جارٍ الحساب...</div>';
+      var d;
+      try { d = await api("/offers", post({ price: +price, cost: +cost })); }
+      catch(e){ out.innerHTML = '<div class="empty">😕 ' + esc(e.message) + '</div>'; return; }
+      var h = '<div class="grid" style="margin-top:12px">'
+        + '<div class="sc"><div class="n">' + money(d.price) + '</div><div class="l">سعر البيع</div></div>'
+        + '<div class="sc"><div class="n">' + money(d.cost) + '</div><div class="l">التكلفة</div></div>'
+        + '<div class="sc"><div class="n">' + d.base_margin_pct + '%</div><div class="l">الهامش الحالي (بدون عرض)</div></div>'
+        + '</div>';
+      d.offers.forEach(function(o){
+        var bad = !!o.warning;
+        var barW = Math.max(0, Math.min(100, o.margin_pct));
+        h += '<div class="offer ' + (bad ? "bad" : "ok") + '">'
+          + '<div class="row" style="justify-content:space-between"><span class="o-name">' + (bad ? "⚠️" : "✅") + ' ' + esc(o.name) + '</span>'
+          + '<b style="color:' + (bad ? "#c62828" : "var(--green2)") + '">الهامش: ' + o.margin_pct + '%</b></div>'
+          + '<div class="o-line">' + esc(o.desc) + '</div>'
+          + '<div class="o-line">💵 دخل العرض: <b>' + money(o.revenue) + '</b> — التكلفة: <b>' + money(o.cost) + '</b> — الربح: <b>' + money(o.profit) + '</b></div>'
+          + '<div class="mbar"><div style="width:' + barW + '%;background:' + (bad ? "#c62828" : "#2e7d32") + '"></div></div>'
+          + (bad ? '<div class="o-line" style="color:#c62828;font-weight:700">' + esc(o.warning) + '</div>' : '')
+          + '</div>';
+      });
+      out.innerHTML = h;
+    }
+
+    // ═══════════ (8) أفضل أوقات النشر ═══════════
+    async function loadBestTimes(){
+      var days = document.getElementById("btDays").value;
+      var top = document.getElementById("btTop"), heat = document.getElementById("btHeat");
+      top.innerHTML = '<div class="empty">⏳ جارٍ التحليل...</div>';
+      var d;
+      try { d = await api("/best-times?days=" + days); } catch(e){ top.innerHTML = '<div class="empty">😕 تعذّر التحليل</div>'; return; }
+      if (!d.top.length) {
+        top.innerHTML = '<div class="empty">لا توجد طلبات كافية بهذه الفترة بعد — جرّب فترة أطول ⏰</div>';
+        heat.innerHTML = '<div class="empty">لا بيانات</div>';
+        return;
+      }
+      var h = '<div class="hint">حُللت ' + d.total_orders + ' طلبات — هذه أعلى 5 فترات طلب عندك:</div><div class="grid">';
+      d.top.forEach(function(t, i){
+        h += '<div class="sc"><div class="n">' + (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "⏰") + '</div>'
+          + '<div class="l" style="font-size:13px;color:#263238;font-weight:700">' + esc(t.day_name) + ' — ' + fmtHour(t.hour) + '</div>'
+          + '<div class="l">' + t.count + ' طلب</div></div>';
+      });
+      h += '</div>';
+      top.innerHTML = h;
+
+      // خريطة حرارية: أيام × ساعات
+      var mat = {}, max = 0, hoursSet = {};
+      d.grid.forEach(function(g){ mat[g.dow + "_" + g.hour] = g.count; if (g.count > max) max = g.count; hoursSet[g.hour] = 1; });
+      var hours = Object.keys(hoursSet).map(Number).sort(function(a,b){ return a - b; });
+      var DAY_AR2 = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+      var t = '<table class="heat"><thead><tr><th>اليوم \\ الساعة</th>';
+      hours.forEach(function(hh){ t += '<th>' + hh + '</th>'; });
+      t += '</tr></thead><tbody>';
+      for (var dow = 0; dow < 7; dow++){
+        t += '<tr><th>' + DAY_AR2[dow] + '</th>';
+        hours.forEach(function(hh){
+          var c = mat[dow + "_" + hh] || 0;
+          var a = max ? (c / max) : 0;
+          t += '<td style="background:rgba(46,125,50,' + (a * 0.85).toFixed(2) + ');color:' + (a > 0.55 ? "#fff" : "#263238") + '">' + (c || "") + '</td>';
+        });
+        t += '</tr>';
+      }
+      t += '</tbody></table>';
+      heat.innerHTML = t;
+    }
+
+    // ═══════════ (9) أرشيف الحملات ═══════════
+    var campEditId = 0;
+    function verdictBadge(v){
+      var c = {"ناجحة":["#e8f5e9","#1b5e20"],"متوسطة":["#fff3e0","#e65100"],"فاشلة":["#ffebee","#c62828"]}[v];
+      return v ? '<span class="badge" style="background:' + (c ? c[0] : "#eceff1") + ';color:' + (c ? c[1] : "#37474f") + '">' + esc(v) + '</span>' : "—";
+    }
+    async function loadCampaigns(){
+      var tb = document.getElementById("campRows"), em = document.getElementById("campEmpty"), sum = document.getElementById("campSummary");
+      tb.innerHTML = "";
+      var d;
+      try { d = await api("/campaigns"); } catch(e){ return; }
+      window._camps = d.campaigns;
+      em.style.display = d.campaigns.length ? "none" : "";
+      var s = d.summary;
+      sum.innerHTML = d.campaigns.length ? '<div class="grid">'
+        + '<div class="sc"><div class="n">' + s.count + '</div><div class="l">حملات مسجّلة</div></div>'
+        + '<div class="sc"><div class="n">' + money(s.total_budget) + '</div><div class="l">إجمالي الميزانيات</div></div>'
+        + '<div class="sc"><div class="n">' + s.total_orders + '</div><div class="l">طلبات مكتسبة</div></div>'
+        + '<div class="sc"><div class="n">' + (s.avg_cost_per_order != null ? money(s.avg_cost_per_order) : "—") + '</div><div class="l">متوسط تكلفة الطلب</div></div>'
+        + (s.best ? '<div class="sc"><div class="n">🏆</div><div class="l"><b>' + esc(s.best.name) + '</b><br>أنجح حملة (' + money(s.best.cost_per_order) + '/طلب)</div></div>' : '')
+        + (s.worst ? '<div class="sc"><div class="n">🔻</div><div class="l"><b>' + esc(s.worst.name) + '</b><br>أضعف حملة (' + money(s.worst.cost_per_order) + '/طلب)</div></div>' : '')
+        + '</div>' : "";
+      d.campaigns.forEach(function(c){
+        var tr = document.createElement("tr");
+        tr.innerHTML = '<td style="white-space:normal;font-weight:700">' + esc(c.name) + (c.notes ? '<div class="hint" style="margin:2px 0 0;white-space:normal">' + esc(c.notes) + '</div>' : '') + '</td>'
+          + '<td>' + esc(c.product || "—") + '</td>'
+          + '<td>' + money(c.budget) + '</td>'
+          + '<td>' + (c.orders_gained || 0) + '</td>'
+          + '<td>' + (c.cost_per_order != null ? '<b style="color:var(--green2)">' + money(c.cost_per_order) + '</b>' : '—') + '</td>'
+          + '<td class="hint" style="margin:0">' + esc(c.started_at || "؟") + ' ← ' + esc(c.ended_at || "؟") + '</td>'
+          + '<td>' + verdictBadge(c.verdict) + '</td>'
+          + '<td><button class="btn gray sm" onclick="editCampaign(' + c.id + ')">✏️</button> <button class="btn red sm" onclick="delCampaign(' + c.id + ')">🗑️</button></td>';
+        tb.appendChild(tr);
+      });
+    }
+    function editCampaign(id){
+      var c = (window._camps || []).find(function(x){ return x.id === id; });
+      if (!c) return;
+      campEditId = id;
+      document.getElementById("cpName").value = c.name;
+      document.getElementById("cpProduct").value = c.product || "";
+      document.getElementById("cpBudget").value = c.budget;
+      document.getElementById("cpGained").value = c.orders_gained;
+      document.getElementById("cpStart").value = c.started_at || "";
+      document.getElementById("cpEnd").value = c.ended_at || "";
+      document.getElementById("cpVerdict").value = c.verdict || "";
+      document.getElementById("cpNotes").value = c.notes || "";
+      document.getElementById("campFormTitle").textContent = "✏️ تعديل الحملة رقم " + id;
+      document.getElementById("cpSaveBtn").textContent = "💾 حفظ التعديل";
+      document.getElementById("cpCancelBtn").style.display = "";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    function cancelCampEdit(){
+      campEditId = 0;
+      ["cpName","cpProduct","cpBudget","cpGained","cpStart","cpEnd","cpNotes"].forEach(function(i){ document.getElementById(i).value = ""; });
+      document.getElementById("cpVerdict").value = "";
+      document.getElementById("campFormTitle").textContent = "📊 تسجيل حملة";
+      document.getElementById("cpSaveBtn").textContent = "💾 تسجيل الحملة";
+      document.getElementById("cpCancelBtn").style.display = "none";
+    }
+    async function saveCampaign(){
+      var body = {
+        name: document.getElementById("cpName").value.trim(),
+        product: document.getElementById("cpProduct").value.trim(),
+        budget: document.getElementById("cpBudget").value,
+        orders_gained: document.getElementById("cpGained").value,
+        started_at: document.getElementById("cpStart").value,
+        ended_at: document.getElementById("cpEnd").value,
+        verdict: document.getElementById("cpVerdict").value,
+        notes: document.getElementById("cpNotes").value.trim()
+      };
+      if (!body.name) { toast("اكتب اسم الحملة أولاً", true); return; }
+      if (campEditId) { body.id = campEditId; await api("/campaigns/update", post(body)); toast("تم حفظ التعديل ✅"); cancelCampEdit(); }
+      else { await api("/campaigns/add", post(body)); toast("تم تسجيل الحملة ✅"); cancelCampEdit(); }
+      loadCampaigns();
+    }
+    async function delCampaign(id){
+      await api("/campaigns/delete", post({ id: id }));
+      toast("تم الحذف"); if (campEditId === id) cancelCampEdit();
+      loadCampaigns();
+    }
+  </script>
+</body>
+</html>

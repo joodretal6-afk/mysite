@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>لوحة إدارة — شيخ الجبنة</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:18px; } header a,header button { color:#fff; background:rgba(255,255,255,.2); border:none; padding:8px 13px; border-radius:8px; font-size:13px; text-decoration:none; cursor:pointer; font-family:inherit; }
+    .tabs { background:var(--card); border-bottom:1px solid var(--line); display:flex; gap:4px; padding:0 12px; overflow-x:auto; }
+    .tab { padding:14px 16px; border:none; background:none; font-family:inherit; font-size:14px; font-weight:600; color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; }
+    .tab.on { color:var(--green2); border-bottom-color:var(--green); }
+    .wrap { max-width:960px; margin:0 auto; padding:20px 16px; }
+    .card { background:var(--card); border-radius:14px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:16px; }
+    .card h3 { font-size:15px; color:var(--green2); margin-bottom:12px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { padding:10px; text-align:right; border-bottom:1px solid var(--line); vertical-align:top; }
+    th { color:var(--green2); }
+    input,select,textarea { width:100%; padding:10px; border:1.5px solid var(--line); border-radius:9px; font-family:inherit; font-size:14px; }
+    textarea { min-height:70px; resize:vertical; }
+    label { display:block; font-size:13px; font-weight:700; color:var(--green2); margin:10px 0 5px; }
+    .btn { padding:9px 15px; background:var(--green); color:#fff; border:none; border-radius:9px; cursor:pointer; font-family:inherit; font-size:13px; font-weight:700; }
+    .btn.del { background:var(--red); padding:6px 11px; font-size:12px; }
+    .btn.sm { padding:6px 11px; font-size:12px; }
+    .row { display:grid; grid-template-columns:2fr 1fr 1fr; gap:8px; align-items:end; }
+    @media(max-width:640px){ .row{grid-template-columns:1fr;} }
+    .msg { font-size:13px; color:var(--green2); margin-top:8px; min-height:16px; }
+    .pill { padding:3px 9px; border-radius:20px; font-size:12px; font-weight:700; background:#e3f2fd; color:#1565c0; }
+    .hide { display:none; }
+    /* login */
+    .login { max-width:360px; margin:80px auto; }
+    .login .card { text-align:center; }
+    .login .logo { font-size:44px; }
+  </style>
+</head>
+<body>
+  <!-- تسجيل الدخول -->
+  <div id="loginView" class="login hide">
+    <div class="card">
+      <div class="logo">🧀</div>
+      <h3 style="margin:10px 0">لوحة إدارة شيخ الجبنة</h3>
+      <input id="pass" type="password" placeholder="كلمة السر" onkeydown="if(event.key==='Enter')login()">
+      <button class="btn" style="width:100%;margin-top:10px" onclick="login()">دخول</button>
+      <div class="msg" id="loginMsg"></div>
+    </div>
+  </div>
+
+  <!-- اللوحة -->
+  <div id="adminView" class="hide">
+    <header>
+      <h1>🧀 لوحة إدارة شيخ الجبنة</h1>
+      <div>
+        <a href="./" target="_blank">💬 الدردشة</a>
+        <button onclick="logout()">خروج</button>
+      </div>
+    </header>
+    <div class="tabs">
+      <button class="tab on" data-t="products" onclick="tab('products')">📦 المنتجات</button>
+      <button class="tab" data-t="prices" onclick="tab('prices')">💵 الأسعار</button>
+      <button class="tab" data-t="faqs" onclick="tab('faqs')">❓ الأسئلة والأجوبة</button>
+      <button class="tab" data-t="orders" onclick="tab('orders')">🧾 الطلبات</button>
+      <button class="tab" data-t="settings" onclick="tab('settings')">⚙️ الإعدادات</button>
+    </div>
+    <div class="wrap">
+      <!-- المنتجات -->
+      <div id="p-products">
+        <div class="card">
+          <h3>إضافة / تعديل منتج</h3>
+          <input type="hidden" id="pid">
+          <div class="row">
+            <div><label>الاسم</label><input id="pname" placeholder="جبنة نابلسية غنم"></div>
+            <div><label>النوع</label><input id="ptype" placeholder="غنم"></div>
+            <div><label>السعر (د)</label><input id="pprice" type="number" step="0.25"></div>
+          </div>
+          <div class="row">
+            <div><label>الوحدة</label><input id="punit" placeholder="نصية / كيلو"></div>
+            <div style="grid-column:span 2"><label>ملاحظة</label><input id="pnote" placeholder="مغلية، بلدية..."></div>
+          </div>
+          <button class="btn" style="margin-top:12px" onclick="saveProduct()">حفظ المنتج</button>
+          <button class="btn sm" style="background:#607d8b;margin-top:12px" onclick="clearProduct()">جديد</button>
+          <div class="msg" id="pmsg"></div>
+        </div>
+        <div class="card"><table><thead><tr><th>المنتج</th><th>النوع</th><th>السعر</th><th>الوحدة</th><th></th></tr></thead><tbody id="ptable"></tbody></table></div>
+      </div>
+
+      <!-- الأسعار (تعديل سريع) -->
+      <div id="p-prices" class="hide">
+        <div class="card">
+          <h3>تعديل الأسعار السريع</h3>
+          <p style="font-size:13px;color:var(--mut);margin-bottom:12px">غيّر السعر واضغط Enter — رد البوت بيتغيّر فوراً بدون إعادة تدريب.</p>
+          <table><thead><tr><th>المنتج</th><th>السعر الحالي</th></tr></thead><tbody id="pricetable"></tbody></table>
+        </div>
+      </div>
+
+      <!-- الأسئلة والأجوبة -->
+      <div id="p-faqs" class="hide">
+        <div class="card">
+          <h3>إضافة / تعديل سؤال</h3>
+          <input type="hidden" id="fid">
+          <label>السؤال</label><input id="fq" placeholder="قديش وزن النصية؟">
+          <label>الجواب</label><textarea id="fa" placeholder="النصية 4 كيلو صافي."></textarea>
+          <button class="btn" style="margin-top:12px" onclick="saveFaq()">حفظ</button>
+          <button class="btn sm" style="background:#607d8b;margin-top:12px" onclick="clearFaq()">جديد</button>
+          <div class="msg" id="fmsg"></div>
+        </div>
+        <div class="card"><table><thead><tr><th>السؤال</th><th>الجواب</th><th></th></tr></thead><tbody id="ftable"></tbody></table></div>
+      </div>
+
+      <!-- الطلبات -->
+      <div id="p-orders" class="hide">
+        <div class="card"><table><thead><tr><th>#</th><th>الطلب</th><th>المجموع</th><th>الزبون</th><th>العنوان</th><th>الهاتف</th><th>الحالة</th><th></th></tr></thead><tbody id="otable"></tbody></table>
+          <div id="oempty" style="text-align:center;color:var(--mut);padding:20px;display:none">ما في طلبات بعد</div>
+        </div>
+      </div>
+
+      <!-- الإعدادات -->
+      <div id="p-settings" class="hide">
+        <div class="card">
+          <h3>🔑 مفتاح الذكاء (API)</h3>
+          <label>مزوّد الذكاء</label>
+          <select id="sprovider" onchange="toggleBase()">
+            <option value="gemini">Gemini (جوجل)</option>
+            <option value="openai">OpenAI (ChatGPT)</option>
+            <option value="custom">نموذج مفتوح / سيرفرك (Groq · Ollama · OpenAI-compatible)</option>
+          </select>
+          <div id="baseWrap" style="display:none">
+            <label>رابط المزوّد (Base URL)</label>
+            <input id="sbaseUrl" placeholder="Groq: https://api.groq.com/openai/v1 — Ollama: http://IP:11434/v1">
+          </div>
+          <label>مفتاح API <small style="color:#90a4ae">(اتركه فارغاً مع Ollama المحلي)</small></label>
+          <input id="sapiKey" placeholder="الصق مفتاحك هنا (يبقى محفوظاً)">
+          <label>اسم الموديل</label>
+          <input id="smodel" placeholder="gemini-flash-latest · llama-3.3-70b-versatile · qwen2.5">
+          <button class="btn" style="margin-top:12px" onclick="saveSettings()">حفظ</button>
+          <div class="msg" id="smsg"></div>
+        </div>
+        <div class="card">
+          <h3>🏪 معلومات المتجر (تدخل بمعرفة البوت)</h3>
+          <div class="row"><div><label>اسم المتجر</label><input id="sbrand"></div><div style="grid-column:span 2"><label>الوصف</label><input id="stagline"></div></div>
+          <label>الوزن</label><input id="sweight">
+          <label>الملح</label><input id="ssalt">
+          <label>التخزين</label><input id="sstorage">
+          <label>التوصيل</label><input id="sdelivery">
+          <label>أوقات العمل</label><input id="shours">
+          <label>رقم التواصل</label><input id="sphone">
+          <label>معلومات إضافية (أي شي بدك البوت يعرفه)</label><textarea id="sextra"></textarea>
+          <button class="btn" style="margin-top:12px" onclick="saveSettings()">حفظ</button>
+        </div>
+        <div class="card">
+          <h3>🔒 كلمة سر اللوحة</h3>
+          <input id="sadminPass" type="password" placeholder="كلمة سر جديدة (اتركها فارغة للإبقاء)">
+          <button class="btn" style="margin-top:12px" onclick="saveSettings()">تحديث كلمة السر</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    const $=id=>document.getElementById(id);
+    const BASE=location.pathname.replace(/\/admin\/?$/,'');   // '' مستقلاً أو '/cheese' مُركّباً
+    async function api(u,opt){ const r=await fetch(BASE+u,opt); if(r.status===401){ show('login'); throw new Error('auth'); } return r; }
+    function show(v){ $('loginView').classList.toggle('hide',v!=='login'); $('adminView').classList.toggle('hide',v==='login'); }
+    function tab(t){ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+      ['products','prices','faqs','orders','settings'].forEach(p=>$('p-'+p).classList.toggle('hide',p!==t));
+      if(t==='products'||t==='prices') loadProducts(); if(t==='faqs') loadFaqs(); if(t==='orders') loadOrders(); if(t==='settings') loadSettings(); }
+
+    async function login(){ const r=await fetch(BASE+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('pass').value})});
+      if(r.ok){ show('admin'); tab('products'); } else { $('loginMsg').textContent='كلمة السر غير صحيحة'; } }
+    async function logout(){ await fetch(BASE+'/api/logout',{method:'POST'}); show('login'); }
+
+    // منتجات + أسعار
+    let PRODUCTS=[];
+    async function loadProducts(){ const {products}=await (await api('/api/products')).json(); PRODUCTS=products;
+      const tb=$('ptable'); tb.innerHTML=products.map(p=>`<tr>
+        <td>${esc(p.name)}${p.note?`<br><small style="color:#90a4ae">${esc(p.note)}</small>`:''}</td>
+        <td>${esc(p.type)}</td><td>${p.price}د</td><td>${esc(p.unit)}</td>
+        <td><button class="btn sm" onclick='editProduct(${JSON.stringify(p)})'>تعديل</button> <button class="btn del" onclick="delProduct(${p.id})">حذف</button></td></tr>`).join('');
+      const pt=$('pricetable'); pt.innerHTML=products.map(p=>`<tr><td>${esc(p.name)}</td>
+        <td><input type="number" step="0.25" value="${p.price}" style="width:120px" onchange="quickPrice(${p.id},this.value)"></td></tr>`).join('');
+    }
+    function editProduct(p){ $('pid').value=p.id; $('pname').value=p.name; $('ptype').value=p.type; $('pprice').value=p.price; $('punit').value=p.unit; $('pnote').value=p.note||''; window.scrollTo(0,0); }
+    function clearProduct(){ ['pid','pname','ptype','pprice','punit','pnote'].forEach(i=>$(i).value=''); }
+    async function saveProduct(){ const body={ id:$('pid').value?Number($('pid').value):undefined, name:$('pname').value, type:$('ptype').value, price:$('pprice').value, unit:$('punit').value, note:$('pnote').value };
+      const r=await api('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(r.ok){ $('pmsg').textContent='✅ تم الحفظ'; clearProduct(); loadProducts(); } else { $('pmsg').textContent=(await r.json()).error||'خطأ'; } }
+    async function delProduct(id){ if(!confirm('حذف المنتج؟'))return; await api('/api/products/'+id,{method:'DELETE'}); loadProducts(); }
+    async function quickPrice(id,val){ const p=PRODUCTS.find(x=>x.id===id); if(!p)return; await api('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...p,price:val})}); loadProducts(); }
+
+    // أسئلة
+    async function loadFaqs(){ const {faqs}=await (await api('/api/faqs')).json();
+      $('ftable').innerHTML=faqs.map(f=>`<tr><td>${esc(f.q)}</td><td>${esc(f.a)}</td>
+        <td><button class="btn sm" onclick='editFaq(${JSON.stringify(f)})'>تعديل</button> <button class="btn del" onclick="delFaq(${f.id})">حذف</button></td></tr>`).join(''); }
+    function editFaq(f){ $('fid').value=f.id; $('fq').value=f.q; $('fa').value=f.a; window.scrollTo(0,0); }
+    function clearFaq(){ ['fid','fq','fa'].forEach(i=>$(i).value=''); }
+    async function saveFaq(){ const body={ id:$('fid').value?Number($('fid').value):undefined, q:$('fq').value, a:$('fa').value };
+      const r=await api('/api/faqs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(r.ok){ $('fmsg').textContent='✅ تم الحفظ'; clearFaq(); loadFaqs(); } else { $('fmsg').textContent=(await r.json()).error||'خطأ'; } }
+    async function delFaq(id){ if(!confirm('حذف؟'))return; await api('/api/faqs/'+id,{method:'DELETE'}); loadFaqs(); }
+
+    // طلبات
+    const STATUSES=['جديد','تم التواصل','تم التجهيز','تم التوصيل','ملغي'];
+    async function loadOrders(){ const {orders}=await (await api('/api/orders')).json();
+      $('oempty').style.display=orders.length?'none':'block';
+      $('otable').innerHTML=orders.map(o=>`<tr>
+        <td>#${o.id}</td>
+        <td>${(o.items||[]).map(i=>esc(i.name)+' ×'+i.qty).join('<br>')}</td>
+        <td>${o.total}د</td><td>${esc(o.customer||'—')}</td><td>${esc(o.area||'—')}</td><td>${esc(o.phone||'—')}</td>
+        <td><select onchange="setStatus(${o.id},this.value)">${STATUSES.map(s=>`<option${s===o.status?' selected':''}>${s}</option>`).join('')}</select></td>
+        <td><button class="btn del" onclick="delOrder(${o.id})">حذف</button></td></tr>`).join(''); }
+    async function setStatus(id,status){ await api('/api/orders/'+id+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})}); }
+    async function delOrder(id){ if(!confirm('حذف الطلب؟'))return; await api('/api/orders/'+id,{method:'DELETE'}); loadOrders(); }
+
+    // إعدادات
+    function toggleBase(){ $('baseWrap').style.display=$('sprovider').value==='custom'?'block':'none'; }
+    async function loadSettings(){ const {settings:s}=await (await api('/api/settings')).json();
+      $('sprovider').value=s.provider||'gemini'; $('sapiKey').value=s.apiKey||''; $('smodel').value=s.model||''; $('sbaseUrl').value=s.baseUrl||''; toggleBase();
+      $('sbrand').value=s.brand||''; $('stagline').value=s.tagline||''; $('sweight').value=s.weight||''; $('ssalt').value=s.salt||'';
+      $('sstorage').value=s.storage||''; $('sdelivery').value=s.delivery||''; $('shours').value=s.hours||''; $('sphone').value=s.phone||''; $('sextra').value=s.extraKnowledge||''; }
+    async function saveSettings(){ const body={ provider:$('sprovider').value, model:$('smodel').value, baseUrl:$('sbaseUrl').value, brand:$('sbrand').value, tagline:$('stagline').value,
+        weight:$('sweight').value, salt:$('ssalt').value, storage:$('sstorage').value, delivery:$('sdelivery').value, hours:$('shours').value, phone:$('sphone').value, extraKnowledge:$('sextra').value };
+      const key=$('sapiKey').value; if(key && !key.includes('••••')) body.apiKey=key;
+      const ap=$('sadminPass').value; if(ap) body.adminPass=ap;
+      const r=await api('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(r.ok){ $('smsg').textContent='✅ تم الحفظ'; $('sadminPass').value=''; loadSettings(); } }
+
+    (async ()=>{ const {authed}=await (await fetch(BASE+'/api/auth')).json(); if(authed){ show('admin'); tab('products'); } else show('login'); })();
+  </script>
+</body>
+</html>

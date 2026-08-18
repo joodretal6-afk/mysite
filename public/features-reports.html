@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>التقارير المتقدمة — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; --blue:#1565c0; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1050px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; -webkit-overflow-scrolling:touch; }
+    .tabs button { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:20px; cursor:pointer; font-family:inherit; font-size:13.5px; color:#37474f; white-space:nowrap; }
+    .tabs button.on { background:var(--green); border-color:var(--green); color:#fff; font-weight:bold; }
+    .card { background:var(--card); border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:18px; }
+    .card h3 { color:var(--green2); font-size:16px; margin-bottom:14px; }
+    .tab-page { display:none; }
+    .tab-page.on { display:block; }
+    .form { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+    .fld { display:flex; flex-direction:column; gap:5px; }
+    .fld label { font-size:12px; color:var(--mut); }
+    .fld input, .fld select { padding:10px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14px; font-family:inherit; min-width:120px; }
+    .btn { padding:11px 20px; background:var(--green); color:#fff; border:none; border-radius:9px; font-weight:bold; cursor:pointer; font-family:inherit; font-size:14px; }
+    .btn:hover { background:var(--green2); }
+    .btn.gray { background:#607d8b; }
+    .btn.small { padding:7px 12px; font-size:12.5px; }
+    .btn.danger { background:var(--red); }
+    .tbl-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th,td { padding:10px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    td.wrapcell { white-space:normal; min-width:140px; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    .empty { text-align:center; padding:28px; color:var(--mut); }
+    .muted { color:var(--mut); font-size:12.5px; }
+    .msg { padding:10px 14px; border-radius:9px; margin:10px 0; font-size:13.5px; display:none; }
+    .msg.ok { display:block; background:#e8f5e9; color:var(--green2); }
+    .msg.err { display:block; background:#ffebee; color:var(--red); }
+    /* بطاقات المؤشرات */
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:12px 0; }
+    .stat { background:#f6faf6; border:1px solid #e2ece3; border-radius:11px; padding:14px; }
+    .stat .lbl { font-size:12px; color:var(--mut); margin-bottom:6px; }
+    .stat .val { font-size:19px; font-weight:800; color:var(--green2); word-break:break-word; }
+    .stat .sub { font-size:11.5px; color:var(--mut); margin-top:4px; }
+    /* أعمدة نسبية (شريط أفقي رفيع + القيمة نص دائماً) */
+    .bar { background:#e9edea; border-radius:4px; height:8px; min-width:90px; overflow:hidden; }
+    .bar i { display:block; height:100%; border-radius:4px; background:var(--green); }
+    .bar i.red { background:var(--red); }
+    .bar i.blue { background:var(--blue); }
+    .bar i.gray { background:#90a4ae; }
+    .pill { display:inline-block; padding:3px 10px; border-radius:12px; font-size:12px; background:#e8f5e9; color:var(--green2); font-weight:700; }
+    .pill.down { background:#ffebee; color:var(--red); }
+    .pill.neutral { background:#eceff1; color:#546e7a; }
+    .ai-box { background:#f6faf6; border:1px solid #e2ece3; border-radius:11px; padding:14px; white-space:pre-line; line-height:1.9; font-size:14px; display:none; }
+    .snap-item { display:flex; justify-content:space-between; align-items:center; gap:10px; border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin-bottom:8px; flex-wrap:wrap; }
+    @media (max-width:640px) { .wrap { padding:10px; } .card { padding:14px; } .fld input, .fld select { min-width:100px; } .stat .val { font-size:16px; } }
+    @media print {
+      body * { visibility:hidden; }
+      .printable, .printable * { visibility:visible; }
+      .printable { position:absolute; top:0; right:0; left:0; width:100%; box-shadow:none; }
+      .no-print { display:none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="no-print">
+    <h1>📊 التقارير المتقدمة</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+
+  <div class="wrap">
+    <nav class="tabs no-print" id="tabs">
+      <button data-tab="weekly" class="on">🖨️ التقرير الأسبوعي</button>
+      <button data-tab="monthly">📅 شهر بشهر</button>
+      <button data-tab="pages">📄 مقارنة الصفحات</button>
+      <button data-tab="mix">🧀 مزيج المنتجات</button>
+      <button data-tab="funnel">🔻 القمع اليومي</button>
+      <button data-tab="cancel">🚫 الإلغاءات</button>
+      <button data-tab="govs">🗺️ المحافظات</button>
+      <button data-tab="chats">💬 المحادثات</button>
+      <button data-tab="coupons">🎟️ الكوبونات</button>
+      <button data-tab="kpi">🎯 لوحة KPI</button>
+    </nav>
+
+    <!-- 1) التقرير الأسبوعي -->
+    <section class="tab-page on" id="tab-weekly">
+      <div class="card" id="weeklyCard">
+        <h3>🖨️ التقرير الأسبوعي <span class="muted" id="wkRange"></span></h3>
+        <div class="form no-print">
+          <button class="btn" onclick="loadWeekly()">تحديث</button>
+          <button class="btn gray" onclick="printSection('weeklyCard')">🖨️ طباعة</button>
+          <button class="btn gray" onclick="saveWeekly()">💾 حفظ نسخة</button>
+          <button class="btn" onclick="weeklyAI()" id="wkAiBtn">🤖 تحليل ذكي</button>
+        </div>
+        <div class="msg" id="wkMsg"></div>
+        <div class="stats" id="wkStats"></div>
+        <div class="ai-box" id="wkAi"></div>
+        <div class="empty" id="wkEmpty" style="display:none">لا توجد طلبات بهذا الأسبوع بعد — الأسبوع لسه ببدايته 🌿</div>
+      </div>
+      <div class="card no-print">
+        <h3>🗂️ أرشيف النسخ المحفوظة</h3>
+        <div id="snapList"></div>
+        <div class="empty" id="snapEmpty" style="display:none">لا توجد نسخ محفوظة بعد — احفظ أول تقرير أسبوعي 💾</div>
+      </div>
+    </section>
+
+    <!-- 2) شهر بشهر -->
+    <section class="tab-page" id="tab-monthly">
+      <div class="card">
+        <h3>📅 مقارنة شهر بشهر — آخر 6 أشهر</h3>
+        <p class="muted" style="margin-bottom:10px">المبيعات بدون الطلبات الملغية. نسبة التغيّر محسوبة على المبيعات مقارنة بالشهر السابق.</p>
+        <div class="msg" id="moMsg"></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>الشهر</th><th>الطلبات</th><th>المبيعات</th><th style="min-width:110px">حجم المبيعات</th><th>التغيّر %</th></tr></thead>
+            <tbody id="moRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="moEmpty" style="display:none">لا توجد بيانات مبيعات بعد 📭</div>
+      </div>
+    </section>
+
+    <!-- 3) مقارنة الصفحات -->
+    <section class="tab-page" id="tab-pages">
+      <div class="card">
+        <h3>📄 أداء الصفحات: هذا الشهر مقابل الماضي <span class="muted" id="pgLabel"></span></h3>
+        <div class="msg" id="pgMsg"></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>الصفحة</th><th>طلبات هذا الشهر</th><th>مبيعات هذا الشهر</th><th>طلبات الشهر الماضي</th><th>مبيعات الماضي</th><th>التغيّر %</th></tr></thead>
+            <tbody id="pgRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="pgEmpty" style="display:none">لا توجد طلبات بالشهرين الأخيرين 📭</div>
+      </div>
+    </section>
+
+    <!-- 4) مزيج المنتجات -->
+    <section class="tab-page" id="tab-mix">
+      <div class="card">
+        <h3>🧀 مزيج المنتجات — حصة كل صنف</h3>
+        <div class="form">
+          <div class="fld"><label>من</label><input type="date" id="mixFrom"></div>
+          <div class="fld"><label>إلى</label><input type="date" id="mixTo"></div>
+          <button class="btn" onclick="loadMix()">عرض</button>
+          <span class="muted">اتركهما فارغين = آخر 30 يوماً</span>
+        </div>
+        <div class="msg" id="mixMsg"></div>
+        <p class="muted" id="mixSummary" style="margin:10px 0"></p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>الصنف</th><th>الكمية</th><th>حصة الكمية %</th><th>قيمة تقديرية</th><th>حصة القيمة %</th><th style="min-width:110px">الحصة</th></tr></thead>
+            <tbody id="mixRows"></tbody>
+          </table>
+        </div>
+        <p class="muted" style="margin-top:8px">القيمة تقديرية: توزيع إجمالي كل طلب على أصنافه بنسبة الكمية.</p>
+        <div class="empty" id="mixEmpty" style="display:none">لا توجد طلبات بهذه الفترة 📭</div>
+      </div>
+    </section>
+
+    <!-- 5) القمع اليومي -->
+    <section class="tab-page" id="tab-funnel">
+      <div class="card">
+        <h3>🔻 القمع اليومي — آخر 14 يوم</h3>
+        <div class="msg" id="fnMsg"></div>
+        <div class="stats" id="fnStats"></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>اليوم</th><th>بدأت (كل الطلبات)</th><th style="min-width:110px"></th><th>اكتملت (تم التسليم)</th><th>أُلغيت</th></tr></thead>
+            <tbody id="fnRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="fnEmpty" style="display:none">لا توجد طلبات بآخر 14 يوم 📭</div>
+      </div>
+    </section>
+
+    <!-- 6) الإلغاءات -->
+    <section class="tab-page" id="tab-cancel">
+      <div class="card">
+        <h3>🚫 تحليل الإلغاءات</h3>
+        <div class="form">
+          <div class="fld"><label>من</label><input type="date" id="cnFrom"></div>
+          <div class="fld"><label>إلى</label><input type="date" id="cnTo"></div>
+          <button class="btn" onclick="loadCancel()">عرض</button>
+          <span class="muted">اتركهما فارغين = آخر 30 يوماً</span>
+        </div>
+        <div class="msg" id="cnMsg"></div>
+        <div class="stats" id="cnStats"></div>
+        <h3 style="margin-top:6px">أسباب الإلغاء المسجّلة</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th class="wrapcell">السبب</th><th>عدد المرات</th><th style="min-width:110px"></th></tr></thead>
+            <tbody id="cnRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="cnEmpty" style="display:none">ما في إلغاءات بهذه الفترة — ممتاز 🎉</div>
+      </div>
+    </section>
+
+    <!-- 7) المحافظات -->
+    <section class="tab-page" id="tab-govs">
+      <div class="card">
+        <h3>🗺️ ترتيب المحافظات بالطلبات والمبيعات</h3>
+        <div class="form">
+          <div class="fld"><label>من</label><input type="date" id="gvFrom"></div>
+          <div class="fld"><label>إلى</label><input type="date" id="gvTo"></div>
+          <button class="btn" onclick="loadGovs()">عرض</button>
+          <span class="muted">اتركهما فارغين = آخر 30 يوماً</span>
+        </div>
+        <div class="msg" id="gvMsg"></div>
+        <p class="muted" id="gvSummary" style="margin:10px 0"></p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>المحافظة</th><th>الطلبات</th><th>المبيعات</th><th>الحصة %</th><th style="min-width:110px"></th></tr></thead>
+            <tbody id="gvRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="gvEmpty" style="display:none">لا توجد طلبات بهذه الفترة 📭</div>
+      </div>
+    </section>
+
+    <!-- 8) المحادثات -->
+    <section class="tab-page" id="tab-chats">
+      <div class="card">
+        <h3>💬 نشاط المحادثات — آخر 14 يوم</h3>
+        <div class="msg" id="chMsg"></div>
+        <div class="stats" id="chStats"></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>اليوم</th><th>واردة</th><th style="min-width:100px"></th><th>صادرة</th><th style="min-width:100px"></th></tr></thead>
+            <tbody id="chRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="chEmpty" style="display:none">لا توجد رسائل بآخر 14 يوم 📭</div>
+      </div>
+    </section>
+
+    <!-- 9) الكوبونات -->
+    <section class="tab-page" id="tab-coupons">
+      <div class="card">
+        <h3>🎟️ أداء الكوبونات</h3>
+        <div class="msg" id="cpMsg"></div>
+        <div class="stats" id="cpStats"></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>الكود</th><th>النوع</th><th>القيمة</th><th>الحالة</th><th>الاستخدامات</th><th>خصم تقديري</th></tr></thead>
+            <tbody id="cpRows"></tbody>
+          </table>
+        </div>
+        <p class="muted" style="margin-top:8px">الخصم التقديري لكوبونات النسبة محسوب على متوسط قيمة الطلب العام.</p>
+        <div class="empty" id="cpEmpty" style="display:none">لا توجد كوبونات بعد — أنشئها من صفحة الكوبونات 🎟️</div>
+      </div>
+    </section>
+
+    <!-- 10) لوحة KPI -->
+    <section class="tab-page" id="tab-kpi">
+      <div class="card">
+        <h3>🎯 لوحة المؤشرات التنفيذية <span class="muted" id="kpiMonth"></span></h3>
+        <div class="form no-print" style="margin-bottom:6px">
+          <button class="btn" onclick="loadKpi()">تحديث</button>
+        </div>
+        <div class="msg" id="kpiMsg"></div>
+        <div class="stats" id="kpiGrid"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    var API = '/admin/f-api/reports';
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    function fmt(n){ return Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2}); }
+    function showMsg(id, text, ok){ var el=document.getElementById(id); el.textContent=text; el.className='msg '+(ok?'ok':'err'); if(ok) setTimeout(function(){ el.className='msg'; }, 3500); }
+    function dayLabel(d){ try { var dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString('ar-EG',{weekday:'short'})+' '+d.slice(5); } catch(e){ return d; } }
+    function changePill(pct){
+      if (pct==null) return '<span class="pill neutral">—</span>';
+      var n = Number(pct)||0;
+      if (n===0) return '<span class="pill neutral">0%</span>';
+      return '<span class="pill'+(n<0?' down':'')+'">'+(n>0?'▲':'▼')+' '+Math.abs(n)+'%</span>';
+    }
+    function bar(val, max, cls){
+      var w = max>0 ? Math.max(2, Math.round(Number(val)/max*100)) : 0;
+      if (!Number(val)) w = 0;
+      return '<div class="bar"><i class="'+(cls||'')+'" style="width:'+w+'%"></i></div>';
+    }
+    function statCard(lbl, val, sub){
+      return '<div class="stat"><div class="lbl">'+esc(lbl)+'</div><div class="val">'+val+'</div>'+(sub?'<div class="sub">'+sub+'</div>':'')+'</div>';
+    }
+    function qs(fromId, toId){
+      var f = document.getElementById(fromId).value, t = document.getElementById(toId).value;
+      var p = [];
+      if (f) p.push('from='+encodeURIComponent(f));
+      if (t) p.push('to='+encodeURIComponent(t));
+      return p.length ? '?'+p.join('&') : '';
+    }
+
+    async function api(path, opts){
+      var r = await fetch(API+path, opts||{});
+      if (r.status===401){ location.href='/admin/login'; throw new Error('unauthorized'); }
+      var j = await r.json().catch(function(){ return {}; });
+      if (!r.ok) throw new Error(j.error || 'حدث خطأ غير متوقع');
+      return j;
+    }
+
+    // ── تبويبات ──
+    var loaded = {};
+    document.getElementById('tabs').addEventListener('click', function(e){
+      var b = e.target.closest('button'); if(!b) return;
+      document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('on'); });
+      document.querySelectorAll('.tab-page').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      document.getElementById('tab-'+b.dataset.tab).classList.add('on');
+      var loaders = { weekly:loadWeekly, monthly:loadMonthly, pages:loadPages, mix:loadMix, funnel:loadFunnel,
+                      cancel:loadCancel, govs:loadGovs, chats:loadChats, coupons:loadCoupons, kpi:loadKpi };
+      if (loaders[b.dataset.tab]) loaders[b.dataset.tab]();
+    });
+
+    function printSection(id){
+      var el = document.getElementById(id);
+      el.classList.add('printable');
+      window.print();
+      setTimeout(function(){ el.classList.remove('printable'); }, 600);
+    }
+    window.onafterprint = function(){ document.querySelectorAll('.printable').forEach(function(x){ x.classList.remove('printable'); }); };
+
+    // ═══ 1) التقرير الأسبوعي ═══
+    async function loadWeekly(){
+      try {
+        var j = await api('/weekly');
+        var d1 = new Date(j.from).toLocaleDateString('ar-EG'), d2 = new Date(j.to).toLocaleDateString('ar-EG');
+        document.getElementById('wkRange').textContent = '— من '+d1+' إلى '+d2;
+        document.getElementById('wkEmpty').style.display = j.current.orders ? 'none' : 'block';
+        document.getElementById('wkStats').innerHTML =
+          statCard('مبيعات الأسبوع', fmt(j.current.sales)+' د', changePill(j.change.sales_pct)+' عن الأسبوع السابق ('+fmt(j.previous.sales)+' د)') +
+          statCard('عدد الطلبات', fmt(j.current.orders), changePill(j.change.orders_pct)+' عن السابق ('+fmt(j.previous.orders)+')') +
+          statCard('متوسط قيمة الطلب', fmt(j.current.avg)+' د', '') +
+          statCard('أفضل صنف', j.current.best_product ? esc(j.current.best_product.name) : '—',
+                   j.current.best_product ? 'كمية: '+fmt(j.current.best_product.qty) : 'لا توجد بيانات') +
+          statCard('أفضل صفحة', j.current.best_page ? esc(j.current.best_page.name) : '—',
+                   j.current.best_page ? fmt(j.current.best_page.sales)+' د / '+fmt(j.current.best_page.orders)+' طلب' : 'لا توجد بيانات');
+        loadSnaps();
+      } catch(e){ if(e.message!=='unauthorized') showMsg('wkMsg', e.message, false); }
+    }
+    async function weeklyAI(){
+      var btn = document.getElementById('wkAiBtn'); btn.disabled = true; btn.textContent = '⏳ جارٍ التحليل...';
+      try {
+        var j = await api('/weekly/ai');
+        var box = document.getElementById('wkAi');
+        box.textContent = j.text;
+        box.style.display = 'block';
+      } catch(e){ if(e.message!=='unauthorized') showMsg('wkMsg', e.message, false); }
+      btn.disabled = false; btn.textContent = '🤖 تحليل ذكي';
+    }
+    async function saveWeekly(){
+      try {
+        var j = await api('/weekly/save', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+        showMsg('wkMsg', 'تم حفظ النسخة: '+j.label+' ✅', true);
+        loadSnaps();
+      } catch(e){ if(e.message!=='unauthorized') showMsg('wkMsg', e.message, false); }
+    }
+    async function loadSnaps(){
+      try {
+        var j = await api('/weekly/snapshots');
+        var box = document.getElementById('snapList'); box.innerHTML = '';
+        document.getElementById('snapEmpty').style.display = j.snapshots.length ? 'none' : 'block';
+        j.snapshots.forEach(function(s){
+          box.insertAdjacentHTML('beforeend',
+            '<div class="snap-item"><div><b>'+esc(s.label)+'</b><div class="muted">حُفظت: '+new Date(s.created_at).toLocaleDateString('ar-EG')+
+            ' — مبيعات '+fmt(s.sales)+' د / '+fmt(s.orders)+' طلب</div></div>'+
+            '<button class="btn danger small" onclick="delSnap('+Number(s.id)+')">حذف</button></div>');
+        });
+      } catch(e){ /* الأرشيف ثانوي */ }
+    }
+    async function delSnap(id){
+      if (!confirm('حذف هذه النسخة من الأرشيف؟')) return;
+      try { await api('/weekly/snapshots/'+id, { method:'DELETE' }); loadSnaps(); }
+      catch(e){ if(e.message!=='unauthorized') showMsg('wkMsg', e.message, false); }
+    }
+
+    // ═══ 2) شهر بشهر ═══
+    async function loadMonthly(){
+      try {
+        var j = await api('/monthly');
+        var tb = document.getElementById('moRows'); tb.innerHTML = '';
+        var any = j.months.some(function(m){ return m.orders>0; });
+        document.getElementById('moEmpty').style.display = any ? 'none' : 'block';
+        var max = Math.max.apply(null, j.months.map(function(m){ return m.sales; }).concat([0]));
+        j.months.slice().reverse().forEach(function(m){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td><b>'+esc(m.ym)+'</b></td><td>'+fmt(m.orders)+'</td><td><b>'+fmt(m.sales)+' د</b></td>'+
+            '<td>'+bar(m.sales, max)+'</td><td>'+changePill(m.change_pct)+'</td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('moMsg', e.message, false); }
+    }
+
+    // ═══ 3) مقارنة الصفحات ═══
+    async function loadPages(){
+      try {
+        var j = await api('/pages');
+        document.getElementById('pgLabel').textContent = '— '+j.this_month+' مقابل '+j.last_month;
+        var tb = document.getElementById('pgRows'); tb.innerHTML = '';
+        document.getElementById('pgEmpty').style.display = j.pages.length ? 'none' : 'block';
+        j.pages.forEach(function(p){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td class="wrapcell"><b>'+esc(p.page_name)+'</b></td><td>'+fmt(p.cur_orders)+'</td><td><b>'+fmt(p.cur_sales)+' د</b></td>'+
+            '<td>'+fmt(p.prev_orders)+'</td><td>'+fmt(p.prev_sales)+' د</td><td>'+changePill(p.change_pct)+'</td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('pgMsg', e.message, false); }
+    }
+
+    // ═══ 4) مزيج المنتجات ═══
+    async function loadMix(){
+      try {
+        var j = await api('/product-mix'+qs('mixFrom','mixTo'));
+        document.getElementById('mixSummary').textContent = j.items.length
+          ? ('طلبات الفترة: '+fmt(j.orders_count)+' — إجمالي المبيعات: '+fmt(j.total_sales)+' د — إجمالي الكميات: '+fmt(j.total_qty))
+          : '';
+        var tb = document.getElementById('mixRows'); tb.innerHTML = '';
+        document.getElementById('mixEmpty').style.display = j.items.length ? 'none' : 'block';
+        var max = Math.max.apply(null, j.items.map(function(x){ return x.value_pct; }).concat([0]));
+        j.items.forEach(function(x){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td class="wrapcell"><b>'+esc(x.name)+'</b></td><td>'+fmt(x.qty)+'</td><td>'+fmt(x.qty_pct)+'%</td>'+
+            '<td>'+fmt(x.value)+' د</td><td><b>'+fmt(x.value_pct)+'%</b></td><td>'+bar(x.value_pct, max)+'</td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('mixMsg', e.message, false); }
+    }
+
+    // ═══ 5) القمع اليومي ═══
+    async function loadFunnel(){
+      try {
+        var j = await api('/funnel');
+        document.getElementById('fnStats').innerHTML =
+          statCard('طلبات بدأت (14 يوم)', fmt(j.totals.started), '') +
+          statCard('اكتملت (تم التسليم)', fmt(j.totals.completed), 'نسبة الإكمال: '+fmt(j.completion_pct)+'%') +
+          statCard('أُلغيت', fmt(j.totals.canceled), 'نسبة الإلغاء: '+fmt(j.cancel_pct)+'%');
+        var tb = document.getElementById('fnRows'); tb.innerHTML = '';
+        document.getElementById('fnEmpty').style.display = j.totals.started ? 'none' : 'block';
+        var max = Math.max.apply(null, j.days.map(function(d){ return d.started; }).concat([0]));
+        j.days.slice().reverse().forEach(function(d){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td>'+esc(dayLabel(d.d))+'</td><td><b>'+fmt(d.started)+'</b></td><td>'+bar(d.started, max, 'gray')+'</td>'+
+            '<td>'+fmt(d.completed)+'</td><td>'+(d.canceled?'<span class="pill down">'+fmt(d.canceled)+'</span>':'0')+'</td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('fnMsg', e.message, false); }
+    }
+
+    // ═══ 6) الإلغاءات ═══
+    async function loadCancel(){
+      try {
+        var j = await api('/cancellations'+qs('cnFrom','cnTo'));
+        document.getElementById('cnStats').innerHTML =
+          statCard('كل طلبات الفترة', fmt(j.total_orders), '') +
+          statCard('طلبات ملغية', fmt(j.canceled), 'نسبة الإلغاء: '+fmt(j.cancel_pct)+'%') +
+          statCard('قيمة مفقودة', fmt(j.lost_value)+' د', '') +
+          statCard('بدون سبب مسجّل', fmt(j.no_reason), '');
+        var tb = document.getElementById('cnRows'); tb.innerHTML = '';
+        document.getElementById('cnEmpty').style.display = j.canceled ? 'none' : 'block';
+        var max = Math.max.apply(null, j.reasons.map(function(r){ return r.count; }).concat([0]));
+        j.reasons.forEach(function(r){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td class="wrapcell">'+esc(r.reason)+'</td><td><b>'+fmt(r.count)+'</b></td><td>'+bar(r.count, max, 'red')+'</td></tr>');
+        });
+        if (j.canceled && !j.reasons.length)
+          tb.insertAdjacentHTML('beforeend','<tr><td class="wrapcell" colspan="3" style="color:#78909c">كل الإلغاءات بدون سبب مسجّل — سجّلوا الأسباب لفهم المشكلة 📝</td></tr>');
+      } catch(e){ if(e.message!=='unauthorized') showMsg('cnMsg', e.message, false); }
+    }
+
+    // ═══ 7) المحافظات ═══
+    async function loadGovs(){
+      try {
+        var j = await api('/governorates'+qs('gvFrom','gvTo'));
+        document.getElementById('gvSummary').textContent = j.total_orders ? ('إجمالي طلبات الفترة (غير الملغية): '+fmt(j.total_orders)) : '';
+        var tb = document.getElementById('gvRows'); tb.innerHTML = '';
+        document.getElementById('gvEmpty').style.display = j.govs.length ? 'none' : 'block';
+        var max = Math.max.apply(null, j.govs.map(function(g){ return g.orders; }).concat([0]));
+        j.govs.forEach(function(g){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td><b>'+esc(g.gov)+'</b></td><td>'+fmt(g.orders)+'</td><td>'+fmt(g.sales)+' د</td>'+
+            '<td>'+fmt(g.pct)+'%</td><td>'+bar(g.orders, max)+'</td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('gvMsg', e.message, false); }
+    }
+
+    // ═══ 8) المحادثات ═══
+    async function loadChats(){
+      try {
+        var j = await api('/chats');
+        document.getElementById('chStats').innerHTML =
+          statCard('رسائل واردة (14 يوم)', fmt(j.total_in), '') +
+          statCard('رسائل صادرة', fmt(j.total_out), '') +
+          statCard('محادثات', fmt(j.conversations), '') +
+          statCard('تحوّلت لطلب', fmt(j.converted), 'نسبة التحويل: '+fmt(j.conversion_pct)+'%');
+        var tb = document.getElementById('chRows'); tb.innerHTML = '';
+        document.getElementById('chEmpty').style.display = (j.total_in+j.total_out) ? 'none' : 'block';
+        var max = Math.max.apply(null, j.days.map(function(d){ return Math.max(d.inbound,d.outbound); }).concat([0]));
+        j.days.slice().reverse().forEach(function(d){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td>'+esc(dayLabel(d.d))+'</td><td><b>'+fmt(d.inbound)+'</b></td><td>'+bar(d.inbound, max, 'blue')+'</td>'+
+            '<td>'+fmt(d.outbound)+'</td><td>'+bar(d.outbound, max, 'gray')+'</td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('chMsg', e.message, false); }
+    }
+
+    // ═══ 9) الكوبونات ═══
+    async function loadCoupons(){
+      try {
+        var j = await api('/coupons');
+        document.getElementById('cpStats').innerHTML =
+          statCard('عدد الكوبونات', fmt(j.coupons.length), '') +
+          statCard('إجمالي الاستخدامات', fmt(j.total_uses), '') +
+          statCard('إجمالي الخصم التقديري', fmt(j.total_discount)+' د', '') +
+          statCard('متوسط قيمة الطلب', fmt(j.avg_order)+' د', 'أساس تقدير كوبونات النسبة');
+        var tb = document.getElementById('cpRows'); tb.innerHTML = '';
+        document.getElementById('cpEmpty').style.display = j.coupons.length ? 'none' : 'block';
+        j.coupons.forEach(function(c){
+          tb.insertAdjacentHTML('beforeend',
+            '<tr><td><b>'+esc(c.code)+'</b></td><td>'+(c.type==='percent'?'نسبة %':'مبلغ ثابت')+'</td>'+
+            '<td>'+fmt(c.value)+(c.type==='percent'?'%':' د')+'</td>'+
+            '<td>'+(c.active?'<span class="pill">فعّال</span>':'<span class="pill down">موقوف</span>')+'</td>'+
+            '<td><b>'+fmt(c.uses)+'</b></td><td>'+fmt(c.discount_est)+' د</td></tr>');
+        });
+      } catch(e){ if(e.message!=='unauthorized') showMsg('cpMsg', e.message, false); }
+    }
+
+    // ═══ 10) لوحة KPI ═══
+    async function loadKpi(){
+      try {
+        var j = await api('/kpi');
+        document.getElementById('kpiMonth').textContent = '— شهر '+j.month;
+        document.getElementById('kpiGrid').innerHTML =
+          statCard('مبيعات الشهر', fmt(j.sales)+' د', '') +
+          statCard('النمو عن الشهر الماضي', changePill(j.growth_pct), '') +
+          statCard('متوسط قيمة الطلب', fmt(j.avg_order)+' د', '') +
+          statCard('نسبة الإكمال', fmt(j.completion_pct)+'%', 'تم التسليم من كل طلبات الشهر') +
+          statCard('نسبة الإلغاء', fmt(j.cancel_pct)+'%', '') +
+          statCard('طلبات / يوم', fmt(j.orders_per_day), 'إجمالي الشهر: '+fmt(j.orders)+' طلب') +
+          statCard('أفضل صنف', j.best_product ? esc(j.best_product) : '—', '') +
+          statCard('أفضل منطقة', j.best_area ? esc(j.best_area) : '—', '');
+      } catch(e){ if(e.message!=='unauthorized') showMsg('kpiMsg', e.message, false); }
+    }
+
+    loadWeekly();
+  </script>
+</body>
+</html>

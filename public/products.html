@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>المنتجات الإضافية — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:900px; margin:0 auto; padding:22px; }
+    .note { background:#e8f5e9; border-radius:10px; padding:12px 16px; font-size:13px; color:#2e7d32; margin-bottom:16px; line-height:1.7; }
+    .card { background:var(--card); border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:18px; }
+    .card h3 { color:var(--green2); font-size:16px; margin-bottom:14px; }
+    .form { display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; }
+    @media(max-width:640px){ .form{ grid-template-columns:1fr; } }
+    .fld { display:flex; flex-direction:column; gap:5px; }
+    .fld.full { grid-column:1/-1; }
+    .fld label { font-size:12px; color:var(--mut); }
+    .fld input { padding:10px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:14px; font-family:inherit; }
+    .fld input:focus { outline:none; border-color:var(--green); }
+    .btn { padding:11px 22px; background:var(--green); color:#fff; border:none; border-radius:9px; font-weight:bold; cursor:pointer; font-family:inherit; margin-top:10px; }
+    .btn:hover { background:var(--green2); }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { padding:11px 12px; text-align:right; border-bottom:1px solid var(--line); }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    .pname { font-weight:700; }
+    .price { color:var(--green2); font-weight:700; }
+    .off { opacity:.5; }
+    .ic { cursor:pointer; background:none; border:none; font-size:15px; margin:0 2px; }
+    .del { color:#c62828; }
+    .empty { text-align:center; padding:30px; color:var(--mut); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🛒 المنتجات الإضافية (بيع إضافي)</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="wrap">
+    <div class="note">💡 هدول المنتجات بيعرضها البوت <b>على كل زبون بعد ما يكمّل طلبه</b> (بكل الصفحات، بنفس السعر) — عشان يزيد قيمة الطلب.</div>
+
+    <div class="card">
+      <h3 id="formTitle">➕ إضافة منتج</h3>
+      <input type="hidden" id="editId">
+      <div class="form">
+        <div class="fld"><label>اسم المنتج</label><input id="name" placeholder="مثال: زيت زيتون بلدي"></div>
+        <div class="fld"><label>السعر (دينار)</label><input id="price" type="number" step="0.5" placeholder="8"></div>
+        <div class="fld"><label>الوزن/الحجم</label><input id="weight" placeholder="مثال: 1 لتر"></div>
+        <div class="fld full"><label>وصف قصير (اختياري)</label><input id="description" placeholder="مثال: عصرة أولى، طبيعي 100%"></div>
+      </div>
+      <button class="btn" id="saveBtn" onclick="save()">حفظ المنتج</button>
+      <button class="btn" style="background:#90a4ae;display:none" id="cancelBtn" onclick="resetForm()">إلغاء التعديل</button>
+    </div>
+
+    <div class="card">
+      <h3>المنتجات الحالية</h3>
+      <table><thead><tr><th>المنتج</th><th>السعر</th><th>الوزن</th><th>الوصف</th><th>الحالة</th><th></th></tr></thead>
+        <tbody id="rows"></tbody></table>
+      <div class="empty" id="empty" style="display:none">لا يوجد منتجات إضافية بعد</div>
+    </div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    async function load(){
+      const r=await fetch('/admin/api/addons');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const {addons}=await r.json();
+      const tb=document.getElementById('rows'), empty=document.getElementById('empty');
+      tb.innerHTML='';
+      if(!addons.length){ empty.style.display='block'; return; }
+      empty.style.display='none';
+      addons.forEach(a=>{
+        tb.insertAdjacentHTML('beforeend',`<tr class="${a.active?'':'off'}">
+          <td class="pname">${esc(a.name)}</td>
+          <td class="price">${a.price}د</td>
+          <td>${esc(a.weight)||'—'}</td>
+          <td>${esc(a.description)||'—'}</td>
+          <td>${a.active?'🟢 معروض':'⚪ موقوف'}</td>
+          <td style="white-space:nowrap">
+            <button class="ic" title="تعديل" onclick='edit(${JSON.stringify(a).replace(/'/g,"&#39;")})'>✏️</button>
+            <button class="ic" title="تفعيل/إيقاف" onclick="tog(${a.id},${a.active?0:1})">${a.active?'⏸️':'▶️'}</button>
+            <button class="ic del" title="حذف" onclick="del(${a.id})">🗑</button>
+          </td></tr>`);
+      });
+    }
+    async function save(){
+      const id=document.getElementById('editId').value;
+      const body={name:document.getElementById('name').value,price:document.getElementById('price').value,weight:document.getElementById('weight').value,description:document.getElementById('description').value};
+      if(!body.name.trim()){ alert('اكتب اسم المنتج'); return; }
+      const url=id?'/admin/api/addons/'+id:'/admin/api/addons';
+      await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      resetForm(); load();
+    }
+    function edit(a){
+      document.getElementById('editId').value=a.id;
+      document.getElementById('name').value=a.name||'';
+      document.getElementById('price').value=a.price||'';
+      document.getElementById('weight').value=a.weight||'';
+      document.getElementById('description').value=a.description||'';
+      document.getElementById('formTitle').textContent='✏️ تعديل منتج';
+      document.getElementById('cancelBtn').style.display='inline-block';
+      window.scrollTo(0,0);
+    }
+    function resetForm(){
+      ['editId','name','price','weight','description'].forEach(i=>document.getElementById(i).value='');
+      document.getElementById('formTitle').textContent='➕ إضافة منتج';
+      document.getElementById('cancelBtn').style.display='none';
+    }
+    async function tog(id,active){ await fetch('/admin/api/addons/'+id+'/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({active:!!active})}); load(); }
+    async function del(id){ if(!confirm('حذف المنتج؟'))return; await fetch('/admin/api/addons/'+id,{method:'DELETE'}); load(); }
+    load();
+  </script>
+</body>
+</html>

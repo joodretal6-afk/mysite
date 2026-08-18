@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🧠 مركز القيادة</title>
+  <style>
+    :root { --bg:#0f1419; --card:#1a2028; --card2:#232b35; --line:#2d3742; --txt:#e8eef4;
+            --mut:#8b9aa9; --acc:#00c2a8; --red:#ff5c5c; --amber:#ffb020; --green:#3ddc84; --blue:#4da3ff; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:var(--txt); }
+    header { background:linear-gradient(120deg,#00332c,#004d40); padding:16px 22px; display:flex;
+             align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+             border-bottom:1px solid var(--line); }
+    header h1 { font-size:20px; }
+    header .r { display:flex; gap:10px; align-items:center; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.14); padding:8px 14px;
+               border-radius:8px; font-size:13px; }
+    select { padding:8px 12px; border-radius:8px; border:1px solid var(--line); background:var(--card);
+             color:var(--txt); font-family:inherit; font-size:13px; }
+    .wrap { max-width:1180px; margin:0 auto; padding:20px; }
+
+    /* شريط الحقيقة — أول إشي بتشوفه */
+    .truth { background:var(--card); border:1px solid var(--line); border-right:4px solid var(--acc);
+             border-radius:12px; padding:14px 18px; margin-bottom:18px; font-size:13.5px;
+             line-height:1.9; color:var(--mut); }
+    .truth b { color:var(--txt); }
+    .truth.warn { border-right-color:var(--amber); }
+
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:16px; }
+    .box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; }
+    .box h3 { font-size:15px; margin-bottom:14px; display:flex; align-items:center; gap:8px;
+              padding-bottom:10px; border-bottom:1px solid var(--line); }
+    .box.wide { grid-column:1/-1; }
+
+    .big { font-size:38px; font-weight:800; color:var(--acc); line-height:1.2; }
+    .big.red { color:var(--red); } .big.green { color:var(--green); }
+    .sub { font-size:12.5px; color:var(--mut); margin-top:4px; }
+    .chg { font-size:14px; font-weight:700; margin-top:6px; }
+    .chg.up { color:var(--green); } .chg.down { color:var(--red); }
+
+    .item { padding:12px 0; border-bottom:1px solid var(--line); }
+    .item:last-child { border-bottom:none; }
+    .item .t { font-size:14px; font-weight:600; margin-bottom:5px; }
+    .item .w { font-size:12.5px; color:var(--mut); line-height:1.7; }
+    .item .v { font-size:16px; font-weight:800; color:var(--red); margin-top:4px; }
+    .item .v.g { color:var(--green); }
+
+    .conf { display:inline-block; padding:2px 9px; border-radius:11px; font-size:11px; margin-top:6px; }
+    .conf.عالية { background:rgba(61,220,132,.16); color:var(--green); }
+    .conf.متوسطة { background:rgba(255,176,32,.16); color:var(--amber); }
+    .conf.منخفضة, .conf["لا تكفي"] { background:rgba(255,92,92,.16); color:var(--red); }
+
+    .act { display:flex; gap:12px; padding:14px; background:var(--card2); border-radius:10px;
+           margin-bottom:10px; align-items:flex-start; }
+    .act .n { flex:0 0 30px; height:30px; border-radius:50%; background:var(--acc); color:#04211d;
+              display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; }
+    .act .b { flex:1; }
+    .act .b .a { font-size:14.5px; font-weight:600; margin-bottom:4px; }
+    .act .b .y { font-size:12.5px; color:var(--mut); line-height:1.7; }
+
+    ul.plain { list-style:none; } ul.plain li { padding:9px 0; font-size:13.5px;
+              border-bottom:1px solid var(--line); line-height:1.7; }
+    ul.plain li:last-child { border-bottom:none; }
+    ul.plain li::before { content:"◆"; color:var(--acc); margin-left:8px; font-size:10px; }
+
+    .empty { text-align:center; padding:22px; color:var(--mut); font-size:13px; }
+    .load { text-align:center; padding:50px; color:var(--mut); }
+    .err { background:rgba(255,92,92,.1); border-right:4px solid var(--red); padding:14px 18px;
+           border-radius:10px; color:var(--red); font-size:13.5px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    td, th { padding:9px 6px; text-align:right; border-bottom:1px solid var(--line); }
+    th { color:var(--mut); font-weight:600; font-size:12px; }
+    a.m { color:var(--blue); text-decoration:none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧠 مركز القيادة</h1>
+    <div class="r">
+      <select id="days">
+        <option value="7">آخر 7 أيام</option>
+        <option value="30" selected>آخر 30 يوم</option>
+        <option value="60">آخر 60 يوم</option>
+        <option value="90">آخر 90 يوم</option>
+      </select>
+      <a href="/admin/features">→ مركز الميزات</a>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div id="out"><div class="load">⏳ بنقرأ بياناتك…</div></div>
+  </div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c =>
+  ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+const num = n => Number(n || 0).toLocaleString("ar-EG", { maximumFractionDigits: 2 });
+
+function conf(c) {
+  if (!c) return "";
+  return `<span class="conf ${esc(c.level)}" title="${esc(c.note || "")}">ثقة ${esc(c.level)}</span>`;
+}
+
+async function load() {
+  const d = $("#days").value;
+  $("#out").innerHTML = '<div class="load">⏳ بنقرأ بياناتك…</div>';
+  try {
+    const r = await fetch(`/admin/f-api/chief/command?days=${d}`);
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+    render(j);
+  } catch (e) {
+    $("#out").innerHTML = `<div class="err">تعذّر بناء التقرير: ${esc(e.message)}</div>`;
+  }
+}
+
+function render(j) {
+  const s = j.sales;
+  const H = [];
+
+  // ── شريط الحقيقة: قيود البيانات قبل أي رقم ──
+  H.push(`<div class="truth ${s.profitReliable ? "" : "warn"}">
+    <b>على شو مبني هالتقرير:</b> ${esc(j.basis["المصدر"] || "")}<br>
+    ${s.profitReliable ? "" : `<b style="color:var(--amber)">⚠️ ${esc(s.profitNote)}</b><br>`}
+    ${conf(j.confidence)} <span style="font-size:12px">${esc((j.confidence || {}).note || "")}</span>
+  </div>`);
+
+  H.push('<div class="grid">');
+
+  // 💰 كم بعنا
+  H.push(`<div class="box">
+    <h3>💰 كم بعنا؟</h3>
+    <div class="big">${num(s.value)}</div>
+    <div class="sub">${num(s.orders)} طلب · متوسط الطلب ${num(s.aov)}</div>
+    ${s.change != null ? `<div class="chg ${s.change >= 0 ? "up" : "down"}">${esc(s.changeLabel)}</div>` : ""}
+    <div class="sub" style="margin-top:10px">الربح: <b style="color:var(--txt)">${num(s.profit)}</b></div>
+    <div class="sub">${esc(s.profitNote)}</div>
+  </div>`);
+
+  // 📈 ليش
+  H.push(`<div class="box"><h3>📈 ليش؟</h3>` +
+    (j.why && j.why.length
+      ? j.why.map(w => `<div class="item">
+          <div class="t">${esc(w.factor)} <span style="color:${String(w.effect).startsWith("+") ? "var(--green)" : "var(--red)"}">${esc(w.effect)}</span></div>
+          <div class="w">${esc(w.note)}</div></div>`).join("")
+      : '<div class="empty">ما في فترة سابقة كافية للمقارنة</div>') + `</div>`);
+
+  // 🔴 وين نخسر
+  H.push(`<div class="box"><h3>🔴 وين نخسر؟</h3>
+    <div class="big red">${num(j.totalLossValue)}</div>
+    <div class="sub">قيمة تقديرية للخسارة بهالفترة</div>
+    ${(j.losses || []).map(l => `<div class="item">
+        <div class="t">${esc(l.what)}</div>
+        <div class="w">${esc(l.why)}</div>
+        <div class="v">${num(l.value)}</div>
+        ${conf(l.confidence)}</div>`).join("") || '<div class="empty">ما في خسائر مرصودة</div>'}
+  </div>`);
+
+  // 🟢 وين الفرصة
+  H.push(`<div class="box"><h3>🟢 وين الفرصة؟</h3>` +
+    ((j.opportunities || []).map(o => `<div class="item">
+        <div class="t">${esc(o.what)}</div>
+        <div class="w">${esc(o.why)}</div>
+        <div class="v g">${num(o.value)}</div>
+        <div class="w" style="margin-top:5px">← ${esc(o.action)}</div>
+        ${conf(o.confidence)}</div>`).join("") || '<div class="empty">ما في فرص مرصودة</div>') + `</div>`);
+
+  // 🎯 أفضل العملاء
+  const c = j.customers;
+  H.push(`<div class="box"><h3>🎯 مين أفضل عملاءك؟</h3>
+    <div class="big">${num(c.topShare)}%</div>
+    <div class="sub">${esc(c.note)}</div>
+    <div class="sub" style="margin-top:8px">${num(c.buyers)} مشتري من ${num(c.total)} تواصلوا معك</div>
+    <table style="margin-top:12px"><tr><th>الزبون</th><th>أنفق</th><th>طلبات</th></tr>
+    ${(c.top || []).slice(0, 6).map(t => `<tr>
+      <td>${t.url ? `<a class="m" href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.sender_id.slice(0,12))}…</a>` : `<span class="sub">${esc(t.sender_id.slice(0,12))}…</span>`}</td>
+      <td><b>${num(t.spend)}</b></td><td>${num(t.orders)}</td></tr>`).join("")}
+    </table></div>`);
+
+  // 🏆 أي منتج ندفع
+  H.push(`<div class="box"><h3>🏆 أي منتج ندفعه؟</h3>` +
+    (j.pushProduct ? `<div class="big" style="font-size:26px">${esc(j.pushProduct.product)}</div>
+       <div class="sub" style="margin-top:8px">${esc(j.pushProduct.why)}</div>`
+     : '<div class="empty">ما في منتج بتكلفة مسجّلة كافية للحكم</div>') + `</div>`);
+
+  // 💵 أي سعر نختبر
+  H.push(`<div class="box"><h3>💵 أي سعر نختبر؟</h3>` +
+    (j.priceTest ? `<div class="item">
+        <div class="t">${esc(j.priceTest.product)}</div>
+        <div class="big" style="font-size:24px">${num(j.priceTest.current)} ← ${num(j.priceTest.test)}</div>
+        <div class="w" style="margin-top:6px">${esc(j.priceTest.why)}</div>
+        <div class="w" style="color:var(--amber);margin-top:6px">اختبره على جزء من زبائنك أول — مش على الكل</div>
+      </div>` : '<div class="empty">ما في منتج جاهز لاختبار سعر</div>') + `</div>`);
+
+  H.push("</div>"); // نهاية الشبكة
+
+  // ⚡ شو نعمل هلأ
+  H.push(`<div class="box wide" style="margin-top:16px"><h3>⚡ شو نعمل هلأ؟</h3>` +
+    ((j.actions || []).map((a, i) => `<div class="act">
+        <div class="n">${i + 1}</div>
+        <div class="b"><div class="a">${esc(a.action)}</div>
+          <div class="y">${esc(a.why)}</div>${conf(a.confidence)}</div>
+      </div>`).join("") || '<div class="empty">ما في إجراءات عاجلة</div>') + `</div>`);
+
+  // 🚀 خلال 30 يوم
+  H.push(`<div class="box wide"><h3>🚀 شو ممكن نعمل خلال 30 يوم؟</h3>
+    <ul class="plain">${(j.horizon || []).map(h => `<li>${esc(h)}</li>`).join("")}</ul></div>`);
+
+  // 🎓 شو تعلّم النظام
+  if (j.lessons && j.lessons.length) {
+    H.push(`<div class="box wide"><h3>🎓 شو تعلّم النظام من نتائجك</h3>
+      <ul class="plain">${j.lessons.map(l =>
+        `<li>${esc(l.lesson)} <span style="color:var(--mut);font-size:12px">(${num(l.samples)} حالة)</span></li>`
+      ).join("")}</ul>
+      <div class="sub" style="margin-top:10px">هاي معرفة خاصة بعملك — بتتراكم كل ما شغّلت تجارب أكثر</div>
+    </div>`);
+  }
+
+  $("#out").innerHTML = H.join("");
+}
+
+$("#days").addEventListener("change", load);
+load();
+</script>
+</body>
+</html>

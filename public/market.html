@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>دراسة السوق — منصة الأجبان</title>
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --gold:#b8860b; --red:#c62828; --blue:#1565c0; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html,body { height:100%; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; display:flex; flex-direction:column; height:100dvh; }
+    header { background:linear-gradient(120deg,#0d3d12,#2e7d32); color:#fff; padding:13px 20px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    header h1 { font-size:18px; } header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:7px 13px; border-radius:8px; font-size:13px; }
+    .layout { flex:1; display:flex; overflow:hidden; }
+    .chatcol { flex:1; display:flex; flex-direction:column; min-width:0; }
+    .chat { flex:1; overflow-y:auto; padding:18px 14px; }
+    .cwrap { max-width:840px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+    .msg { display:flex; gap:9px; align-items:flex-end; }
+    .msg.me { flex-direction:row-reverse; }
+    .av { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:17px; background:#e8f0e9; }
+    .bub { padding:11px 15px; border-radius:15px; font-size:14.5px; line-height:1.8; max-width:85%; white-space:pre-wrap; word-wrap:break-word; }
+    .msg.bot .bub { background:#fff; border:1px solid var(--line); border-bottom-right-radius:5px; }
+    .msg.me .bub { background:var(--green); color:#fff; border-bottom-left-radius:5px; }
+    .stag { align-self:center; background:#e8f5e9; color:var(--green2); font-size:13px; font-weight:700; padding:8px 16px; border-radius:20px; }
+    .steps { align-self:stretch; max-width:85%; background:#f5f7f9; border:1px dashed var(--line); border-radius:12px; padding:9px 13px; font-size:12px; color:var(--mut); line-height:1.9; }
+    .steps b { color:#455a64; }
+    .typing .bub { color:var(--mut); }
+    .composer { background:var(--card); border-top:1px solid var(--line); padding:11px 14px; }
+    .cbox { max-width:840px; margin:0 auto; display:flex; gap:9px; align-items:flex-end; background:#fff; border:1.5px solid var(--line); border-radius:20px; padding:5px 7px 5px 5px; }
+    .cbox textarea { flex:1; border:none; outline:none; resize:none; font-family:inherit; font-size:14.5px; padding:8px 10px; max-height:110px; background:transparent; }
+    .send { width:38px; height:38px; border:none; border-radius:50%; background:var(--green); color:#fff; font-size:17px; cursor:pointer; flex-shrink:0; }
+    .send:disabled { opacity:.4; }
+    .chips { display:flex; flex-wrap:wrap; gap:7px; justify-content:center; }
+    .chip { background:#eef1f0; border:none; border-radius:15px; padding:8px 13px; font-size:12.5px; font-family:inherit; cursor:pointer; color:#37474f; }
+    /* خط أنابيب المنتجات */
+    .pipecol { width:360px; border-inline-start:1px solid var(--line); background:var(--card); overflow-y:auto; padding:16px; flex-shrink:0; }
+    .pipecol h3 { font-size:15px; color:var(--green2); margin-bottom:12px; }
+    .study { border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:11px; }
+    .study .t { display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:5px; }
+    .study .name { font-weight:700; font-size:13.5px; }
+    .score { font-size:12px; font-weight:800; padding:3px 9px; border-radius:12px; background:#e8f5e9; color:var(--green2); }
+    .score.hot { background:#fff3e0; color:#e65100; }
+    .study .nums { font-size:12px; color:var(--mut); margin-bottom:7px; }
+    .stbtns { display:flex; gap:5px; flex-wrap:wrap; }
+    .stb { border:1px solid var(--line); background:#fff; border-radius:12px; padding:4px 9px; font-size:11px; font-family:inherit; cursor:pointer; color:#546e7a; }
+    .stb.on { font-weight:800; }
+    .stb.on.w { background:#e8f5e9; color:var(--green2); border-color:#a5d6a7; }
+    .stb.on.l { background:#ffebee; color:var(--red); border-color:#ef9a9a; }
+    .stb.on.t { background:#e3f2fd; color:var(--blue); border-color:#90caf9; }
+    .stb.on.c { background:#f5f5f5; color:#455a64; }
+    .details { font-size:12px; color:#546e7a; background:#f7f9f7; border-radius:8px; padding:9px; margin-top:8px; white-space:pre-wrap; display:none; line-height:1.8; }
+    .links { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+    .lnk { font-size:10.5px; padding:4px 8px; border-radius:11px; text-decoration:none; font-weight:700; border:1px solid var(--line); }
+    .lnk.fb { background:#e7f0fe; color:#1565c0; border-color:#bbd6f7; }
+    .lnk.mp { background:#e8f5e9; color:var(--green2); border-color:#b7dfba; }
+    .lnk.sup { background:#fff3e0; color:#e65100; border-color:#ffd9a8; }
+    .mini { border:none; background:none; cursor:pointer; font-size:11.5px; color:var(--mut); font-family:inherit; }
+    .mini.del { color:var(--red); }
+    .empty { text-align:center; color:var(--mut); font-size:13px; padding:22px 6px; line-height:1.9; }
+    @media(max-width:900px){ .pipecol{display:none;} }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🔎 دراسة السوق — صيّاد المنتجات 🇯🇴</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </header>
+  <div class="layout">
+    <div class="chatcol">
+      <div style="background:#fff;border-bottom:1px solid var(--line);padding:10px 14px">
+        <div style="max-width:840px;margin:0 auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div id="today" style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mut)"></div>
+          <button id="fmm" onclick="findMoney()" style="margin-inline-start:auto;background:linear-gradient(120deg,#b8860b,#e6a817);color:#fff;border:none;border-radius:20px;padding:10px 20px;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 3px 10px rgba(184,134,11,.35)">💰 FIND ME MONEY</button>
+        </div>
+      </div>
+      <div class="chat" id="chat"><div class="cwrap" id="cwrap"></div></div>
+      <div class="composer">
+        <div class="cbox">
+          <textarea id="input" rows="1" placeholder="اسأل عن منتج، فئة، أو اطلب TOP 10 اليوم..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"></textarea>
+          <button class="send" id="sendBtn" onclick="send()">➤</button>
+        </div>
+      </div>
+    </div>
+    <div class="pipecol">
+      <div style="border:1px solid #f0e2b6;background:#fffdf5;border-radius:12px;padding:11px;margin-bottom:12px">
+        <div style="font-weight:800;font-size:13px;color:var(--gold);margin-bottom:6px">🧬 DNA المنتج الرابح عندك</div>
+        <div id="dna" style="font-size:11.5px;color:#6d5a12;white-space:pre-wrap;line-height:1.8">—</div>
+        <button class="stb" style="margin-top:7px" onclick="genDNA(this)">🔄 استخرج/حدّث الـDNA من نتائجي</button>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:12px">
+        <div style="font-weight:800;font-size:13px;color:var(--green2);margin-bottom:6px">💵 محرك التسعير</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <input id="prW" type="number" step="0.1" placeholder="جملة" style="width:70px;padding:6px;border:1px solid var(--line);border-radius:7px;font-family:inherit">
+          <input id="prA" type="number" step="0.5" placeholder="إعلان/طلب" style="width:85px;padding:6px;border:1px solid var(--line);border-radius:7px;font-family:inherit">
+          <button class="stb" onclick="calcPrice()">احسب</button>
+        </div>
+        <div id="prOut" style="font-size:11.5px;margin-top:7px;line-height:1.8"></div>
+      </div>
+      <h3>📦 خط المنتجات (اضغط الحالة ليتعلم النظام)</h3>
+      <div id="pipe"><div class="empty">جاري التحميل...</div></div>
+    </div>
+  </div>
+  <script>
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    const cwrap=document.getElementById('cwrap'), chat=document.getElementById('chat'), input=document.getElementById('input');
+    let messages=[], busy=false;
+    function scroll(){ chat.scrollTop=chat.scrollHeight; }
+    function addMsg(role,text){ const me=role==='user';
+      const el=document.createElement('div'); el.className='msg '+(me?'me':'bot');
+      el.innerHTML=`<div class="av">${me?'👤':'🔎'}</div><div class="bub">${esc(text)}</div>`;
+      cwrap.appendChild(el); scroll(); return el; }
+    function addTyping(){ const el=document.createElement('div'); el.className='msg bot typing';
+      el.innerHTML=`<div class="av">🔎</div><div class="bub">يحلّل السوق ويتعلم من بياناتك...</div>`; cwrap.appendChild(el); scroll(); return el; }
+    input.addEventListener('input',()=>{ input.style.height='auto'; input.style.height=Math.min(110,input.scrollHeight)+'px'; });
+
+    async function send(txt){
+      const text=(txt!=null?txt:input.value).trim();
+      if(!text||busy) return;
+      busy=true; document.getElementById('sendBtn').disabled=true;
+      input.value=''; input.style.height='auto';
+      document.querySelectorAll('.chips').forEach(c=>c.remove());
+      addMsg('user',text); messages.push({role:'user',content:text});
+      const t=addTyping();
+      try{
+        const r=await fetch('/admin/api/market',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages})});
+        if(r.status===401){ location.href='/admin/login'; return; }
+        const d=await r.json();
+        t.remove();
+        if(d.error){ addMsg('assistant','🙏 '+d.error); }
+        else{
+          if(d.steps&&d.steps.length){
+            const st=document.createElement('div'); st.className='steps';
+            st.innerHTML='<b>🕵️ عمليات البحث الفعلية اللي نفّذها:</b><br>'+d.steps.map(s=>
+              (s.type==='search'?'🔍 بحث: ':'📄 قرأ صفحة: ')+esc(s.q.slice(0,90))).join('<br>');
+            cwrap.appendChild(st);
+          }
+          addMsg('assistant',d.reply); messages.push({role:'assistant',content:d.reply});
+          (d.createdStudies||[]).forEach(s=>{
+            const el=document.createElement('div'); el.className='stag';
+            el.textContent='📦 انحفظ بخط المنتجات: '+s.product+' ('+s.score+'/100)'; cwrap.appendChild(el);
+          });
+          if((d.createdStudies||[]).length) loadPipe();
+          scroll();
+        }
+      }catch(e){ t.remove(); addMsg('assistant','🙏 صار خطأ بالاتصال، جرّب كمان مرة.'); }
+      busy=false; document.getElementById('sendBtn').disabled=false; input.focus();
+    }
+
+    const STATUSES=[['مرشح','c'],['تجربة','t'],['رابح','w'],['فاشل','l']];
+    async function loadPipe(){
+      const r=await fetch('/admin/api/market/studies');
+      if(r.status===401){ location.href='/admin/login'; return; }
+      const {studies}=await r.json();
+      const box=document.getElementById('pipe');
+      if(!studies.length){ box.innerHTML='<div class="empty">ما في دراسات بعد.<br>اطلب من الصيّاد:<br>«اعطيني TOP 10 منتجات اليوم»<br>وكل دراسة بتنحفظ هون تلقائياً.</div>'; return; }
+      box.innerHTML=studies.map(s=>{
+        const d=s.data||{};
+        const det=[d.why?('🔎 '+d.why):'', d.economics?('💰 '+d.economics):'', d.audience?('👥 '+d.audience):'',
+          (d.videos&&d.videos.length)?('🎬 أفكار فيديو:\n- '+d.videos.join('\n- ')):'',
+          (d.angles&&d.angles.length)?('📢 زوايا إعلانية:\n- '+d.angles.join('\n- ')):'',
+          d.suppliers?('🛒 '+d.suppliers):'', d.risks?('⚠️ '+d.risks):'',
+          d.council?('🏛️ رأي المجلس (رئيس المجلس):\n'+d.council.chairman+'\n\nآراء الأعضاء:\n'+(d.council.opinions||[]).map(o=>'【'+o.role+' '+o.score+'/10】 '+o.opinion).join('\n\n')):''
+          ].filter(Boolean).join('\n\n');
+        // 🔗 روابط بحث جاهزة: مكتبة إعلانات فيسبوك الرسمية + فيسبوك/ماركت بليس + موردين
+        const qa=encodeURIComponent(d.keywords_ar||s.product);
+        const qe=encodeURIComponent(d.keywords_en||s.product);
+        const links=`<div class="links">
+          <a class="lnk fb" target="_blank" href="https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=JO&q=${qa}&search_type=keyword_unordered&media_type=all">📢 إعلاناته بالأردن (Ads Library)</a>
+          <a class="lnk fb" target="_blank" href="https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=ALL&q=${qa}&search_type=keyword_unordered&media_type=all">🌍 إعلاناته عالمياً</a>
+          <a class="lnk mp" target="_blank" href="https://www.facebook.com/search/posts/?q=${qa}">📄 منشورات فيسبوك</a>
+          <a class="lnk mp" target="_blank" href="https://www.facebook.com/marketplace/amman/search?query=${qa}">🏪 ماركت بليس عمّان</a>
+          <a class="lnk sup" target="_blank" href="https://www.aliexpress.com/wholesale?SearchText=${qe}">🛒 AliExpress</a>
+          <a class="lnk sup" target="_blank" href="https://www.alibaba.com/trade/search?SearchText=${qe}">🏭 Alibaba (جملة)</a>
+          ${(d.sources||[]).slice(0,4).map((u,j)=>`<a class="lnk fb" target="_blank" href="${esc(u)}">🔗 مصدر ${j+1}</a>`).join('')}
+        </div>`;
+        return `<div class="study">
+          <div class="t"><span class="name">${esc(s.product)}</span>
+            <span class="score ${s.score>=85?'hot':''}">${s.score}/100</span></div>
+          <div class="nums">جملة ~${s.wholesale}د → بيع ~${s.sell}د${s.category?(' | '+esc(s.category)):''}</div>
+          ${links}
+          ${d.council?`<div style="font-size:11.5px;margin-bottom:6px;padding:6px 9px;background:#fffdf5;border:1px solid #f0e2b6;border-radius:9px">🏛️ قرار المجلس: <b>${esc(d.council.decision||'—')}</b> (${d.council.finalScore}/100)</div>`:''}
+          <div class="stbtns">
+            ${STATUSES.map(([st,cls])=>`<button class="stb ${s.status===st?('on '+cls):''}" onclick="setSt(${s.id},'${st}')">${st}</button>`).join('')}
+            <button class="mini" onclick="council(${s.id},this)">🏛️ ${d.council?'أعد عقد':'اعقد'} المجلس</button>
+            ${det||d.council?`<button class="mini" onclick="tog(this)">📋 التفاصيل</button>`:''}
+            <button class="mini del" onclick="delSt(${s.id})">حذف</button>
+          </div>
+          ${det?`<div class="details">${esc(det)}</div>`:''}
+        </div>`;
+      }).join('');
+    }
+    function tog(b){ const d=b.closest('.study').querySelector('.details'); d.style.display=d.style.display==='block'?'none':'block'; }
+
+    // 📊 شريط قيادة اليوم
+    async function loadToday(){
+      try{ const r=await fetch('/admin/api/market/today'); const t=await r.json();
+        document.getElementById('today').innerHTML=
+          `<span>🔎 اليوم: <b>${t.discoveredToday}</b> دراسة</span><span>🔥 مؤهلة: <b>${t.hotToday}</b></span>`+
+          `<span>🏆 رابحة: <b>${t.winners}</b></span><span>🧪 تجربة: <b>${t.testing}</b></span>`+
+          `<span>💵 مبيعات اليوم: <b>${t.salesToday}د</b> (${t.ordersToday} طلب)</span>`;
+      }catch{}
+    }
+
+    // 💰 FIND ME MONEY
+    async function findMoney(){
+      if(busy) return; busy=true;
+      const btn=document.getElementById('fmm'); btn.disabled=true; btn.textContent='⏳ البايبلاين شغّال (1-3 دقائق)...';
+      addMsg('user','💰 FIND ME MONEY — شغّل البايبلاين الكامل');
+      const t=addTyping();
+      try{
+        const r=await fetch('/admin/api/market/findmoney',{method:'POST'});
+        const d=await r.json(); t.remove();
+        if(d.error){ addMsg('assistant','🙏 '+d.error); }
+        else{
+          if(d.steps&&d.steps.length){ const st=document.createElement('div'); st.className='steps';
+            st.innerHTML='<b>🕵️ خطوات البايبلاين الفعلية:</b><br>'+d.steps.map(s=>
+              (s.type==='search'?'🔍 بحث: ':s.type==='shortlist'?'🎯 المرشحون: ':'🏛️ مجلس على: ')+esc(String(s.q).slice(0,100))).join('<br>');
+            cwrap.appendChild(st); }
+          let msg='💰 نتيجة البايبلاين:\n\n🏆 النهائيون (بعد مجلس المستشارين):\n'+
+            (d.finalists||[]).map((f,i)=>`${i+1}. ${f.product} — ${f.score}/100 — القرار: ${f.decision||'—'}`).join('\n')+
+            '\n\n📋 بقية المرشحين: '+(d.candidates||[]).slice(3).map(c=>c.product).join('، ');
+          addMsg('assistant',msg);
+          loadPipe(); loadToday();
+        }
+      }catch(e){ t.remove(); addMsg('assistant','🙏 خطأ بالاتصال — جرّب كمان مرة.'); }
+      btn.disabled=false; btn.textContent='💰 FIND ME MONEY'; busy=false;
+    }
+
+    // 🏛️ عقد المجلس على دراسة
+    async function council(id,b){
+      b.disabled=true; b.textContent='⏳ المجلس منعقد...';
+      try{
+        const r=await fetch('/admin/api/market/council',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+        const d=await r.json();
+        if(d.error) alert(d.error);
+        loadPipe();
+      }catch{ alert('خطأ بالاتصال'); b.disabled=false; }
+    }
+
+    // 💵 محرك التسعير
+    async function calcPrice(){
+      const w=document.getElementById('prW').value, a=document.getElementById('prA').value||3;
+      const out=document.getElementById('prOut');
+      if(!w){ out.textContent='أدخل سعر الجملة'; return; }
+      const r=await fetch('/admin/api/market/pricing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({wholesale:w,adCost:a})});
+      const d=await r.json();
+      if(d.error){ out.textContent=d.error; return; }
+      out.innerHTML=(d.rows||[]).map(x=>
+        `${x.price===d.best.price?'⭐':'▫️'} <b>${x.price}د</b> → تحويل ~${x.conv}% | هامش ${x.netMargin}د | ربح/100 زيارة: <b>${x.profitPer100}د</b>`
+      ).join('<br>')+`<br><span style="color:#8d6e00">✅ الأفضل: ${d.best.price}د — ${esc(d.note)}</span>`;
+    }
+
+    // 🧬 Winner DNA
+    async function loadDNA(){
+      try{ const r=await fetch('/admin/api/market/dna'); const d=await r.json();
+        document.getElementById('dna').textContent=d.dna||'لسا ما انبنى — علّم منتجات (رابح/فاشل) ثم اضغط استخراج.'; }catch{}
+    }
+    async function genDNA(b){
+      b.disabled=true; b.textContent='⏳ يتعلم من نتائجك...';
+      try{ const r=await fetch('/admin/api/market/dna',{method:'POST'}); const d=await r.json();
+        if(d.error) alert(d.error); else document.getElementById('dna').textContent=d.dna;
+      }catch{ alert('خطأ'); }
+      b.disabled=false; b.textContent='🔄 استخرج/حدّث الـDNA من نتائجي';
+    }
+    loadToday(); loadDNA(); setInterval(loadToday, 60000);
+    async function setSt(id,status){ await fetch('/admin/api/market/studies/'+id+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})}); loadPipe(); }
+    async function delSt(id){ if(!confirm('حذف الدراسة؟'))return; await fetch('/admin/api/market/studies/'+id,{method:'DELETE'}); loadPipe(); }
+
+    addMsg('assistant','أهلاً! أنا صيّاد المنتجات 🇯🇴 — بدرس السوق الأردني وبتعلم من مبيعاتك ونتائج تجاربك.\nكل منتج بتجرّبه علّم عليه (رابح/فاشل) بخط المنتجات — وكل ما علّمت أكثر، ترشيحاتي بتصير أدق على جمهورك.');
+    const chips=document.createElement('div'); chips.className='chips';
+    ['🏆 اعطيني TOP 10 منتجات اليوم','ادرسلي منتج: جهاز تنظيف السيارة','شو المنتجات الرابحة بموسم الشتاء؟','منتجات بهامش عالي وسعر 10-25 دينار','شو يناسب جمهوري الحالي؟'].forEach(q=>{
+      const b=document.createElement('button'); b.className='chip'; b.textContent=q; b.onclick=()=>send(q.replace(/^([🏆]\s*)/,'')); chips.appendChild(b);
+    });
+    cwrap.appendChild(chips); scroll();
+    loadPipe();
+  </script>
+</body>
+</html>
