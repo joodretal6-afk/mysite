@@ -164,13 +164,13 @@
       if(!convs.length){ box.innerHTML = '<div class="msgbar err">لا توجد محادثات في هذه الفترة</div>'; resetBulkBtns(); return; }
 
       // 2) افتح كل محادثة قدام المستخدم واستخرج واحفظ
-      let saved=0, review=0, dup=0, none=0, done=0;
+      let saved=0, review=0, dup=0, none=0, done=0, failed=0;
       const savedRows = [];
 
       for(const c of convs){
         if(bulkStop) break;
         done++;
-        setCounters(done, convs.length, saved, review, dup, none);
+        setCounters(done, convs.length, saved, review, dup, none, failed);
         document.getElementById('bar').style.width = Math.round(done/convs.length*100)+'%';
         document.getElementById('liveName').textContent = `💬 ${c.customerName} (${done}/${convs.length})`;
         document.getElementById('liveThread').innerHTML = '<div class="loading">⏳ يفتح المحادثة...</div>';
@@ -203,20 +203,36 @@
           try {
             const sr = await fetch('/admin/api/orders/manual',{method:'POST',headers:{'Content-Type':'application/json'},
               body:JSON.stringify({page_id:pageId, customer_id:data.customerId||c.customerId, order_string:ex.orderString, total:ex.total, phone:ex.phone, area:ex.area, dedup:true})});
-            const sd = await sr.json();
-            if(sd.skipped){ dup++; exHtml += `<div style="color:var(--mut);margin-top:8px">🔁 مكرّر — موجود مسبقاً</div>`; }
-            else { saved++; savedRows.push({customer:c.customerName, order:ex.orderString, total:ex.total, phone:ex.phone});
-              exHtml += `<div style="color:var(--green);margin-top:8px;font-weight:700">✅ تم الحفظ وإنزاله بالجدول</div>`; }
-          } catch(e){ exHtml += `<div style="color:#c62828;margin-top:8px">فشل الحفظ</div>`; }
+            // 🔴 لازم نفحص نجاح الطلب قبل ما نقول "حُفظ".
+            // بدون هالفحص كان الفشل يُعدّ نجاحاً، فالتاجر يشوف "✅ حُفظ 12"
+            // ويكون ما انحفظ ولا واحد — وبيكتشفها لما يضيع الطلب.
+            if(sr.status===401){
+              bulkStop=true;
+              exHtml += `<div style="color:#c62828;margin-top:8px">انتهت الجلسة — رح نحوّلك لصفحة الدخول</div>`;
+              document.getElementById('liveExtract').innerHTML = exHtml;
+              setTimeout(()=>{ location.href='/admin/login'; }, 1200);
+              return;
+            }
+            if(!sr.ok){
+              failed++;
+              exHtml += `<div style="color:#c62828;margin-top:8px">❌ فشل الحفظ (${sr.status}) — ما انحفظ الطلب</div>`;
+            } else {
+              const sd = await sr.json();
+              if(sd.error){ failed++; exHtml += `<div style="color:#c62828;margin-top:8px">❌ ${esc(sd.error)}</div>`; }
+              else if(sd.skipped){ dup++; exHtml += `<div style="color:var(--mut);margin-top:8px">🔁 مكرّر — موجود مسبقاً</div>`; }
+              else { saved++; savedRows.push({customer:c.customerName, order:ex.orderString, total:ex.total, phone:ex.phone});
+                exHtml += `<div style="color:var(--green);margin-top:8px;font-weight:700">✅ تم الحفظ وإنزاله بالجدول</div>`; }
+            }
+          } catch(e){ failed++; exHtml += `<div style="color:#c62828;margin-top:8px">❌ فشل الحفظ — ${esc(e.message||"خطأ شبكة")}</div>`; }
         }
         document.getElementById('liveExtract').innerHTML = exHtml;
-        setCounters(done, convs.length, saved, review, dup, none);
+        setCounters(done, convs.length, saved, review, dup, none, failed);
 
         await sleep(700);   // مهلة بسيطة حتى تشوف كل محادثة قدامك
       }
 
       // 3) الملخّص النهائي
-      let html = `<div class="msgbar ok" style="margin:0">✅ ${bulkStop?'تم الإيقاف':'خلص الاستخراج'}! فُحص <b>${done}</b> محادثة — حُفظ <b>${saved}</b> • مراجعة <b>${review}</b> • مكرّر <b>${dup}</b> • بدون طلب <b>${none}</b></div>`;
+      let html = `<div class="msgbar ${failed?'err':'ok'}" style="margin:0">✅ ${bulkStop?'تم الإيقاف':'خلص الاستخراج'}! فُحص <b>${done}</b> محادثة — حُفظ <b>${saved}</b> • مراجعة <b>${review}</b> • مكرّر <b>${dup}</b> • بدون طلب <b>${none}</b>${failed?` • <b style="color:#c62828">❌ فشل ${failed}</b>`:''}</div>`;
       if(savedRows.length){
         html += '<div style="max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:9px;margin-top:10px"><table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="background:#f0f4f1;font-weight:700"><td style="padding:7px">الزبون</td><td style="padding:7px">الطلب</td><td style="padding:7px">الحساب</td><td style="padding:7px">التلفون</td></tr>';
         savedRows.forEach(o=>{ html += `<tr style="border-top:1px solid var(--line)"><td style="padding:7px">${esc(o.customer)}</td><td style="padding:7px">${esc(o.order)}</td><td style="padding:7px">${o.total}د</td><td style="padding:7px">${esc(o.phone)}</td></tr>`; });
@@ -226,10 +242,10 @@
       resetBulkBtns();
     }
 
-    function setCounters(done,total,saved,review,dup,none){
+    function setCounters(done,total,saved,review,dup,none,failed){
       document.getElementById('counters').innerHTML =
         `<span style="color:#455a64">📂 ${done}/${total}</span>
-         <span style="color:var(--green)">✅ حُفظ ${saved}</span>
+         <span style="color:var(--green)">✅ حُفظ ${saved}</span>${failed?`<span style="color:#c62828">❌ فشل ${failed}</span>`:''}
          <span style="color:#e65100">🟠 مراجعة ${review}</span>
          <span style="color:var(--mut)">🔁 مكرّر ${dup}</span>
          <span style="color:var(--mut)">⚪ بدون ${none}</span>`;

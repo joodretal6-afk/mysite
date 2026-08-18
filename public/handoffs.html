@@ -53,6 +53,12 @@
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     let prevCount=0;
     async function load(){
+      // 🔴 التحديث التلقائي كان يعيد بناء الصفحة كل 8 ثوانٍ ويمسح
+      // اللي بيكتبه التاجر بنص الجملة. هون الزبون منتظر رد بشري —
+      // فمسح الرد أثناء كتابته أسوأ عطل ممكن بهالصفحة.
+      // إذا التاجر بيكتب حالياً، منأجّل التحديث للدورة الجاية.
+      const el = document.activeElement;
+      if (el && el.id && el.id.startsWith('rin_') && el.value.trim()) return;
       const r=await fetch('/admin/api/handoffs');
       if(r.status===401){ location.href='/admin/login'; return; }
       const {handoffs}=await r.json();
@@ -61,6 +67,10 @@
       prevCount=handoffs.length;
       if(!handoffs.length){ list.innerHTML=''; empty.style.display='block'; return; }
       empty.style.display='none';
+      // نحفظ اللي انكتب بأي حقل قبل إعادة البناء ونرجّعه بعدها،
+      // عشان ما تضيع مسودّة رد التاجر لو حدّثت الصفحة وهو مش مركّز عليها
+      const drafts = {};
+      list.querySelectorAll('input[id^="rin_"]').forEach(i => { if (i.value.trim()) drafts[i.id] = i.value; });
       list.innerHTML=handoffs.map(h=>{
         const k=esc(h.session_key).replace(/'/g,"&#39;");
         const paused=Number(h.paused)===1;
@@ -86,6 +96,11 @@
           </div>
         </div>`;
       }).join('');
+      // نرجّع المسودّات بعد إعادة البناء
+      for (const [id, v] of Object.entries(drafts)) {
+        const i = document.getElementById(id);
+        if (i) i.value = v;
+      }
     }
     async function viewChat(key,pageId,senderId){
       const box=document.getElementById('chat_'+key);

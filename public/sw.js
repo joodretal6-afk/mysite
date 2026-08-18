@@ -1,5 +1,5 @@
 // Service Worker — منصة الأجبان (PWA)
-const CACHE = "cheese-v1";
+const CACHE = "cheese-v2";
 const SHELL = ["/admin", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (e) => {
@@ -20,7 +20,12 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   // لا نتدخّل في نداءات الـ API — لازم تكون حيّة دائماً
-  if (url.pathname.startsWith("/admin/api") || url.pathname.startsWith("/webhook")) return;
+  // 🔴 وحدات الميزات مركّبة على /admin/f-api — كانت تُخزّن بالكاش
+  // فيشوف التاجر أرقام أمس على إنها اليوم. أي بيانات حيّة ممنوع تخزينها.
+  if (url.pathname.startsWith("/admin/api") ||
+      url.pathname.startsWith("/admin/f-api") ||
+      url.pathname.startsWith("/webhook") ||
+      url.pathname.startsWith("/whatsapp")) return;
   e.respondWith(
     fetch(req).then(res => {
       if (res && res.ok && url.origin === self.location.origin) {

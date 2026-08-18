@@ -16,9 +16,10 @@
     "test:address": "node scripts/smoke-address.js",
     "test:flow": "node scripts/smoke-flow.js",
     "test:send": "node scripts/smoke-send.js",
+    "test:window": "node scripts/smoke-window.js",
     "tokens": "node scripts/migrate-tokens.js",
     "tokens:check": "node scripts/migrate-tokens.js --check",
-    "test": "node scripts/smoke-send.js && node scripts/smoke-flow.js && node scripts/smoke-address.js && node scripts/smoke-links.js && node scripts/smoke-brain-ui.js && node scripts/smoke-brain.js && node scripts/smoke-venture.js && node scripts/smoke-radar.js"
+    "test": "node scripts/smoke-window.js && node scripts/smoke-send.js && node scripts/smoke-flow.js && node scripts/smoke-address.js && node scripts/smoke-links.js && node scripts/smoke-brain-ui.js && node scripts/smoke-brain.js && node scripts/smoke-venture.js && node scripts/smoke-radar.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

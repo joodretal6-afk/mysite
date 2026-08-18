@@ -755,6 +755,33 @@ adminRouter.post("/api/handoffs/:key/reply", requireAuth, async (req, res) => {
   const page = PAGES[pageId];
   if (!page?.PAGE_TOKEN || !senderId) return res.status(400).json({ error: "صفحة/زبون غير معروف" });
   try {
+    // ═══════════════════════════════════════════════════════════
+    // 🔴 نافذة الـ24 ساعة تنطبق على الرد اليدوي كمان.
+    //
+    // openReplyWindow كانت تُفتح بلا أي فحص، فالموظف يقدر يرد على
+    // محادثة عمرها أسبوع — وهاي مخالفة صريحة لسياسة ميتا وعقوبتها
+    // إيقاف الصفحة والحساب الإعلاني. الحارس اللي بالبوت كان
+    // مُتجاوَزاً من هون بالضبط.
+    //
+    // منقيس من آخر رسالة **واردة** من الزبون لنفس الصفحة.
+    // ═══════════════════════════════════════════════════════════
+    const last = retryDb(() => db.prepare(
+      `SELECT MAX(created_at) AS at FROM messages
+       WHERE page_id = ? AND sender_id = ? AND direction = 'in'`
+    ).get(pageId, senderId));
+    const lastIn = Number(last && last.at) || 0;
+    const ageMs = Date.now() - lastIn;
+    if (!lastIn || ageMs > 24 * 3600 * 1000) {
+      const hours = lastIn ? Math.floor(ageMs / 3600000) : null;
+      return res.status(409).json({
+        error: lastIn
+          ? `خارج نافذة الـ24 ساعة — آخر رسالة من الزبون قبل ${hours} ساعة. ` +
+            `سياسة ميتا بتمنع الرد بعدها، والمخالفة بتوقّف الصفحة.`
+          : "ما في رسالة واردة من هاد الزبون — ما بنقدر نبدأ محادثة من طرفنا.",
+        outsideWindow: true, hoursAgo: hours
+      });
+    }
+
     // رد يدوي من موظف داخل محادثة نشطة — نفتح نافذة الرد لهذا الإرسال فقط
     openReplyWindow();
     try { await sendText(page.PAGE_TOKEN, senderId, text); }
