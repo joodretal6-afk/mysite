@@ -184,13 +184,16 @@ console.log("\n── منع القيم بلا مصدر ──");
 {
   const mem = { cart: { "غنم": 1 }, area: "عمان، البيادر", addressReady: true,
                 phone: "0791234567", prov: { order: { source_mid: "a" }, area: { source_mid: "b" } } };
-  // الرقم موجود بس بلا مصدر (prov.phone غائب) → لازم يعتبره ناقص
+  // الرقم موجود بس بلا مصدر → القيمة موجودة (التقطت وقت الالتقاط) فالطلب
+  // مكتمل، بس غياب المصدر ينكتب كتحذير تدقيق (مش مانع — عشان ما يوقف
+  // طلب جاهز). منع الاختراع بيصير لحظة الالتقاط مش هون.
   const v = validateOrder(mem, { pageId: "Z", senderId: "z" });
-  okv(!v.complete && v.missing.includes("phone"),
-      `رقم بلا source_mid = ناقص (missing=${v.missing.join(",")})`);
-  // نضيف مصدره → يكتمل
-  mem.prov.phone = { source_mid: "c" };
-  okv(validateOrder(mem, {}).complete, "بعد إضافة مصدر الرقم → مكتمل");
+  okv(v.complete && v.warnNoSource.includes("phone"),
+      `رقم موجود بلا مصدر = مكتمل + تحذير تدقيق (warn=${v.warnNoSource.join(",")})`);
+  // القيمة الناقصة فعلاً (مش المصدر) هي اللي بتوقف الطلب
+  const v2 = validateOrder({ cart: { "غنم": 1 }, area: "عمان، البيادر", addressReady: true,
+    phone: "", prov: {} }, {});
+  okv(!v2.complete && v2.missing.includes("phone"), "رقم ناقص فعلاً = الطلب ناقص");
 }
 
 // ═══ "نفس العنوان" بلا سياق داخل الجلسة → عنوان مجهول ═══
