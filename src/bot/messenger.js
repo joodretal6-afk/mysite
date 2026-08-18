@@ -28,7 +28,20 @@ export function closeReplyWindow() { _replyDepth = Math.max(0, _replyDepth - 1);
 export function replyWindowOpen() { return _replyDepth > 0; }
 
 export async function sendText(pageToken, senderId, text) {
-  if (!text || !text.trim()) return;
+  // 🔴 حارس ترتيب المعاملات: (pageToken, senderId, text).
+  // عكسها سابقاً مرّر كائن مكان النص، فرمت .trim() خطأً وانهار المعالج
+  // كاملاً — والزبون ما وصله ولا رد. الصمت أسوأ من رسالة خطأ، فمنكشف
+  // الغلط بصوت عالي بدل ما ينهار كل شي بهدوء.
+  if (typeof text !== "string") {
+    console.error(`🔴 sendText: النص لازم يكون سلسلة، وصل ${typeof text}. ` +
+                  `الترتيب الصحيح: sendText(pageToken, senderId, text)`);
+    return;
+  }
+  if (typeof pageToken !== "string" || !pageToken) {
+    console.error("🔴 sendText: توكن الصفحة ناقص أو مش سلسلة — تأكد من ترتيب المعاملات");
+    return;
+  }
+  if (!text.trim()) return;
   if (_replyDepth <= 0) {
     console.warn("🛑 إرسال استباقي مرفوض (خارج نافذة الرد) — لم تُرسل أي رسالة للزبون.");
     return;   // 🔒 لا إرسال إطلاقاً خارج نافذة الرد

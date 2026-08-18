@@ -122,6 +122,32 @@ r = runFlow(reefan, ["بدي جلن غسيل للبيادر جنب دوار ال
 ok(r.out.filter(x => x.type === "سؤال").length === 0, "ما سأل ولا سؤال");
 ok(!!r.out.find(x => x.type === "فاتورة"), "وطلّع الفاتورة مباشرة");
 
+// ═══ 4.5) 🔴 صحة الفاتورة: كل كمية لصنفها ═══
+console.log("\n── الكميات والفواتير ──");
+const motamad = PAGES["907535882452054"];
+const { RESET_INTENT } = await import("../src/bot/parser.js");
+for (const [txt, want, expected] of [
+  ["بدي نصية غنم ونصيتين شخل", { "غنم": 1, "شخل": 2 }, 47],
+  ["نصيتين غنم", { "غنم": 2 }, 29],
+  ["بدي غنم", { "غنم": 1 }, 15],
+  ["ثلاث نصيات غنم ونصية ماعز", { "غنم": 3, "ماعز": 1 }, 65]
+]) {
+  const m = { cart: {} };
+  parseMessage(m, txt, motamad);
+  const o = computeOrder(motamad, m.cart, null);
+  ok(JSON.stringify(m.cart) === JSON.stringify(want) && o.total === expected,
+     `"${txt}" ⇒ ${JSON.stringify(m.cart)} = ${o.total}د`);
+}
+
+console.log("\n── تفريغ السلة: بس لما الزبون يقصده ──");
+for (const [txt, shouldClear] of [
+  ["بدي أعدّل العنوان", false], ["تعديل رقمي", false], ["بدل العنوان", false],
+  ["بدي الغنم", false], ["الغي الطلب", true], ["امسح الطلبية", true], ["غيرت رأيي", true]
+]) {
+  ok(RESET_INTENT.test(txt) === shouldClear,
+     `"${txt}" ⇒ ${RESET_INTENT.test(txt) ? "تفريغ" : "السلة سليمة"}`);
+}
+
 // ═══ 5) مناطق أضفناها ═══
 console.log("\n── مناطق كانت ناقصة ──");
 for (const a of ["البيادر", "مرج الحمام", "وادي السير", "صافوط", "طبربور", "ناعور"]) {

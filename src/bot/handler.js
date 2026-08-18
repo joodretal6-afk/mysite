@@ -442,12 +442,18 @@ async function _handleEvent(event, env, ctx) {
   // بعدها بيكمّل مع الذكاء الاصطناعي عادي — ما بنسكت ولا بنعلّق الطلب.
   if (cartItemsCount > 0 && memory.phone && addrUnknown
       && memory.addressQuestion && !memory._addrAsked && !memory.sent) {
+    const ask = `تمام 👌 ضلّ إشي واحد بس عشان يوصلك الطلب صح:\n${memory.addressQuestion}`;
+    // 🔴 ترتيب المعاملات: sendText(pageToken, senderId, text) — لا تعكسه.
+    // عكسه سابقاً كان يمرّر كائن مكان النص فترمي .trim() خطأً وينهار
+    // المعالج كاملاً ⇒ الزبون ما بيوصله ولا رد والطلب بيعلق.
+    await sendText(token, senderId, ask);
+    // ما بنعلّم "سألنا" إلا بعد نجاح الإرسال فعلاً — وإلا لو فشل الإرسال
+    // بنكون حرقنا السؤال الوحيد بلا ما يسمعه الزبون.
     memory._addrAsked = true;
     memory.lastReply = memory.addressQuestion;
-    const ask = `تمام 👌 ضلّ إشي واحد بس عشان يوصلك الطلب صح:\n${memory.addressQuestion}`;
     logMessage({ page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
                  direction: "out", body: ask, created_at: Date.now() });
-    await sendText(senderId, ask, pageConfig);
+    await env.SESSIONS_KV.put(sessionKey, JSON.stringify(memory), { expirationTtl: CONFIG.SESSION_TTL });
     return;
   }
 

@@ -4,8 +4,21 @@
 import { normalizeDigits } from "./utils.js";
 import { mergeAddress, looksLikeAddressAttempt, isCorrection } from "./address.js";
 
-// 🔴 تصليح مهم: القديم كان فيه "الغ" فأي زبون يكتب "بدي الغنم" كانت السلة بتنمسح
-export const RESET_INTENT = /(غيرت\s*رأي|غيرت\s*راي|بطلت|بدال|بدّل|بدل\s|امسح|الغي|ألغي|إلغاء|الغاء|تعديل)/i;
+// 🔴 تفريغ السلة إجراء مدمّر — لازم يكون الزبون قاصده صراحةً.
+//
+// النسخة السابقة كانت بتفرّغ السلة على "تعديل" و"بدل" لحالهم، فـ
+// "تعديل رقمي" و"بدل العنوان" كانت بتمسح طلب الزبون كامل وهو بس
+// بده يصحّح رقمه. الزبون بيلاقي حاله رجع من الصفر بلا ما يفهم ليش.
+//
+// القاعدة الجديدة: كلمة التفريغ لازم تكون مرتبطة بالطلب أو السلة،
+// مش بأي إشي تاني بالمحادثة.
+const CLEAR_WORD = "(?:امسح|الغي|ألغي|إلغاء|الغاء|بطلت|شيل|فضّي|فضي)";
+const ORDER_WORD = "(?:الطلب|الطلبيه|الطلبية|السله|السلة|الاوردر|الأوردر|كل شي|كلشي|الكل)";
+export const RESET_INTENT = new RegExp(
+  // تغيير رأي صريح — واضح لحاله
+  `(غيرت\\s*رأي|غيرت\\s*راي|بلّشنا من جديد|من الاول|من البدايه|من البداية` +
+  // أو كلمة تفريغ + إشارة للطلب (بأي ترتيب)
+  `|${CLEAR_WORD}\\s+${ORDER_WORD}|${ORDER_WORD}\\s+${CLEAR_WORD})`, "i");
 
 // ═══════════════════════════════════════════════════════════
 // 📍 قاعدة عناوين الأردن الشاملة (كل المحافظات والمدن والمناطق والأحياء)
@@ -160,12 +173,45 @@ export function parseMessage(memory, originalText, pageConfig) {
 
   const qty = extractQty(text, pageConfig);
 
-  let productFound = false;
+  // ═══════════════════════════════════════════════════════════
+  // 🔴 ربط كل كمية بصنفها — مسح بالمواقع لا فحص عام
+  //
+  // النسخة السابقة كانت تحسب كمية واحدة للرسالة كلها وتطبّقها على كل
+  // صنف انذكر فيها. فـ«نصية غنم ونصيتين شخل» كانت تطلع {غنم:2, شخل:2}،
+  // يعني الزبون بينحاسب على 4 نصيات بدل 3 — خطأ مباشر بالفاتورة والفلوس.
+  //
+  // الحل: منلاقي موقع كل صنف بالنص، ومنقرأ الكمية من المقطع اللي قبله.
+  // بالعربي الكمية بتسبق الصنف غالباً («نصية غنم»)، فالمقطع اللي قبل
+  // الصنف هو المكان الصح للبحث عنها.
+  // ═══════════════════════════════════════════════════════════
   const keywords = pageConfig.PRODUCT_KEYWORDS || {};
+  const hits = [];
   for (const [product, regex] of Object.entries(keywords)) {
-    if (regex.test(text)) {
-      memory.cart[product] = qty > 0 ? qty : (memory.cart[product] || 1);
-      productFound = true;
+    // ننسخ التعبير بعلم g عشان نلاقي كل المواقع بلا ما نعبث بالأصلي
+    const rx = new RegExp(regex.source, regex.flags.includes("g") ? regex.flags : regex.flags + "g");
+    let m;
+    while ((m = rx.exec(text)) !== null) {
+      hits.push({ product, at: m.index, end: m.index + m[0].length });
+      if (m.index === rx.lastIndex) rx.lastIndex++;   // حماية من حلقة لا نهائية
+    }
+  }
+  hits.sort((a, b) => a.at - b.at);
+
+  let productFound = hits.length > 0;
+  if (hits.length === 1) {
+    // صنف واحد: نستخدم كمية الرسالة كاملة — أدق لأن الكمية ممكن تجي بعده
+    const h = hits[0];
+    memory.cart[h.product] = qty > 0 ? qty : (memory.cart[h.product] || 1);
+  } else if (hits.length > 1) {
+    let prevEnd = 0;
+    const seen = new Set();
+    for (const h of hits) {
+      if (seen.has(h.product)) { prevEnd = h.end; continue; }   // أول ذكر بس
+      seen.add(h.product);
+      const segment = text.slice(prevEnd, h.at);       // المقطع اللي قبل الصنف
+      const segQty = extractQty(segment, pageConfig);
+      memory.cart[h.product] = segQty > 0 ? segQty : (memory.cart[h.product] || 1);
+      prevEnd = h.end;
     }
   }
 
