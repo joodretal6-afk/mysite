@@ -10,6 +10,7 @@ import { askAI, extractOrderWithAI } from "./ai.js";
 import { computeOrder } from "./order.js";
 import { saveOrder, getRecentOpenOrderId, updateOrder } from "../db/database.js";
 import { notifyTelegram } from "./messenger.js";
+import { groundAddress, parseAddress } from "./address.js";
 
 export function whatsappEnabled() {
   return Boolean(CONFIG.WHATSAPP_TOKEN && CONFIG.WHATSAPP_PHONE_ID);
@@ -75,7 +76,14 @@ export async function handleWhatsAppMessage(msg, contactName, kv) {
     if (ai?.ok && ai.is_order && Array.isArray(ai.items) && ai.items.length) {
       mem.cart = {};
       ai.items.forEach(it => { mem.cart[it.product] = it.qty; });
-      if (ai.area) mem.area = ai.area;
+      // 🔴 نفس قاعدة الماسنجر: ممنوع نثق بعنوان الذكاء أعمى. كل كلمة
+      //    لازم تكون من كلام الزبون الفعلي، وإلا بنرفضه بدل ما نطبع
+      //    عنوان مخترع بالفاتورة.
+      if (ai.area) {
+        const g = groundAddress(ai.area, convo);
+        if (g.ok) mem.area = parseAddress(g.grounded).formatted;
+        else console.warn(`🛑 واتساب: عنوان الذكاء مرفوض (${g.reason}): "${ai.area}"`);
+      }
       if (ai.phone) mem.phone = ai.phone;
       const { total, orderString } = computeOrder(page, mem.cart, null);
       const phone = mem.phone || from;

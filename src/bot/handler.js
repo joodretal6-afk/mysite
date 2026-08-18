@@ -290,8 +290,10 @@ async function _handleEvent(event, env, ctx) {
       const last = lastCompletedOrder(senderId);
       if (last && last.order_string) {
         memory.cart = parseOrderStringToCart(last.order_string);
-        if (!memory.area) memory.area = last.area || "";
         if (!memory.phone) memory.phone = last.phone || "";
+        // 🔴 حتى بإعادة الطلب: ما منعبّي العنوان القديم لحالنا. منعيد
+        //    الأصناف بس، والعنوان بيسأل عنه الزبون من جديد — بلكي الطلب
+        //    لمكان ثاني. ما منفترض إنه نفس العنوان.
         memory._repeated = true;   // نتخطى استخراج الذكاء هالدور حتى ما يمسح السلة
       }
     } catch (e) { console.error("repeat order:", e && e.message); }
@@ -370,15 +372,20 @@ async function _handleEvent(event, env, ctx) {
     }
   }
 
-  // 🏠 العنوان المحفوظ: زبون قديم عندو أصناف بالسلة بس ناقص عنوان/رقم → نعبّيه من آخر طلب/الـCRM
+  // 🏠 الرقم المحفوظ فقط: زبون قديم ناقص رقم → نعبّيه من آخر طلب/الـCRM.
+  //
+  // 🔴 العنوان: ممنوع منعاً باتاً نحطّه لحالنا. لا من طلب سابق، ولا من
+  //    الـCRM، ولا من أي توقّع. العنوان بينعتمد بس لما الزبون يبعثه
+  //    بهالمحادثة. الزبون ممكن يكون نقل بيت أو الطلب لمكان ثاني —
+  //    فأي عنوان قديم منطبعه بالفاتورة = طلب بيروح غلط. إذا ناقص عنوان
+  //    منسأل الزبون، مش منفترض.
   try {
     const cartHasItems = memory.cart && Object.keys(memory.cart).length > 0;
-    if (cartHasItems && (!memory.area || !memory.phone)) {
+    if (cartHasItems && !memory.phone) {
       const last = lastCompletedOrder(senderId);
-      if (!memory.area) memory.area = (crmData && crmData.lastArea) || (last && last.area) || memory.area;
-      if (!memory.phone) memory.phone = (last && last.phone) || (crmData && crmData.phone) || memory.phone;
+      memory.phone = (last && last.phone) || (crmData && crmData.phone) || memory.phone;
     }
-  } catch (e) { console.error("saved address:", e && e.message); }
+  } catch (e) { console.error("saved phone:", e && e.message); }
 
   // 🏢 كشف تاجر الجملة: كمية كبيرة أو كلمات جملة → تنبيه + ملاحظة (مرة لكل جلسة)
   try {
