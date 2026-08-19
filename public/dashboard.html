@@ -107,6 +107,8 @@
     .act button:hover, .act a:hover{ background:var(--hover); }
     .act .wa{ color:#25b862; }
     .rowsub{ font-size:11px; color:var(--mut); }
+    .plat{ display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:20px; font-size:12px; font-weight:700;
+      background:var(--hover-brand); color:var(--brand); border:1px solid color-mix(in srgb,var(--brand) 20%,transparent); white-space:nowrap; }
 
     .qa{ display:flex; align-items:center; gap:12px; width:100%; padding:11px 12px; border:none; background:transparent; border-radius:12px; cursor:pointer; font-family:var(--font); font-size:14px; font-weight:600; color:var(--txt); text-decoration:none; transition:.18s; }
     .qa:hover{ background:var(--hover); }
@@ -261,7 +263,7 @@
         </div>
         <div style="overflow:auto">
           <table>
-            <thead><tr><th>#</th><th>الطلب</th><th>المبلغ</th><th>العنوان</th><th>الهاتف</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+            <thead><tr><th>#</th><th>المنصة</th><th>الطلب</th><th>المبلغ</th><th>العنوان</th><th>الهاتف</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
             <tbody id="rows"></tbody>
           </table>
         </div>
@@ -312,6 +314,8 @@
     function fmtDate(ts){try{return new Date(ts).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'});}catch{return'';}}
     function money(n){return Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
     function stClass(s){return s==='ملغي'?'cancel':s==='جديد'?'new':'done';}
+    // أيقونة مميّزة لكل منصة (حسب نوع منتجها)
+    function pIcon(n){n=String(n||'');return /ريفان|تنظيف|غسيل/.test(n)?'🧴':/أم نزار|ام نزار/.test(n)?'🏡':/غزة|غزه/.test(n)?'🧀':/معتمد/.test(n)?'🐑':'🏷️';}
     function qs(){const p=new URLSearchParams();['search','page_id','status','from','to'].forEach(id=>{const v=document.getElementById(id).value;if(v)p.set(id,v);});return p.toString();}
     function showFilters(){const f=document.getElementById('filters');f.style.display=f.style.display==='none'?'flex':'none';}
     function toggleMenu(e){e.stopPropagation();document.getElementById('usermenu').classList.toggle('open');}
@@ -386,6 +390,7 @@
       rows.forEach(o=>{ ordersById[o.id]=o;
         const tr=document.createElement('tr');
         tr.innerHTML=`<td><b>#${o.id}</b><div class="rowsub">${fmtDate(o.created_at)}</div></td>
+          <td><span class="plat">${pIcon(o.page_name)} ${esc(o.page_name)||'—'}</span></td>
           <td class="order">${esc(o.order_string)}</td>
           <td class="amount">${money(o.total)} <span class="rowsub">د.ا</span></td>
           <td>📍 ${esc(o.area)||'—'}</td>
