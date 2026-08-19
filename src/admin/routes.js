@@ -646,13 +646,18 @@ adminRouter.post("/api/bulk-extract", requireAuth, async (req, res) => {
 // جلب الأوردرات
 adminRouter.get("/api/orders", requireAuth, (req, res) => {
   const { page_id, search, from, to, status } = req.query;
+  // 📄 تصفّح حقيقي: نقدر نوصل لكل طلب من أول يوم (بلا سقف مخفي).
+  //    limit=0 يعني "كل الطلبات" (للتصدير)، وغير هيك صفحة بحجم محدّد.
+  const lim = req.query.limit !== undefined ? parseInt(req.query.limit, 10) : 50;
+  const off = parseInt(req.query.offset, 10) || 0;
   const result = listOrders({
     page_id: page_id || undefined,
     search: search || undefined,
     status: status || undefined,
     from: from ? new Date(from).getTime() : undefined,
     to: to ? (new Date(to).getTime() + 86400000 - 1) : undefined,
-    limit: 1000
+    limit: (lim > 0 ? lim : 100000),
+    offset: off
   });
   res.json(result);
 });
