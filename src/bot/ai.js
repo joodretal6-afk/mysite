@@ -8,6 +8,9 @@ import { COMMON_KNOWLEDGE, SALES_PERSONA, SALES_BEHAVIOR } from "./brain.js";
 import { ADDRESS_EXPERT } from "./addressExpert.js";
 import { buildNextTask, askGemini } from "./gemini.js";
 
+// عنوان البوابة المتوافقة مع OpenAI (AIsa أو غيرها) — قابل للضبط
+const OAI_BASE = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
+
 function chosenProvider() {
   if (CONFIG.AI_PROVIDER === "openai") return "openai";
   if (CONFIG.AI_PROVIDER === "gemini") return "gemini";
@@ -75,7 +78,7 @@ ${conversationText.slice(0, 6000)}`;
   let raw = "";
   try {
     if (chosenProvider() === "openai") {
-      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      const resp = await fetch(`${OAI_BASE}/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${CONFIG.OPENAI_API_KEY}` },
         body: JSON.stringify({
@@ -137,7 +140,7 @@ async function transcribeOpenAI(audioPart) {
     const form = new FormData();
     form.append("file", blob, "audio.m4a");
     form.append("model", CONFIG.OPENAI_TRANSCRIBE_MODEL);
-    const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    const r = await fetch(`${OAI_BASE}/audio/transcriptions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${CONFIG.OPENAI_API_KEY}` },
       body: form,
@@ -183,7 +186,7 @@ async function askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmDat
   messages.push({ role: "user", content: finalUser || "..." });
 
   try {
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+    const resp = await fetch(`${OAI_BASE}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

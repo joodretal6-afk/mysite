@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ربط الذكاء الاصطناعي — منصة الأجبان</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:var(--font,'Tajawal',sans-serif)}
+    .top{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 26px;background:var(--surface-1);border-bottom:1px solid var(--line)}
+    .top h1{font-family:var(--font-display);font-size:19px;font-weight:700;color:var(--txt);display:flex;align-items:center;gap:9px}
+    .top a{color:var(--mut);font-size:13px;font-weight:600;text-decoration:none;padding:8px 13px;border-radius:10px;border:1px solid var(--line)}
+    .wrap{max-width:820px;margin:0 auto;padding:26px 20px 60px}
+    .card{background:var(--surface-1);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow-xs)}
+    .card h2{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--txt);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+    .sub{color:var(--mut);font-size:13px;line-height:1.7;margin-bottom:14px}
+    label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 6px}
+    input,select{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:11px;font-family:inherit;font-size:14px;background:var(--input-bg);color:var(--txt)}
+    input:focus,select:focus{outline:none;border-color:color-mix(in srgb,var(--brand) 55%,transparent);box-shadow:var(--ring)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:640px){.row{grid-template-columns:1fr}}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+    .btn{padding:11px 20px;border:none;border-radius:11px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;transition:.2s}
+    .btn.p{background:var(--brand);color:#fff}
+    .btn.g{background:transparent;color:var(--txt);border:1px solid var(--line-strong)}
+    .btn.d{background:transparent;color:var(--bad);border:1px solid color-mix(in srgb,var(--bad) 45%,transparent)}
+    .btn:hover{filter:brightness(1.06)}
+    .state{display:flex;align-items:center;gap:11px;padding:14px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);margin-bottom:14px}
+    .state .dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+    .on{background:var(--ok);box-shadow:0 0 9px var(--ok)} .off{background:var(--bad)}
+    .kv{font-size:13px;color:var(--mut)} .kv b{color:var(--txt)}
+    .note{font-size:12.5px;color:var(--mut);line-height:1.8;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:12px}
+    .warn{border-color:color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 8%,transparent)}
+    .res{margin-top:14px;padding:13px;border-radius:12px;font-size:13.5px;display:none}
+    .res.ok{display:block;background:color-mix(in srgb,var(--ok) 10%,transparent);border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);color:var(--ok)}
+    .res.err{display:block;background:color-mix(in srgb,var(--bad) 10%,transparent);border:1px solid color-mix(in srgb,var(--bad) 30%,transparent);color:var(--bad)}
+    .feat{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--hair);font-size:13.5px;color:var(--txt)}
+    .feat:last-child{border:none} .feat span:first-child{width:22px}
+  </style>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"violet")}catch(e){}</script>
+  <link rel="stylesheet" href="/premium.css">
+</head>
+<body>
+  <div class="top">
+    <h1>🧠 ربط الذكاء الاصطناعي</h1>
+    <a href="/admin">→ اللوحة الرئيسية</a>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <h2>الحالة الحالية</h2>
+      <div class="state" id="state"><span class="dot off"></span><div class="kv">جاري الفحص...</div></div>
+      <div class="sub">المفتاح اللي بتحطّه هون بيشغّل <b>كل</b> ذكاء الموقع: البوت، المستشار، دراسة السوق والمنافسين، رادار السوق اليومي، باني المشاريع، وتحليل التقارير.</div>
+    </div>
+
+    <div class="card">
+      <h2>⚙️ إعداد المزوّد</h2>
+      <div class="sub">أي بوابة متوافقة مع OpenAI بتشتغل (AIsa، OpenAI، وغيرها). خُذ الـ Base URL من صفحة Docs عند مزوّدك.</div>
+      <div class="row">
+        <div>
+          <label>المزوّد</label>
+          <select id="provider">
+            <option value="openai">بوابة متوافقة مع OpenAI (AIsa وغيرها)</option>
+            <option value="gemini">Gemini مباشرة</option>
+            <option value="">تلقائي</option>
+          </select>
+        </div>
+        <div>
+          <label>النموذج (Model)</label>
+          <input id="model" placeholder="gpt-4o-mini">
+        </div>
+      </div>
+      <label>عنوان الـ API (Base URL)</label>
+      <input id="base" dir="ltr" placeholder="https://api.aisa.one/v1">
+      <label>المفتاح (API Key)</label>
+      <input id="key" dir="ltr" type="password" placeholder="اتركه فاضي للإبقاء على المفتاح الحالي">
+      <div class="btns">
+        <button class="btn p" onclick="save()">💾 حفظ</button>
+        <button class="btn g" onclick="test()">⚡ فحص الاتصال</button>
+        <button class="btn d" onclick="clearKey()">🗑 حذف المفتاح</button>
+      </div>
+      <div class="res" id="res"></div>
+      <div class="note warn">🔒 المفتاح بينحفظ بقاعدة بيانات موقعك فقط — ما بينكتب بالكود ولا بينرفع للمستودع. إذا ظهر مفتاحك بأي صورة أو مكان عام، احذفه من لوحة المزوّد واعمل واحد جديد فوراً.</div>
+    </div>
+
+    <div class="card">
+      <h2>✅ شو بيتفعّل لما تربط</h2>
+      <div class="feat"><span>🤖</span><div>ردود البوت على الزبائن واستخراج الطلبات</div></div>
+      <div class="feat"><span>🧠</span><div>المستشار — تحليل شغلك واقتراح خطوات</div></div>
+      <div class="feat"><span>🔎</span><div>دراسة السوق والمنافسين (بيبحث بالنت فعلياً ثم يحلّل)</div></div>
+      <div class="feat"><span>📡</span><div>رادار السوق اليومي</div></div>
+      <div class="feat"><span>🏗️</span><div>باني المشاريع الغذائية ودراسة الجدوى</div></div>
+      <div class="feat"><span>📊</span><div>تحليل التقارير وجودة البوت</div></div>
+      <div class="note">ℹ️ ملاحظة مهمة عن "قراءات السوق": الذكاء بيحلّل، والبيانات بتيجي من بحث فعلي بالنت داخل الموقع. لكن منصات مثل فيسبوك/تيك توك ما بتعطي أرقام مشاهدات المنافسين للعامة — فأي رقم ما إلو مصدر، النظام مصمّم يقول "ما لقيت بيانات" بدل ما يخترعه.</div>
+    </div>
+  </div>
+
+  <script>
+    const $=id=>document.getElementById(id);
+    function show(ok,msg){const r=$('res');r.className='res '+(ok?'ok':'err');r.textContent=msg;}
+    async function loadState(){
+      try{
+        const r=await fetch('/admin/api/ai/status'); if(r.status===401){location.href='/admin/login';return;}
+        const d=await r.json();
+        $('state').innerHTML=`<span class="dot ${d.configured?'on':'off'}"></span><div class="kv">`+
+          (d.configured?`مربوط ✔ — <b>${d.provider}</b> · نموذج <b>${d.model}</b>`:'غير مربوط — حطّ المفتاح تحت')+
+          (d.key_masked?` · المفتاح <b dir="ltr">${d.key_masked}</b> (${d.key_source})`:'')+`</div>`;
+        if(d.model)$('model').value=d.model;
+        if(d.base&&d.base.startsWith('http'))$('base').value=d.base;
+      }catch(e){}
+    }
+    async function save(){
+      const body={provider:$('provider').value,base:$('base').value,model:$('model').value,key:$('key').value};
+      const r=await fetch('/admin/api/ai/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const d=await r.json();
+      if(d.error)return show(false,'❌ '+d.error);
+      $('key').value=''; show(true,'✅ انحفظ. اضغط «فحص الاتصال» للتأكد.'); loadState();
+    }
+    async function test(){
+      show(true,'⏳ جاري الفحص...');
+      const r=await fetch('/admin/api/ai/test',{method:'POST'});
+      const d=await r.json();
+      if(d.ok)show(true,`✅ الاتصال ناجح — ${d.provider} · ${d.model} · ${d.ms}ms · رد: "${d.sample}"`);
+      else show(false,'❌ فشل الاتصال: '+(d.error||'غير معروف'));
+      loadState();
+    }
+    async function clearKey(){
+      if(!confirm('حذف المفتاح المحفوظ؟'))return;
+      await fetch('/admin/api/ai/clear',{method:'POST'}); $('key').value=''; show(true,'تم حذف المفتاح'); loadState();
+    }
+    loadState();
+  </script>
+  <script src="/theme.js" defer></script>
+  <script src="/motion.js" defer></script>
+</body>
+</html>

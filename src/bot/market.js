@@ -74,23 +74,19 @@ export function extractAndSaveStudies(reply) {
   return { clean: reply.replace(re, "").trim(), created };
 }
 
+// يمرّ من الطبقة الموحّدة — يشتغل بأي مزوّد مربوط (AIsa أو Gemini)
 async function callGemini(sys, contents) {
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.MODEL_NAME}:generateContent?key=${CONFIG.GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: sys }] },
-        contents,
-        generationConfig: { temperature: 0.5, maxOutputTokens: 2200 }
-      }),
-      signal: AbortSignal.timeout(60000)
-    }
-  );
-  if (!resp.ok) throw new Error(`Gemini ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
-  const d = await resp.json();
-  return (d?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").replace(/\*\*/g, "").trim();
+  const { aiComplete } = await import("./aiCore.js");
+  // نحوّل المحادثة لنص واحد (متوافق مع كل المزوّدين)
+  const convo = (contents || []).map(c => {
+    const who = c.role === "model" ? "المساعد" : "المستخدم";
+    const txt = (c.parts || []).map(p => p.text || "").join("");
+    return `${who}: ${txt}`;
+  }).join("\n\n");
+  const r = await aiComplete(`${sys}\n\n━━ المحادثة ━━\n${convo}`,
+    { temperature: 0.5, maxTokens: 2200, timeoutMs: 60000 });
+  if (!r.ok) throw new Error(r.error || "فشل الذكاء الاصطناعي");
+  return String(r.text || "").replace(/\*\*/g, "").trim();
 }
 
 // 🕵️ حلقة الوكيل الباحث: يبحث → يقرأ → يبحث... → دراسة نهائية بمصادر
@@ -166,15 +162,10 @@ const COUNCIL = [
 
 async function askOne(prompt, maxTokens = 500) {
   try {
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.MODEL_NAME}:generateContent?key=${CONFIG.GEMINI_API_KEY}`,
-      { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: maxTokens } }),
-        signal: AbortSignal.timeout(45000) });
-    if (!resp.ok) return null;
-    const d = await resp.json();
-    return (d?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").replace(/\*\*/g, "").trim() || null;
+    const { aiComplete } = await import("./aiCore.js");
+    const r = await aiComplete(prompt, { temperature: 0.4, maxTokens, timeoutMs: 45000 });
+    if (!r.ok) return null;
+    return String(r.text || "").replace(/\*\*/g, "").trim() || null;
   } catch { return null; }
 }
 

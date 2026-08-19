@@ -64,24 +64,13 @@ export function searchQueries(product, country = "الأردن") {
 // 🤖 حلقة الوكيل الباحث — بحث حقيقي ثم تحليل
 // نفس نمط askMarket الموجود، بس مخصّص للأغذية والمنافسة.
 // ═══════════════════════════════════════════════════════════
+// يمرّ من الطبقة الموحّدة — فيشتغل بأي مزوّد مربوط (AIsa أو Gemini)
 async function callAI(sys, userText) {
-  if (!CONFIG.GEMINI_API_KEY) throw new Error("مفتاح الذكاء الاصطناعي غير مضبوط");
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.MODEL_NAME}:generateContent?key=${CONFIG.GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: sys }] },
-        contents: [{ role: "user", parts: [{ text: String(userText).slice(0, 12000) }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 2600 }
-      }),
-      signal: AbortSignal.timeout(60000)
-    }
-  );
-  if (!resp.ok) throw new Error(`AI ${resp.status}: ${(await resp.text()).slice(0, 160)}`);
-  const d = await resp.json();
-  return (d?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").replace(/\*\*/g, "").trim();
+  const { aiComplete } = await import("../bot/aiCore.js");
+  const r = await aiComplete(`${sys}\n\n---\n\n${String(userText).slice(0, 12000)}`,
+    { temperature: 0.4, maxTokens: 2600, timeoutMs: 60000 });
+  if (!r.ok) throw new Error(r.error || "فشل الذكاء الاصطناعي");
+  return String(r.text || "").replace(/\*\*/g, "").trim();
 }
 
 const RESEARCHER = `أنت باحث سوق متخصص بالمنتجات الغذائية للبيع عبر فيسبوك بالدفع عند الاستلام.

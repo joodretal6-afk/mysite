@@ -59,24 +59,12 @@ try {
 
 // ── الذكاء الاصطناعي (Gemini) — يرجع نص أو null عند الفشل ──
 async function askAI(prompt) {
+  // يمرّ من الطبقة الموحّدة — يشتغل بأي مزوّد مربوط (AIsa أو Gemini)
   try {
-    const r = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/" + CONFIG.MODEL_NAME + ":generateContent?key=" + CONFIG.GEMINI_API_KEY,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.5, maxOutputTokens: 900 }
-        }),
-        signal: AbortSignal.timeout(40000)
-      }
-    );
+    const { aiComplete } = await import("../bot/aiCore.js");
+    const r = await aiComplete(prompt, { temperature: 0.5, maxTokens: 900, timeoutMs: 40000 });
     if (!r.ok) return null;
-    const j = await r.json();
-    const parts = j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
-    const text = Array.isArray(parts) ? parts.map(p => p.text || "").join("").trim() : "";
-    return text || null;
+    return String(r.text || "").replace(/\*\*/g, "").trim() || null;
   } catch { return null; }
 }
 
