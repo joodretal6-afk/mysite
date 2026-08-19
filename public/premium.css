@@ -1,0 +1,237 @@
+/* ════════════════════════════════════════════════════════════════
+   ✦ AURORA OBSIDIAN — نظام تصميم موحّد
+   AI Command Center · Dark Premium · Luxury SaaS
+   يُحمّل آخر شي بكل صفحة فيتحكّم بالهوية كلها من مصدر واحد.
+   لا يمسّ أي منطق — بصري بحت.
+   ════════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=Tajawal:wght@300;400;500;700;800&display=swap');
+
+/* ── 1) التوكنز: نعيد تعريف المتغيّرات المشتركة عبر كل الصفحات ──
+   (لأنها تُحمّل بعد :root الداخلي لكل صفحة، فتفوز وتُعيد تلوين الموقع كله) */
+:root{
+  /* الخلفيات والأسطح */
+  --bg:#080b0a; --bg2:#0b100e; --surface:#0e1513; --surface2:#121a17;
+  --card:#0f1614; --card2:#131c19; --line:rgba(255,255,255,.085); --line2:rgba(255,255,255,.14);
+  /* النص */
+  --txt:#e8f0ec; --text:#e8f0ec; --mut:#8ba39a; --muted:#8ba39a; --ink:#e8f0ec;
+  /* الهوية: زمرّد مُضيء + ذهب فخم + سماوي ذكاء */
+  --green:#22c98a; --green2:#6ff2be; --emerald:#22c98a; --primary:#22c98a; --acc:#22c98a;
+  --brand:#22c98a; --brand-2:#6ff2be;
+  --gold:#e2c15f; --gold2:#f0d98a; --gold-soft:#3a3418;
+  --ai:#37e0d0; --ai-soft:rgba(55,224,208,.12);
+  /* الحالات */
+  --red:#ff6b6b; --danger:#ff6b6b; --error:#ff6b6b;
+  --amber:#f0b54d; --warning:#f0b54d; --warn:#f0b54d;
+  --blue:#5cc8ff; --info:#5cc8ff; --success:#22c98a; --wa:#22c98a;
+  /* أنظمة */
+  --radius:16px; --radius-sm:11px; --radius-lg:22px;
+  --shadow:0 18px 44px -22px rgba(0,0,0,.75);
+  --shadow-lg:0 40px 90px -30px rgba(0,0,0,.85);
+  --glow:0 0 0 1px rgba(34,201,138,.28), 0 14px 40px -14px rgba(34,201,138,.35);
+  --glow-gold:0 0 0 1px rgba(226,193,95,.32), 0 14px 40px -16px rgba(226,193,95,.28);
+  --ring:0 0 0 3px rgba(34,201,138,.22);
+  --glass:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.014));
+  --t:.24s cubic-bezier(.2,.7,.2,1);
+  --font:'Tajawal','Segoe UI',Tahoma,Arial,sans-serif;
+  --font-display:'El Messiri','Tajawal',serif;
+  color-scheme:dark;
+}
+
+/* ── 2) الأساس والخلفية السينمائية ── */
+html{ scroll-behavior:smooth; }
+body{
+  font-family:var(--font) !important;
+  color:var(--txt) !important;
+  background:var(--bg) !important;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  position:relative;
+}
+/* هالة ضوئية محيطة (طبقة ثابتة خلف كل شي) */
+body::before{
+  content:''; position:fixed; inset:0; z-index:-2; pointer-events:none;
+  background:
+    radial-gradient(1100px 620px at 88% -8%, rgba(34,201,138,.16), transparent 60%),
+    radial-gradient(900px 560px at -6% 4%, rgba(55,224,208,.10), transparent 58%),
+    radial-gradient(760px 520px at 50% 116%, rgba(226,193,95,.09), transparent 60%),
+    linear-gradient(180deg, #080b0a 0%, #0a0f0d 48%, #070a09 100%);
+}
+/* نسيج نويز خفيف جداً للعُمق */
+body::after{
+  content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+::selection{ background:rgba(34,201,138,.28); color:#fff; }
+::-webkit-scrollbar{ width:11px; height:11px; }
+::-webkit-scrollbar-thumb{ background:linear-gradient(180deg,#1f8f66,#0c6a49); border-radius:20px; border:3px solid transparent; background-clip:padding-box; }
+::-webkit-scrollbar-thumb:hover{ background:linear-gradient(180deg,#26b478,#0f7d57); background-clip:padding-box; }
+::-webkit-scrollbar-track{ background:transparent; }
+
+/* ── 3) الترويسة ── */
+header{
+  background:
+    radial-gradient(600px 180px at 92% 0%, rgba(34,201,138,.16), transparent 70%),
+    linear-gradient(135deg,#0d1815 0%, #0a1210 60%, #070d0b 100%) !important;
+  color:var(--txt) !important;
+  border-bottom:1px solid var(--line) !important;
+  box-shadow:0 20px 50px -30px rgba(0,0,0,.9);
+  position:relative;
+}
+header::after{
+  content:''; position:absolute; left:0; right:0; bottom:0; height:1px;
+  background:linear-gradient(90deg,transparent, rgba(34,201,138,.6) 25%, rgba(226,193,95,.5) 50%, rgba(34,201,138,.6) 75%, transparent);
+}
+header h1{ font-family:var(--font-display) !important; letter-spacing:.3px; }
+
+/* ── 4) روابط التنقل (pills) ── */
+.nav, header a.nav{
+  background:rgba(255,255,255,.04) !important; color:#d7e5de !important;
+  border:1px solid var(--line) !important; border-radius:12px !important;
+  backdrop-filter:blur(8px); transition:var(--t) !important; font-weight:500;
+}
+.nav:hover, header a.nav:hover{
+  background:rgba(34,201,138,.16) !important; color:#eafff5 !important;
+  border-color:rgba(34,201,138,.5) !important; transform:translateY(-1px);
+  box-shadow:0 8px 22px -10px rgba(34,201,138,.5) !important;
+}
+
+/* ── 5) الأسطح الزجاجية ── */
+.card, .stat, .toolbar, .tbl-card, .box, .panel, .tile,
+.side, nav.side, .modal, .filters{
+  background:var(--glass) !important;
+  border:1px solid var(--line) !important;
+  border-radius:var(--radius) !important;
+  box-shadow:var(--shadow) !important;
+  backdrop-filter:blur(14px) saturate(1.1);
+}
+.card, .toolbar, .tbl-card, .panel{ position:relative; }
+/* بطاقات المؤشرات: شريط علوي مُضيء + رفعة عند المرور */
+.stat{ overflow:hidden; transition:var(--t) !important; animation:pm-rise .55s cubic-bezier(.2,.7,.2,1) both; }
+.stat::before{
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg,var(--brand-2),var(--brand),var(--ai)); opacity:.9;
+}
+.stat::after{
+  content:''; position:absolute; top:-50px; inset-inline-start:-30px; width:130px; height:130px;
+  background:radial-gradient(circle, rgba(34,201,138,.16), transparent 70%); pointer-events:none;
+}
+.stat:hover{ transform:translateY(-4px); border-color:rgba(34,201,138,.35) !important; box-shadow:var(--glow) !important; }
+.stat .n, .stat .num, .stat .value{ font-family:var(--font-display) !important; color:var(--brand-2) !important; text-shadow:0 0 22px rgba(34,201,138,.35); }
+.stat .l, .stat .label{ color:var(--mut) !important; }
+
+/* ── 6) الأزرار ── */
+.btn, button.btn, .btn.primary, button{ transition:var(--t) !important; font-family:var(--font); }
+.btn{ border-radius:var(--radius-sm) !important; font-weight:700; letter-spacing:.2px; }
+.btn.primary, .btn.g, .btn-primary{
+  background:linear-gradient(135deg,#25d492,#0e9b6b) !important; color:#04140d !important;
+  border:1px solid rgba(111,242,190,.4) !important;
+  box-shadow:0 10px 26px -12px rgba(34,201,138,.6) !important;
+}
+.btn.primary:hover, .btn.g:hover{ filter:brightness(1.07); transform:translateY(-1px); box-shadow:0 14px 32px -12px rgba(34,201,138,.7) !important; }
+.btn.ghost, .btn.sec, .btn.secondary{
+  background:rgba(255,255,255,.05) !important; color:var(--txt) !important; border:1px solid var(--line) !important;
+}
+.btn.ghost:hover, .btn.sec:hover{ background:rgba(255,255,255,.09) !important; }
+.btn.dan, .btn.danger{ background:linear-gradient(135deg,#ff7a7a,#d84545) !important; color:#fff !important; border:none !important; }
+.btn.xls{ background:linear-gradient(135deg,#1fb277,#0c7d54) !important; color:#fff !important; }
+.btn.csv{ background:linear-gradient(135deg,#3a5f54,#26433a) !important; color:#e8f0ec !important; }
+header button{ background:rgba(255,255,255,.06) !important; color:#e8f0ec !important; border:1px solid var(--line) !important; border-radius:11px !important; }
+header button:hover{ background:rgba(226,193,95,.85) !important; color:#1a1206 !important; }
+
+/* ── 7) الحقول ── */
+input, select, textarea{
+  background:rgba(255,255,255,.035) !important; color:var(--txt) !important;
+  border:1px solid var(--line) !important; border-radius:var(--radius-sm) !important;
+  font-family:var(--font) !important; transition:var(--t) !important;
+}
+input::placeholder, textarea::placeholder{ color:#5f746c !important; }
+input:focus, select:focus, textarea:focus{
+  outline:none !important; border-color:rgba(34,201,138,.6) !important; box-shadow:var(--ring) !important;
+  background:rgba(255,255,255,.055) !important;
+}
+select option{ background:#0e1513; color:var(--txt); }
+label{ color:var(--mut) !important; }
+
+/* ── 8) الجداول ── */
+.tbl-card, .tablewrap{ background:var(--glass) !important; }
+table{ font-family:var(--font); }
+th, td{ border-bottom:1px solid var(--line) !important; background:transparent !important; color:var(--txt) !important; }
+th{
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)) !important;
+  color:var(--brand-2) !important; font-family:var(--font-display) !important; font-weight:700 !important;
+  border-bottom:1px solid var(--line2) !important;
+}
+tbody tr{ transition:var(--t); }
+tr:hover td{ background:rgba(34,201,138,.05) !important; }
+td:first-child{ color:var(--mut) !important; }
+td.total{ color:var(--gold2) !important; font-weight:800; }
+a.msg{ color:var(--brand) !important; } a.msg:hover{ color:var(--gold2) !important; }
+
+/* ── 9) الشارات (Design System واحد) ── */
+.badge{ border-radius:30px !important; font-weight:700 !important; font-size:11.5px !important; letter-spacing:.3px;
+  padding:5px 12px !important; border:1px solid transparent; backdrop-filter:blur(4px); }
+.badge::before{ content:''; display:inline-block; width:6px; height:6px; border-radius:50%; margin-inline-end:6px; vertical-align:middle; background:currentColor; box-shadow:0 0 8px currentColor; }
+.b-جديد, .b-new{ background:rgba(92,200,255,.12) !important; color:#7fd4ff !important; border-color:rgba(92,200,255,.3) !important; }
+.b-تم, .b-done, .b-on, .b-connected{ background:rgba(34,201,138,.13) !important; color:#5fe6ab !important; border-color:rgba(34,201,138,.32) !important; }
+.b-ملغي, .b-failed, .b-off{ background:rgba(255,107,107,.12) !important; color:#ff9090 !important; border-color:rgba(255,107,107,.3) !important; }
+.b-un, .b-pending{ background:rgba(240,181,77,.12) !important; color:#f2c877 !important; border-color:rgba(240,181,77,.3) !important; }
+.pill{ background:rgba(255,255,255,.06) !important; color:#b9c7c0 !important; border:1px solid var(--line); border-radius:11px; }
+
+/* ── 10) المودالات ── */
+.modal-bg, .modal{ }
+.modal-bg{ background:rgba(4,8,7,.66) !important; backdrop-filter:blur(6px); }
+.modal, .modal .box{ background:linear-gradient(180deg,#101815,#0c1310) !important; border:1px solid var(--line2) !important; border-radius:var(--radius-lg) !important; box-shadow:var(--shadow-lg) !important; animation:pm-rise .3s ease both; }
+.modal h3, .box h3{ font-family:var(--font-display) !important; color:var(--brand-2) !important; }
+
+/* ── 11) الشريط الجانبي (صفحات فيها side nav مثل مركز واتساب) ── */
+.side button{ color:#b9c7c0 !important; border-right:3px solid transparent !important; transition:var(--t) !important; }
+.side button:hover{ background:rgba(255,255,255,.04) !important; color:#eafff5 !important; }
+.side button.active{ background:rgba(34,201,138,.12) !important; color:var(--brand-2) !important; border-right-color:var(--brand) !important; }
+h2{ font-family:var(--font-display) !important; color:var(--brand-2) !important; }
+.hint, .empty, .note{ color:var(--mut) !important; }
+
+/* ── 12) حركات هادئة راقية ── */
+@keyframes pm-rise{ from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);} }
+@keyframes pm-fade{ from{opacity:0;} to{opacity:1;} }
+@keyframes pm-pulse{ 0%,100%{opacity:.5; transform:scale(1);} 50%{opacity:1; transform:scale(1.15);} }
+@keyframes pm-shimmer{ 100%{ background-position:-200% 0; } }
+.wrap, main{ animation:pm-fade .5s ease both; }
+
+/* مؤشر حيّ (AI/live status) — يُستخدم بالصفحات المحدّثة */
+.pm-live{ display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--mut); }
+.pm-live .dot{ width:8px; height:8px; border-radius:50%; background:var(--brand); box-shadow:0 0 10px var(--brand); animation:pm-pulse 1.8s ease-in-out infinite; }
+.pm-live.ai .dot{ background:var(--ai); box-shadow:0 0 10px var(--ai); }
+.pm-live.warn .dot{ background:var(--amber); box-shadow:0 0 10px var(--amber); }
+.pm-live.off .dot{ background:#6b7d76; box-shadow:none; animation:none; }
+
+/* Skeleton loading */
+.pm-skel{ background:linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.09) 37%, rgba(255,255,255,.04) 63%); background-size:200% 100%; animation:pm-shimmer 1.4s infinite; border-radius:8px; }
+
+/* ── 13) تقليل الحركة لمن يفضّلها ── */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{ animation-duration:.001ms !important; transition-duration:.05ms !important; }
+  html{ scroll-behavior:auto; }
+}
+
+/* ── 14) شبكة أمان: أي عناصر تحكّم بأصناف خاصة بصفحة تبقى فاتحة ──
+   (أزرار فلاتر/تبويبات/رقائق مكتوب لها background أبيض داخل صفحتها) */
+.ftab, .tab, .chip, .seg, .filter-btn, .tagbtn, .copybtn, .quick button, .subnav a,
+button:not(.btn):not(.btn.primary):not(.btn.g):not(.btn.dan):not(header button):not(.side button){
+  background:rgba(255,255,255,.05) !important; color:var(--txt) !important;
+  border:1px solid var(--line) !important; border-radius:var(--radius-sm) !important;
+  transition:var(--t) !important;
+}
+.ftab:hover, .tab:hover, .chip:hover, .quick button:hover, .copybtn:hover{
+  background:rgba(34,201,138,.14) !important; border-color:rgba(34,201,138,.4) !important; color:#eafff5 !important;
+}
+.ftab.active, .tab.active, .chip.active, .seg.active, .subnav a.active{
+  background:rgba(34,201,138,.16) !important; color:var(--brand-2) !important; border-color:rgba(34,201,138,.5) !important;
+}
+/* شارات/رقائق فاتحة داخل الصفحات تتحوّل لأسلوب داكن راقٍ */
+.vip{ background:rgba(226,193,95,.14) !important; color:var(--gold2) !important; border:1px solid rgba(226,193,95,.3) !important; }
+/* روابط عامة */
+a{ color:var(--brand); }
+a:hover{ color:var(--gold2); }
+
+/* ── 15) لمسات RTL آمنة ── */
+[dir="rtl"] .side button{ border-right:3px solid transparent !important; }
