@@ -107,6 +107,14 @@
     .act button:hover, .act a:hover{ background:var(--hover); }
     .act .wa{ color:#25b862; }
     .rowsub{ font-size:11px; color:var(--mut); }
+    .pager{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding-top:14px; margin-top:6px; border-top:1px solid var(--hair); }
+    .pginfo{ font-size:12.5px; color:var(--mut); }
+    .pgbtns{ display:flex; gap:5px; flex-wrap:wrap; }
+    .pg{ min-width:34px; height:34px; padding:0 10px; border-radius:10px; border:1px solid var(--line); background:var(--surface-1); color:var(--txt); cursor:pointer; font-family:var(--font); font-size:13px; font-weight:700; transition:.15s; }
+    .pg:hover:not(:disabled){ background:var(--hover); }
+    .pg.act{ background:var(--brand); color:#fff; border-color:transparent; }
+    .pg:disabled{ opacity:.4; cursor:not-allowed; }
+    .pgdots{ color:var(--mut); padding:0 4px; align-self:center; }
     .plat{ display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:20px; font-size:12px; font-weight:700;
       background:var(--hover-brand); color:var(--brand); border:1px solid color-mix(in srgb,var(--brand) 20%,transparent); white-space:nowrap; }
 
@@ -256,6 +264,7 @@
           <select id="page_id"><option value="">كل المنصات</option></select>
           <select id="status"><option value="">كل الحالات</option><option>جديد</option><option>تم التواصل</option><option>تم الشحن</option><option>تم التسليم</option><option>ملغي</option></select>
           <input id="from" type="date"><input id="to" type="date">
+          <select id="perPage" title="عدد الطلبات بالصفحة"><option value="50">50 بالصفحة</option><option value="100">100</option><option value="200">200</option><option value="500">500</option></select>
           <button class="btn primary" onclick="load()">تطبيق</button>
           <button class="btn ghost" onclick="reset()">مسح</button>
           <button class="btn xls" onclick="exp('xlsx')">⬇ Excel</button>
@@ -268,6 +277,7 @@
           </table>
         </div>
         <div class="empty" id="empty" style="display:none">لا توجد طلبات مطابقة</div>
+        <div class="pager" id="pager"></div>
       </div>
     </main>
 
@@ -382,10 +392,14 @@
       document.getElementById('page_id').innerHTML=opts;
       document.getElementById('chartPage').innerHTML='<option value="">جميع المنصات</option>'+d.pages.map(p=>`<option value="${p.page_id}">${esc(p.page_name)}</option>`).join('');
     }
-    async function load(){
-      const r=await fetch('/admin/api/orders?'+qs()); if(r.status===401){location.href='/admin/login';return;} const d=await r.json();
+    let curOff=0, perPage=50, totalOrders=0;
+    async function load(reset){
+      if(reset!==false) curOff=0;
+      const r=await fetch('/admin/api/orders?'+qs()+'&limit='+perPage+'&offset='+curOff);
+      if(r.status===401){location.href='/admin/login';return;} const d=await r.json();
       const tb=document.getElementById('rows'), empty=document.getElementById('empty'); tb.innerHTML=''; ordersById={};
-      const rows=(d.rows||[]).slice(0,12);
+      const rows=d.rows||[]; totalOrders=d.count||rows.length;
+      renderPager();
       if(!rows.length){empty.style.display='block';return;} empty.style.display='none';
       rows.forEach(o=>{ ordersById[o.id]=o;
         const tr=document.createElement('tr');
@@ -405,6 +419,24 @@
         tb.appendChild(tr);
       });
     }
+    // 📄 التصفّح: كل الطلبات من أول يوم متاحة (بلا استثناء)
+    function renderPager(){
+      const el=document.getElementById('pager'); if(!el)return;
+      const pages=Math.max(1,Math.ceil(totalOrders/perPage)), cur=Math.floor(curOff/perPage)+1;
+      const from=totalOrders?curOff+1:0, to=Math.min(curOff+perPage,totalOrders);
+      let btns='';
+      const go=p=>`onclick="gotoPage(${p})"`;
+      const add=(p,lbl,dis,act)=>btns+=`<button class="pg${act?' act':''}" ${dis?'disabled':go(p)}>${lbl}</button>`;
+      add(cur-2,'‹',cur===1);
+      const start=Math.max(1,Math.min(cur-2,pages-4)), end=Math.min(pages,start+4);
+      if(start>1){ add(0,'1',false,cur===1); if(start>2) btns+='<span class="pgdots">…</span>'; }
+      for(let p=start;p<=end;p++) add(p-1,p,false,p===cur);
+      if(end<pages){ if(end<pages-1) btns+='<span class="pgdots">…</span>'; add(pages-1,pages,false,cur===pages); }
+      add(cur,'›',cur===pages);
+      el.innerHTML=`<div class="pginfo">عرض ${from} إلى ${to} من أصل <b>${totalOrders.toLocaleString('en-US')}</b> طلب</div><div class="pgbtns">${btns}</div>`;
+    }
+    function gotoPage(p){ curOff=Math.max(0,p)*perPage; load(false); document.getElementById('orders').scrollIntoView({behavior:'smooth',block:'start'}); }
+
     function editRow(id){const o=ordersById[id];if(!o)return;ed_id.value=id;ed_order.value=o.order_string||'';ed_total.value=o.total||0;ed_area.value=o.area||'';ed_phone.value=o.phone||'';document.getElementById('editModal').classList.add('show');}
     function closeEdit(){document.getElementById('editModal').classList.remove('show');}
     async function saveEdit(){const id=ed_id.value;const body={order_string:ed_order.value,total:ed_total.value,area:ed_area.value,phone:ed_phone.value};const b=document.getElementById('ed-save');b.disabled=true;b.textContent='جاري الحفظ...';try{const r=await fetch('/admin/api/orders/'+id+'/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw 0;closeEdit();load();loadDash();}catch{alert('فشل الحفظ');}b.disabled=false;b.textContent='💾 حفظ';}
@@ -416,7 +448,8 @@
     // أحداث
     document.getElementById('gsearch').addEventListener('input',e=>{document.getElementById('search').value=e.target.value;clearTimeout(window._t);window._t=setTimeout(load,300);});
     document.getElementById('search').addEventListener('input',()=>{clearTimeout(window._t);window._t=setTimeout(load,300);});
-    ['page_id','status','from','to'].forEach(id=>document.getElementById(id).addEventListener('change',load));
+    ['page_id','status','from','to'].forEach(id=>document.getElementById(id).addEventListener('change',()=>load()));
+    document.getElementById('perPage').addEventListener('change',e=>{perPage=parseInt(e.target.value,10)||50;load();});
     document.querySelectorAll('#ranges button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#ranges button').forEach(x=>x.classList.remove('active'));b.classList.add('active');curDays=b.dataset.d;loadDash();});
     document.getElementById('chartPage').addEventListener('change',e=>{curPage=e.target.value;loadDash();});
 
