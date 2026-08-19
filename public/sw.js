@@ -1,5 +1,5 @@
 // Service Worker — منصة الأجبان (PWA)
-const CACHE = "cheese-v2";
+const CACHE = "cheese-v3";
 const SHELL = ["/admin", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (e) => {
