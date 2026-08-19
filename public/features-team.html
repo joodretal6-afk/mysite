@@ -114,6 +114,7 @@
       #page-standup { display:block !important; }
     }
   </style>
+    <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"aurora")}catch(e){}</script>
   <link rel="stylesheet" href="/premium.css">
 </head>
 <body>
@@ -653,5 +654,6 @@
     loadTasks();
     api('/reminders').then(function(d){ renderDueBanner(d.due); }).catch(function(){});
   </script>
+  <script src="/theme.js" defer></script>
 </body>
 </html>

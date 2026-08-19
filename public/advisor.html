@@ -48,6 +48,7 @@
     @media(max-width:860px){ .goalscol{display:none;} .goalsbtn{display:inline-block!important;} }
     .goalsbtn { display:none; }
   </style>
+    <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"aurora")}catch(e){}</script>
   <link rel="stylesheet" href="/premium.css">
 </head>
 <body>
@@ -145,5 +146,6 @@
     cwrap.appendChild(chips); scroll();
     loadGoals(); setInterval(loadGoals, 30000);   // تحديث العدّادات كل 30 ثانية
   </script>
+  <script src="/theme.js" defer></script>
 </body>
 </html>

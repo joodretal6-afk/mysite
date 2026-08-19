@@ -29,6 +29,7 @@
     .tog { cursor:pointer; background:none; border:none; font-size:14px; }
     .empty { text-align:center; padding:30px; color:var(--mut); }
   </style>
+    <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"aurora")}catch(e){}</script>
   <link rel="stylesheet" href="/premium.css">
 </head>
 <body>
@@ -91,5 +92,6 @@
     async function del(code){ if(!confirm('حذف الكوبون؟'))return; await fetch('/admin/api/coupons/'+encodeURIComponent(code),{method:'DELETE'}); load(); }
     load();
   </script>
+  <script src="/theme.js" defer></script>
 </body>
 </html>

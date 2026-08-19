@@ -31,6 +31,7 @@
     a.msg { color:var(--green); text-decoration:none; font-size:13px; }
     .empty { text-align:center; padding:40px; color:var(--mut); }
   </style>
+    <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"aurora")}catch(e){}</script>
   <link rel="stylesheet" href="/premium.css">
 </head>
 <body>
@@ -108,5 +109,6 @@
     document.getElementById('search').addEventListener('input',()=>{clearTimeout(window._t);window._t=setTimeout(load,350);});
     load();
   </script>
+  <script src="/theme.js" defer></script>
 </body>
 </html>

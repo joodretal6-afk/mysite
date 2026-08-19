@@ -32,6 +32,7 @@
     .pausetag { padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; background:#ffcdd2; color:#b71c1c; }
     .pausetag.off { background:#e8f5e9; color:var(--green2); }
   </style>
+    <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"aurora")}catch(e){}</script>
   <link rel="stylesheet" href="/premium.css">
 </head>
 <body>
@@ -133,5 +134,6 @@
     function beep(){ try{ const c=new(window.AudioContext||window.webkitAudioContext)(); const o=c.createOscillator(),g=c.createGain(); o.connect(g);g.connect(c.destination); o.type='sine';o.frequency.value=760;g.gain.value=0.15; o.start(); o.frequency.setValueAtTime(520,c.currentTime+0.15); o.stop(c.currentTime+0.3);}catch(e){} }
     load(); setInterval(load, 8000);   // تحديث تلقائي كل 8 ثوانٍ
   </script>
+  <script src="/theme.js" defer></script>
 </body>
 </html>
