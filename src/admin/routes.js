@@ -430,6 +430,9 @@ adminRouter.get("/api/chat", requireAuth, (req, res) => {
   res.json({ messages: getChatMessages(page_id, sender_id) });
 });
 
+// 📲 مركز واتساب (كل الأقسام في صفحة واحدة بتبويبات جانبية)
+adminRouter.get("/whatsapp", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "wa.html")));
+
 // 📞 صفحة البحث عن الأرقام + الـ API
 adminRouter.get("/phones", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "phones.html")));
 adminRouter.get("/api/phones", requireAuth, (req, res) => {

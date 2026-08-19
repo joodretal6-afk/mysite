@@ -216,6 +216,13 @@ function dailyJobsTick() {
 setInterval(dailyJobsTick, 5 * 60 * 1000).unref?.();   // فحص كل 5 دقائق
 dailyJobsTick();   // نسخة احتياطية فورية عند الإقلاع
 
+// 📲 طابور واتساب: إرسال تدريجي للحملات النشطة (رسمي فقط، بس للموافقين).
+// كل 20 ثانية دفعة صغيرة — يحترم حدود ميتا. بلا حساب مهيأ ما بينبعت شي.
+try {
+  const { waQueueTick } = await import("./features/whatsapp.js");
+  setInterval(() => { waQueueTick().catch(e => console.error("waQueueTick:", e && e.message)); }, 20 * 1000).unref?.();
+} catch (e) { console.error("WA queue init:", e && e.message); }
+
 // ⚠️ حُذفت متابعة ما بعد البيع نهائياً (إرسال استباقي خارج نافذة 24 ساعة — شبهة مخالفة).
 
 // بيئة متوافقة مع كود الـ Worker الأصلي (env + ctx)
