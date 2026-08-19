@@ -344,6 +344,7 @@ app.get("/icon.svg", (req, res) => res.sendFile(path.join(pwaDir, "icon.svg")));
 // أصول واجهة عقل المبيعات — تنسيق وكود عرض فقط، بلا أي بيانات
 app.get("/premium.css", (req, res) => { res.type("text/css"); res.sendFile(path.join(pwaDir, "premium.css")); });
 app.get("/theme.js", (req, res) => { res.type("application/javascript"); res.sendFile(path.join(pwaDir, "theme.js")); });
+app.get("/motion.js", (req, res) => { res.type("application/javascript"); res.sendFile(path.join(pwaDir, "motion.js")); });
 app.get("/brain-ui.css", (req, res) => res.sendFile(path.join(pwaDir, "brain-ui.css")));
 app.get("/brain-ui.js", (req, res) => res.sendFile(path.join(pwaDir, "brain-ui.js")));
 
