@@ -8,14 +8,25 @@ import { COMMON_KNOWLEDGE, SALES_PERSONA, SALES_BEHAVIOR } from "./brain.js";
 import { ADDRESS_EXPERT } from "./addressExpert.js";
 import { buildNextTask, askGemini } from "./gemini.js";
 
-// عنوان البوابة المتوافقة مع OpenAI (AIsa أو غيرها) — قابل للضبط
-const OAI_BASE = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
+// عنوان البوابة المتوافقة مع OpenAI (افتراضياً AIsa — تم التحقق منها)
+const OAI_BASE = (process.env.OPENAI_BASE_URL || "https://api.aisa.one/v1").replace(/\/+$/, "");
+
+// 🔑 المفتاح والنموذج: متغيّر بيئة أولاً، وإلا المحفوظ بصفحة /admin/ai.
+//    (نقرأه لحظياً عشان يشتغل فوراً بعد ما تحفظه بالموقع بلا إعادة تشغيل)
+function siteSetting(key) {
+  try {
+    // استيراد متزامن كسول عبر ذاكرة الوحدة (database.js محمّلة أصلاً)
+    return (globalThis.__aiSettings && globalThis.__aiSettings(key)) || "";
+  } catch { return ""; }
+}
+export function oaiKey()   { return process.env.OPENAI_API_KEY || siteSetting("ai_key") || ""; }
+export function oaiModel() { return process.env.OPENAI_MODEL || siteSetting("ai_model") || "qwen-flash"; }
 
 function chosenProvider() {
   if (CONFIG.AI_PROVIDER === "openai") return "openai";
   if (CONFIG.AI_PROVIDER === "gemini") return "gemini";
-  // تلقائي: لو في مفتاح OpenAI استخدمه، وإلا Gemini
-  return CONFIG.OPENAI_API_KEY ? "openai" : "gemini";
+  // تلقائي: لو في مفتاح بوابة استخدمها، وإلا Gemini
+  return oaiKey() ? "openai" : "gemini";
 }
 
 // نقطة الدخول الموحّدة (نفس توقيع askGemini)
@@ -80,9 +91,9 @@ ${conversationText.slice(0, 6000)}`;
     if (chosenProvider() === "openai") {
       const resp = await fetch(`${OAI_BASE}/chat/completions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${CONFIG.OPENAI_API_KEY}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${oaiKey()}` },
         body: JSON.stringify({
-          model: CONFIG.OPENAI_MODEL,
+          model: oaiModel(),
           messages: [{ role: "user", content: prompt }],
           temperature: 0,
           response_format: { type: "json_object" }
@@ -142,7 +153,7 @@ async function transcribeOpenAI(audioPart) {
     form.append("model", CONFIG.OPENAI_TRANSCRIBE_MODEL);
     const r = await fetch(`${OAI_BASE}/audio/transcriptions`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${CONFIG.OPENAI_API_KEY}` },
+      headers: { Authorization: `Bearer ${oaiKey()}` },
       body: form,
       signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
     });
@@ -190,10 +201,10 @@ async function askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmDat
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${CONFIG.OPENAI_API_KEY}`
+        Authorization: `Bearer ${oaiKey()}`
       },
       body: JSON.stringify({
-        model: CONFIG.OPENAI_MODEL,
+        model: oaiModel(),
         messages,
         temperature: 0.2,
         max_tokens: 400
