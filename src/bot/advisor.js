@@ -105,22 +105,16 @@ export async function askAdvisor(history) {
     role: h.role === "assistant" ? "model" : "user",
     parts: [{ text: String(h.content || "").slice(0, 4000) }]
   }));
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.MODEL_NAME}:generateContent?key=${CONFIG.GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: sys }] },
-        contents,
-        generationConfig: { temperature: 0.5, maxOutputTokens: 1200 }
-      }),
-      signal: AbortSignal.timeout(45000)
-    }
-  );
-  if (!resp.ok) throw new Error(`Gemini ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
-  const d = await resp.json();
-  const raw = (d?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").replace(/\*\*/g, "").trim();
+  // يمرّ من الطبقة الموحّدة — يشتغل بأي مزوّد مربوط (AIsa أو Gemini)
+  const { aiComplete } = await import("./aiCore.js");
+  const convo = contents.map(c => {
+    const who = c.role === "model" ? "المستشار" : "التاجر";
+    return `${who}: ${(c.parts || []).map(p => p.text || "").join("")}`;
+  }).join("\n\n");
+  const res = await aiComplete(`${sys}\n\n━━ المحادثة ━━\n${convo}`,
+    { temperature: 0.5, maxTokens: 1200, timeoutMs: 45000 });
+  if (!res.ok) throw new Error(res.error || "فشل الذكاء الاصطناعي");
+  const raw = String(res.text || "").replace(/\*\*/g, "").trim();
   const { clean, created } = extractAndSaveGoals(raw);
   return { reply: clean || "تمام، خبّرني أكثر عن وضع الشغل.", createdGoals: created };
 }

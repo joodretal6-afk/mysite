@@ -430,6 +430,40 @@ adminRouter.get("/api/chat", requireAuth, (req, res) => {
   res.json({ messages: getChatMessages(page_id, sender_id) });
 });
 
+// ═══════════════════════════════════════════════════════════
+// 🧠 ربط مزوّد الذكاء (AIsa أو أي بوابة متوافقة) من داخل الموقع
+// المفتاح بينحفظ بقاعدة البيانات — ما بينكتب بالكود أبداً.
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/ai", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "ai.html")));
+
+adminRouter.get("/api/ai/status", requireAuth, async (req, res) => {
+  try { const { aiStatus } = await import("../bot/aiCore.js"); res.json(await aiStatus()); }
+  catch (e) { res.status(500).json({ error: e && e.message }); }
+});
+
+adminRouter.post("/api/ai/save", requireAuth, requireAdmin, (req, res) => {
+  try {
+    const { provider, base, model, key } = req.body || {};
+    if (provider) setSetting("ai_provider", String(provider).trim());
+    if (base !== undefined) setSetting("ai_base", String(base).trim().replace(/\/+$/, ""));
+    if (model !== undefined) setSetting("ai_model", String(model).trim());
+    // المفتاح: نحفظه بس لو انبعت فعلاً (فراغ = خلّي القديم)
+    if (key) setSetting("ai_key", String(key).trim());
+    logActivity(req.user, "ربط الذكاء", `مزوّد=${provider || "-"} نموذج=${model || "-"}`);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e && e.message }); }
+});
+
+adminRouter.post("/api/ai/test", requireAuth, requireAdmin, async (req, res) => {
+  try { const { aiTest } = await import("../bot/aiCore.js"); res.json(await aiTest()); }
+  catch (e) { res.status(500).json({ ok: false, error: e && e.message }); }
+});
+
+adminRouter.post("/api/ai/clear", requireAuth, requireAdmin, (req, res) => {
+  try { setSetting("ai_key", ""); logActivity(req.user, "حذف مفتاح الذكاء", ""); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: e && e.message }); }
+});
+
 // 📲 مركز واتساب (كل الأقسام في صفحة واحدة بتبويبات جانبية)
 adminRouter.get("/whatsapp", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "wa.html")));
 
