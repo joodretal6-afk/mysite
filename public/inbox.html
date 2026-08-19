@@ -45,6 +45,7 @@
     .msgbar.ok { background:#e8f5e9; color:#2e7d32; }
     .loading { text-align:center; padding:24px; color:var(--mut); }
   </style>
+    <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"aurora")}catch(e){}</script>
   <link rel="stylesheet" href="/premium.css">
 </head>
 <body>
@@ -350,5 +351,6 @@
     document.getElementById('refreshBtn').addEventListener('click', loadConversations);
     loadPages();
   </script>
+  <script src="/theme.js" defer></script>
 </body>
 </html>

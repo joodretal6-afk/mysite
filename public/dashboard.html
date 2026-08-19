@@ -170,6 +170,7 @@
     .empty { text-align:center; padding:56px; color:var(--mut); font-family:'El Messiri',serif; font-size:16px; }
     td.total { font-weight:800; color:#a9841a; font-family:'Tajawal'; }
   </style>
+    <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"aurora")}catch(e){}</script>
   <link rel="stylesheet" href="/premium.css">
 </head>
 <body>
@@ -424,5 +425,6 @@
     meta().then(load);   // ننتظر تعبئة الفلاتر (وفلتر الرابط) قبل جلب الطلبات
     setInterval(()=>{ meta(); load(); }, 30000); // تحديث تلقائي كل 30 ثانية
   </script>
+  <script src="/theme.js" defer></script>
 </body>
 </html>

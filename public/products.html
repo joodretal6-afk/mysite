@@ -34,6 +34,7 @@
     .del { color:#c62828; }
     .empty { text-align:center; padding:30px; color:var(--mut); }
   </style>
+    <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"aurora")}catch(e){}</script>
   <link rel="stylesheet" href="/premium.css">
 </head>
 <body>
@@ -115,5 +116,6 @@
     async function del(id){ if(!confirm('حذف المنتج؟'))return; await fetch('/admin/api/addons/'+id,{method:'DELETE'}); load(); }
     load();
   </script>
+  <script src="/theme.js" defer></script>
 </body>
 </html>

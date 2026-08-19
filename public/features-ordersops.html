@@ -66,6 +66,7 @@
       .no-print { display:none !important; }
     }
   </style>
+    <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"aurora")}catch(e){}</script>
   <link rel="stylesheet" href="/premium.css">
 </head>
 <body>
@@ -643,5 +644,6 @@
     document.getElementById('prepDate').value = new Date().toISOString().slice(0,10);
     loadBulk();
   </script>
+  <script src="/theme.js" defer></script>
 </body>
 </html>

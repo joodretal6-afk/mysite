@@ -73,6 +73,7 @@
     th { color:var(--mut); font-weight:600; font-size:12px; }
     a.m { color:var(--blue); text-decoration:none; }
   </style>
+    <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"aurora")}catch(e){}</script>
   <link rel="stylesheet" href="/premium.css">
 </head>
 <body>
@@ -225,5 +226,6 @@ function render(j) {
 $("#days").addEventListener("change", load);
 load();
 </script>
+  <script src="/theme.js" defer></script>
 </body>
 </html>
