@@ -174,38 +174,72 @@
   <link rel="stylesheet" href="/premium.css">
 </head>
 <body>
-  <header>
-    <h1><span class="crown">👑</span> منصة الأجبان — لوحة القيادة</h1>
-    <div class="right">
-      <span id="who"></span>
-      <a href="/admin/f/command" class="nav" style="background:#b8860b">👑 غرفة القيادة</a>
-      <a href="/admin/features" class="nav" style="background:#1b5e20">⚡ مركز الميزات</a>
-      <a href="/admin/advisor" class="nav">🧠 المستشار</a>
-      <a href="/admin/market" class="nav">🔎 دراسة السوق</a>
-      <a href="/admin/analytics" class="nav">📊 تحليلات</a>
-      <a href="/admin/insights" class="nav">🔎 رؤى</a>
-      <a href="/admin/customers" class="nav">👥 الزبائن</a>
-      <a href="/admin/pages" class="nav">📄 الصفحات</a>
-      <a href="/admin/pagehealth" class="nav">🩺 فحص الصفحات</a>
-      <a href="/admin/inbox" class="nav">📥 الوارد</a>
-      <a href="/admin/chats" class="nav">💬 الدردشات</a>
-      <a href="/admin/phones" class="nav">📞 البحث عن الأرقام</a>
-      <a href="/admin/whatsapp" class="nav">📲 مركز واتساب</a>
-      <a href="/admin/products" class="nav">🛒 منتجات إضافية</a>
-      <a href="/admin/coupons" class="nav">🎟️ كوبونات</a>
-      <a href="/admin/reviews" class="nav">⭐ تقييمات</a>
-      <a href="/admin/handoffs" class="nav">🙋 تدخّل بشري</a>
-      <a href="/admin/profit" class="nav">💰 الأرباح</a>
-      <a href="/admin/inventory" class="nav">📦 المخزون</a>
-      <a href="/admin/prices" class="nav">💵 الأسعار</a>
-      <a href="/admin/team" class="nav">👥 الفريق</a>
-      <a href="/admin/settings" class="nav">⚙️ الإعدادات</a>
-      <a href="/admin/knowledge" class="nav">🧠 تغذية البوت</a>
-      <button onclick="logout()">تسجيل خروج</button>
+  <!-- ═══ شريط علوي هادئ ═══ -->
+  <div class="pm-topbar">
+    <div class="pm-brand">
+      <span class="mark">👑</span>
+      <span>منصة الأجبان<small>لوحة القيادة</small></span>
     </div>
-  </header>
+    <nav class="pm-topnav">
+      <a href="/admin/analytics">التحليلات</a>
+      <a href="/admin/customers">الزبائن</a>
+      <a href="/admin/whatsapp">واتساب</a>
+      <a href="/admin/profit">الأرباح</a>
+      <a href="/admin/features">الميزات</a>
+    </nav>
+    <div class="pm-actions">
+      <span id="who" style="font-size:13px"></span>
+      <button class="pm-navbtn" onclick="pmDrawer(true)">☰ الأقسام</button>
+      <button class="pm-navbtn ghost" onclick="logout()">خروج</button>
+    </div>
+  </div>
+
+  <!-- ═══ درج التنقّل المنظّم ═══ -->
+  <div class="pm-scrim" id="pmScrim" onclick="pmDrawer(false)"></div>
+  <aside class="pm-drawer" id="pmDrawer">
+    <button class="pm-close" onclick="pmDrawer(false)">✕</button>
+    <div class="dh"><span>👑</span> كل الأقسام</div>
+
+    <h4>العمليات اليومية</h4>
+    <a href="/admin/inbox"><span class="ic">📥</span> الوارد</a>
+    <a href="/admin/chats"><span class="ic">💬</span> الدردشات</a>
+    <a href="/admin/phones"><span class="ic">📞</span> البحث عن الأرقام</a>
+    <a href="/admin/handoffs"><span class="ic">🙋</span> تدخّل بشري</a>
+
+    <h4>الذكاء والتحليل</h4>
+    <a href="/admin/f/command"><span class="ic">👑</span> غرفة القيادة</a>
+    <a href="/admin/features"><span class="ic">⚡</span> مركز الميزات</a>
+    <a href="/admin/advisor"><span class="ic">🧠</span> المستشار</a>
+    <a href="/admin/market"><span class="ic">🔎</span> دراسة السوق</a>
+    <a href="/admin/analytics"><span class="ic">📊</span> التحليلات</a>
+    <a href="/admin/insights"><span class="ic">✨</span> رؤى</a>
+
+    <h4>العملاء والتسويق</h4>
+    <a href="/admin/customers"><span class="ic">👥</span> الزبائن</a>
+    <a href="/admin/whatsapp"><span class="ic">📲</span> مركز واتساب</a>
+    <a href="/admin/reviews"><span class="ic">⭐</span> التقييمات</a>
+    <a href="/admin/coupons"><span class="ic">🎟️</span> الكوبونات</a>
+
+    <h4>الإدارة</h4>
+    <a href="/admin/profit"><span class="ic">💰</span> الأرباح</a>
+    <a href="/admin/inventory"><span class="ic">📦</span> المخزون</a>
+    <a href="/admin/prices"><span class="ic">💵</span> الأسعار</a>
+    <a href="/admin/products"><span class="ic">🛒</span> منتجات إضافية</a>
+    <a href="/admin/pages"><span class="ic">📄</span> الصفحات</a>
+    <a href="/admin/pagehealth"><span class="ic">🩺</span> فحص الصفحات</a>
+    <a href="/admin/team"><span class="ic">👤</span> الفريق</a>
+
+    <h4>الإعدادات</h4>
+    <a href="/admin/settings"><span class="ic">⚙️</span> الإعدادات</a>
+    <a href="/admin/knowledge"><span class="ic">📚</span> تغذية البوت</a>
+  </aside>
 
   <div class="wrap">
+    <div style="margin-bottom:26px">
+      <div class="pm-eyebrow">لوحة القيادة</div>
+      <div class="pm-h1">نظرة عامة على المنصة</div>
+      <div class="pm-sub">كل طلباتك ومبيعاتك عبر صفحاتك في مكان واحد.</div>
+    </div>
     <div class="stats" id="stats"></div>
 
     <div class="toolbar">
@@ -418,6 +452,13 @@
     function exp(type){ window.open('/admin/export.'+type+'?'+qs(),'_blank'); }
     function reset(){ ['search','page_id','status','from','to'].forEach(id=>document.getElementById(id).value=''); load(); }
     async function logout(){ await fetch('/admin/logout',{method:'POST'}); location.href='/admin/login'; }
+    // درج التنقّل
+    function pmDrawer(open){
+      document.getElementById('pmDrawer').classList.toggle('open', open);
+      document.getElementById('pmScrim').classList.toggle('open', open);
+      document.body.style.overflow = open ? 'hidden' : '';
+    }
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape') pmDrawer(false); });
 
     document.getElementById('search').addEventListener('input', ()=>{ clearTimeout(window._t); window._t=setTimeout(load,350); });
     ['page_id','status','from','to'].forEach(id=>document.getElementById(id).addEventListener('change',load));
