@@ -24,12 +24,21 @@ async function setting(key) {
   } catch { return ""; }
 }
 
+// الافتراضي جاهز لبوابة AIsa (تم التحقق منها فعلياً):
+//   العنوان: https://api.aisa.one/v1
+//   النموذج: qwen-flash — أسرع نموذج متاح بلا رصيد، وفهم عربي أردني ممتاز،
+//            ويدعم وضع JSON المطلوب لاستخراج الطلبات.
+// 🔴 المفتاح **ما بينكتب هون أبداً** — المستودع عام، ولو انكتب بالكود
+//    بترصده GitHub وبيتلغى فوراً. مصدره: صفحة /admin/ai أو متغيّر بيئة.
+const DEFAULT_BASE  = "https://api.aisa.one/v1";
+const DEFAULT_MODEL = "qwen-flash";
+
 // ── الإعداد الفعّال: متغيّر البيئة أولاً، وإلا إعدادات الموقع ──
 export async function aiConfig() {
   const provider = process.env.AI_PROVIDER || (await setting("ai_provider")) || "";
   const key      = process.env.OPENAI_API_KEY || (await setting("ai_key")) || "";
-  const base     = (process.env.OPENAI_BASE_URL || (await setting("ai_base")) || "https://api.openai.com/v1").replace(/\/+$/, "");
-  const model    = process.env.OPENAI_MODEL || (await setting("ai_model")) || CONFIG.OPENAI_MODEL || "gpt-4o-mini";
+  const base     = (process.env.OPENAI_BASE_URL || (await setting("ai_base")) || DEFAULT_BASE).replace(/\/+$/, "");
+  const model    = process.env.OPENAI_MODEL || (await setting("ai_model")) || DEFAULT_MODEL;
   const gKey     = CONFIG.GEMINI_API_KEY;
   const gModel   = CONFIG.MODEL_NAME;
   // "openai" = أي بوابة متوافقة (AIsa وغيرها)

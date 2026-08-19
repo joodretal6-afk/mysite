@@ -1081,6 +1081,9 @@ export function getSetting(key, def = null) {
     return r ? r.value : def;
   } catch { return def; }
 }
+// جسر متزامن لطبقة الذكاء: تقرأ مفتاح/نموذج المزوّد المحفوظ بالموقع
+// فوراً بعد حفظه، بلا إعادة تشغيل الخادم وبلا دورة استيراد.
+try { globalThis.__aiSettings = (k) => getSetting(k, "") || ""; } catch { /* تجاهل */ }
 export function setSetting(key, value) {
   retryDb(() => db.prepare(
     "INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value"
