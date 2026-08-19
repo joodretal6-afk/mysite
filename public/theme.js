@@ -10,7 +10,7 @@
   ];
   var KEY = "pm-theme";
 
-  function current() { try { return localStorage.getItem(KEY) || "aurora"; } catch (e) { return "aurora"; } }
+  function current() { try { return localStorage.getItem(KEY) || "violet"; } catch (e) { return "aurora"; } }
   function apply(id) { document.documentElement.setAttribute("data-theme", id); }
   function save(id) { try { localStorage.setItem(KEY, id); } catch (e) {} }
 

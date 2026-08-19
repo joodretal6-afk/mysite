@@ -24,7 +24,7 @@ import {
   addGoal, listGoalsWithProgress, setGoalStatus, deleteGoal,
   setPageToken, getPageTokenOverrides, deletePageToken,
   listStudies, setStudyStatus, deleteStudy,
-  findPhonesInRange
+  findPhonesInRange, dashboardData
 } from "../db/database.js";
 import { askAdvisor } from "../bot/advisor.js";
 import { askMarket, runCouncil, priceScenarios, generateWinnerDNA, findMeMoney } from "../bot/market.js";
@@ -453,6 +453,12 @@ adminRouter.get("/api/phones", requireAuth, (req, res) => {
 // جلب فلاتر البيانات (الصفحات + الإحصائيات)
 adminRouter.get("/api/meta", requireAuth, (req, res) => {
   res.json({ user: req.user, pages: distinctPages(), stats: ordersStats() });
+});
+
+// 📊 بيانات لوحة القيادة الغنية (KPIs + سلسلة + مؤشرات + رؤى) — كلها حقيقية
+adminRouter.get("/api/dashboard", requireAuth, (req, res) => {
+  try { res.json(dashboardData({ days: req.query.days, pageId: (req.query.page_id && PAGES[req.query.page_id]) ? req.query.page_id : null })); }
+  catch (e) { console.error("api/dashboard:", e && e.message); res.status(500).json({ error: "تعذّر تحميل اللوحة" }); }
 });
 
 // ═══════════════════════════════════════════════════════════
