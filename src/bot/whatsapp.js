@@ -11,6 +11,7 @@ import { computeOrder } from "./order.js";
 import { saveOrder, getRecentOpenOrderId, updateOrder } from "../db/database.js";
 import { notifyTelegram } from "./messenger.js";
 import { groundAddress, parseAddress } from "./address.js";
+import { handleInboundOptOut } from "../features/whatsapp.js";
 
 export function whatsappEnabled() {
   return Boolean(CONFIG.WHATSAPP_TOKEN && CONFIG.WHATSAPP_PHONE_ID);
@@ -54,6 +55,10 @@ export async function handleWhatsAppMessage(msg, contactName, kv) {
   const from = msg.from;                       // رقم المرسل (WhatsApp ID)
   const text = msg.text?.body || "";
   if (!from || !text) return;
+
+  // ✋ إلغاء الاشتراك التسويقي: لو كتب الزبون "إيقاف/إلغاء" نوقف عنه
+  // الحملات التسويقية فوراً (رسمياً)، ونكمّل الرد العادي.
+  try { handleInboundOptOut({ page_id: p.id, phone: from, text }); } catch (e) { console.error("optout:", e && e.message); }
 
   const mem = await loadMem(kv, from);
   mem.history = mem.history || [];

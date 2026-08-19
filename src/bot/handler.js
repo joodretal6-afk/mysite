@@ -8,6 +8,7 @@ import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { parseAddress, groundAddress } from "./address.js";
 import { withSessionLock } from "./lock.js";
+import { attributeReorder } from "../features/whatsapp.js";
 import { validateOrder, recordSource, sessionFingerprint } from "./validate.js";
 import { inboxUrl } from "../brain/links.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
@@ -577,6 +578,8 @@ async function _handleEvent(event, env, ctx) {
           "UPDATE leads_prospects SET status = 'converted' WHERE page_id = ? AND sender_id = ? AND status = 'open'"
         ).run(recipientId, senderId));
       } catch {}
+      // 📲 ربط إعادة الشراء: لو هالزبون كان مستهدَف بحملة واتساب حديثة
+      try { if (memory.phone) attributeReorder({ page_id: recipientId, phone: memory.phone, order_id: memory.orderId, total }); } catch {}
     } catch (e) {
       console.error("🔴 live upsert FAILED:", e && e.message, e && e.stack);
     }

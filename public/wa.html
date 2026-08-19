@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مركز واتساب — منصة الأجبان</title>
+<style>
+  :root{ --green:#25863f; --green2:#1b5e20; --wa:#25d366; --bg:#eef1f4; --card:#fff; --line:#e4e8ec; --mut:#7a8a99; --danger:#d84343; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#243; }
+  header{ background:var(--green); color:#fff; padding:13px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  header h1{ font-size:18px; display:flex; align-items:center; gap:8px; }
+  header a{ color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:7px 13px; border-radius:8px; font-size:13px; }
+  .layout{ display:grid; grid-template-columns:210px 1fr; min-height:calc(100vh - 52px); }
+  @media(max-width:760px){ .layout{ grid-template-columns:1fr; } .side{ display:flex; overflow-x:auto; } }
+  .side{ background:#fff; border-left:1px solid var(--line); padding:12px 0; }
+  .side button{ display:flex; align-items:center; gap:9px; width:100%; text-align:right; background:none; border:none; padding:12px 18px; font-family:inherit; font-size:14.5px; color:#37474f; cursor:pointer; border-right:3px solid transparent; white-space:nowrap; }
+  .side button:hover{ background:#f4f8f5; }
+  .side button.active{ background:#eafaef; color:var(--green2); border-right-color:var(--wa); font-weight:700; }
+  main{ padding:20px; max-width:1150px; }
+  .view{ display:none; } .view.active{ display:block; }
+  h2{ font-size:19px; color:var(--green2); margin-bottom:14px; }
+  .card{ background:var(--card); border-radius:13px; box-shadow:0 2px 7px rgba(0,0,0,.05); padding:17px; margin-bottom:15px; }
+  .grid{ display:grid; gap:13px; }
+  .stats{ grid-template-columns:repeat(auto-fill,minmax(155px,1fr)); }
+  .stat{ background:#fff; border-radius:12px; padding:15px; box-shadow:0 2px 7px rgba(0,0,0,.05); }
+  .stat .n{ font-size:26px; font-weight:800; color:var(--green2); }
+  .stat .l{ font-size:12.5px; color:var(--mut); margin-top:4px; }
+  label{ font-size:13px; color:var(--mut); font-weight:600; display:block; margin-bottom:5px; }
+  input,select,textarea{ width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:8px; font-family:inherit; font-size:14px; background:#fff; }
+  textarea{ min-height:110px; resize:vertical; }
+  .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+  .row>div{ flex:1; min-width:150px; }
+  .btn{ background:var(--wa); color:#fff; border:none; padding:10px 18px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .btn:hover{ filter:brightness(.95); }
+  .btn.g{ background:var(--green); } .btn.sec{ background:#eceff1; color:#37474f; } .btn.dan{ background:var(--danger); }
+  .btn.sm{ padding:6px 11px; font-size:12.5px; }
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th,td{ padding:10px 11px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th{ background:#f6faf7; color:var(--green2); font-size:12.5px; position:sticky; top:0; }
+  .tablewrap{ overflow:auto; max-height:64vh; }
+  .badge{ padding:2px 9px; border-radius:11px; font-size:11px; font-weight:700; }
+  .b-on{ background:#e3f7e8; color:#1b7a33; } .b-off{ background:#fdecec; color:#c0392b; } .b-un{ background:#eef1f4; color:#78909c; }
+  .num{ direction:ltr; unicode-bidi:embed; font-weight:600; }
+  .hint{ padding:30px; text-align:center; color:var(--mut); }
+  .pill{ background:#eceff1; border-radius:11px; padding:2px 8px; font-size:11px; color:#546e7a; }
+  .chip{ display:inline-block; background:#eafaef; color:var(--green2); border:1px solid #cde dd; border-radius:16px; padding:5px 11px; font-size:12px; cursor:pointer; margin:3px; }
+  .modal{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; padding:16px; z-index:50; }
+  .modal.show{ display:flex; }
+  .modal .box{ background:#fff; border-radius:14px; max-width:560px; width:100%; max-height:88vh; overflow:auto; padding:20px; }
+  .var{ background:#f0f4f7; border-radius:6px; padding:2px 6px; font-size:12px; cursor:pointer; direction:ltr; display:inline-block; margin:2px; }
+  .flex{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .note{ font-size:12px; color:var(--mut); margin-top:6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📲 مركز إعادة التواصل عبر واتساب</h1>
+  <a href="/admin">→ اللوحة الرئيسية</a>
+</header>
+<div class="layout">
+  <nav class="side">
+    <button data-v="dash" class="active">📊 الإحصائيات</button>
+    <button data-v="accounts">🔗 الحسابات</button>
+    <button data-v="customers">👥 العملاء</button>
+    <button data-v="campaigns">📣 الحملات</button>
+    <button data-v="templates">📝 القوالب</button>
+    <button data-v="log">📜 سجل الإرسال</button>
+  </nav>
+  <main>
+    <!-- ═══ الإحصائيات ═══ -->
+    <section class="view active" id="v-dash">
+      <h2>📊 لوحة مركز واتساب</h2>
+      <div class="grid stats" id="statCards"><div class="hint">تحميل...</div></div>
+    </section>
+
+    <!-- ═══ الحسابات ═══ -->
+    <section class="view" id="v-accounts">
+      <h2>🔗 حسابات واتساب (رسمي — Cloud API)</h2>
+      <div class="card">
+        <div class="note">🔴 رسمي فقط عبر WhatsApp Business Cloud API. التوكن ومعرّف الرقم بينحطّوا كمتغيّرات بيئة على الاستضافة (مش بالكود)، وهون بتكتب اسم المتغيّر فقط.</div>
+        <div class="row" style="margin-top:12px">
+          <div><label>الصفحة</label><select id="acc-page"></select></div>
+          <div><label>اسم الحساب</label><input id="acc-name" placeholder="واتساب أجبان غزة"></div>
+          <div><label>رقم واتساب</label><input id="acc-num" placeholder="+9627..." class="num"></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div><label>اسم متغيّر التوكن (ENV)</label><input id="acc-tokenv" placeholder="WA_TOKEN_GHAZA"></div>
+          <div><label>اسم متغيّر PHONE_ID (ENV)</label><input id="acc-phonev" placeholder="WA_PHONE_ID_GHAZA"></div>
+          <div style="flex:0"><button class="btn g" onclick="saveAccount()">💾 حفظ الحساب</button></div>
+        </div>
+      </div>
+      <div class="card"><div class="tablewrap"><table>
+        <thead><tr><th>الحساب</th><th>الصفحة</th><th>الرقم</th><th>مهيأ؟</th><th>الحالة</th><th>آخر اتصال</th><th>إجراءات</th></tr></thead>
+        <tbody id="accRows"><tr><td colspan="7" class="hint">لا حسابات بعد</td></tr></tbody>
+      </table></div></div>
+    </section>
+
+    <!-- ═══ العملاء ═══ -->
+    <section class="view" id="v-customers">
+      <h2>👥 العملاء (لكل صفحة على حِدة)</h2>
+      <div class="card">
+        <div class="row">
+          <div><label>الصفحة</label><select id="cust-page"></select></div>
+          <div><label>الفلتر</label><select id="cust-filter">
+            <option value="all">جميع العملاء</option>
+            <option value="delivered">المستلمون</option>
+            <option value="not_delivered">لم يستلموا</option>
+            <option value="cancelled">ألغوا</option>
+            <option value="repeat">أكثر من طلب</option>
+            <option value="new">عملاء جدد (طلب واحد)</option>
+            <option value="inactive">غير نشطين منذ فترة</option>
+            <option value="opted_in">موافقون على التسويق</option>
+          </select></div>
+          <div><label>خلال آخر (يوم)</label><select id="cust-days">
+            <option value="0">الكل</option><option value="7">7</option><option value="14">14</option>
+            <option value="30">30</option><option value="60">60</option>
+          </select></div>
+          <div><label>المنتج (يحتوي)</label><input id="cust-product" placeholder="غنم..."></div>
+          <div><label>المنطقة</label><input id="cust-area" placeholder="عمان..."></div>
+          <div><label>أقل قيمة شراء</label><input id="cust-minval" type="number" placeholder="0"></div>
+          <div style="flex:0"><button class="btn" onclick="loadCustomers()">🔍 عرض</button></div>
+        </div>
+        <div class="flex" style="margin-top:11px; justify-content:space-between">
+          <div><b id="cust-count">0</b> عميل</div>
+          <div class="flex">
+            <button class="btn sec sm" onclick="exportCustomers()">⬇️ تصدير CSV</button>
+            <button class="btn sec sm" onclick="bulkConsent('OPTED_IN')">✅ تعليم المحدّدين موافقين</button>
+            <button class="btn sec sm" onclick="addSelectedToCampaign()">📣 إضافة المحدّدين لحملة</button>
+          </div>
+        </div>
+      </div>
+      <div class="card"><div class="tablewrap"><table>
+        <thead><tr>
+          <th><input type="checkbox" id="cust-all" onclick="toggleAll(this)"></th>
+          <th>الاسم</th><th>الهاتف</th><th>دولي</th><th>آخر طلب</th><th>عدد</th><th>آخر قيمة</th>
+          <th>آخر حالة</th><th>الموافقة</th><th>آخر رسالة</th><th>إجراءات</th>
+        </tr></thead>
+        <tbody id="custRows"><tr><td colspan="11" class="hint">اختر صفحة واضغط عرض</td></tr></tbody>
+      </table></div></div>
+    </section>
+
+    <!-- ═══ الحملات ═══ -->
+    <section class="view" id="v-campaigns">
+      <h2>📣 الحملات</h2>
+      <div class="card">
+        <b>إنشاء حملة جديدة</b>
+        <div class="row" style="margin-top:11px">
+          <div><label>اسم الحملة</label><input id="cmp-name" placeholder="عرض العملاء السابقين"></div>
+          <div><label>الصفحة</label><select id="cmp-page"></select></div>
+          <div><label>القالب</label><select id="cmp-template"></select></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div><label>الجمهور</label><select id="cmp-filter">
+            <option value="delivered">المستلمون</option><option value="all">الكل</option>
+            <option value="repeat">المتكررون</option><option value="new">الجدد</option>
+            <option value="inactive">غير نشطين</option>
+          </select></div>
+          <div><label>خلال آخر (يوم)</label><select id="cmp-days">
+            <option value="0">الكل</option><option value="7">7</option><option value="14">14</option>
+            <option value="30" selected>30</option><option value="60">60</option>
+          </select></div>
+          <div><label><input type="checkbox" id="cmp-consent" checked style="width:auto"> استبعاد غير الموافقين</label></div>
+          <div style="flex:0"><button class="btn sec" onclick="previewCampaign()">👁️ معاينة</button></div>
+        </div>
+        <div id="cmp-preview" class="note"></div>
+      </div>
+      <div class="card"><div class="tablewrap"><table>
+        <thead><tr><th>الحملة</th><th>الصفحة</th><th>الجمهور</th><th>أُرسلت</th><th>فشل</th><th>طلبات ناتجة</th><th>مبيعات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+        <tbody id="cmpRows"><tr><td colspan="9" class="hint">لا حملات بعد</td></tr></tbody>
+      </table></div></div>
+    </section>
+
+    <!-- ═══ القوالب ═══ -->
+    <section class="view" id="v-templates">
+      <h2>📝 قوالب الرسائل</h2>
+      <div class="card">
+        <div class="row">
+          <div><label>اسم القالب</label><input id="tpl-name" placeholder="عرض العملاء السابقين"></div>
+          <div><label>التصنيف</label><select id="tpl-cat">
+            <option>بعد التسليم</option><option>شكر العميل</option><option>طلب تقييم</option>
+            <option>عرض للعملاء السابقين</option><option>إعادة شراء</option><option>تذكير بالمنتج</option>
+            <option>عرض خاص</option><option>رسالة موسمية</option>
+          </select></div>
+          <input type="hidden" id="tpl-id">
+        </div>
+        <label style="margin-top:10px">نص الرسالة</label>
+        <textarea id="tpl-body" placeholder="أهلاً {{name}} ❤️&#10;شكراً لطلبك من {{page}}."></textarea>
+        <div class="note">متغيّرات:
+          <span class="var" onclick="insVar('{{name}}')">{{name}}</span>
+          <span class="var" onclick="insVar('{{page}}')">{{page}}</span>
+          <span class="var" onclick="insVar('{{last_product}}')">{{last_product}}</span>
+          <span class="var" onclick="insVar('{{last_order_total}}')">{{last_order_total}}</span>
+          <span class="var" onclick="insVar('{{last_order_date}}')">{{last_order_date}}</span>
+        </div>
+        <div class="note">🔴 كل رسالة تسويقية لازم توضّح طريقة الإيقاف: "لإيقاف العروض اكتب: إيقاف".</div>
+        <div style="margin-top:11px" class="flex">
+          <button class="btn g" onclick="saveTemplate()">💾 حفظ</button>
+          <button class="btn sec" onclick="clearTpl()">جديد</button>
+        </div>
+      </div>
+      <div class="card"><div id="tplList"></div></div>
+    </section>
+
+    <!-- ═══ سجل الإرسال ═══ -->
+    <section class="view" id="v-log">
+      <h2>📜 سجل الإرسال</h2>
+      <div class="card"><div class="row">
+        <div><label>الصفحة</label><select id="log-page"><option value="">الكل</option></select></div>
+        <div style="flex:0"><button class="btn sec" onclick="loadLog()">تحديث</button></div>
+      </div></div>
+      <div class="card"><div class="tablewrap"><table>
+        <thead><tr><th>التاريخ</th><th>الصفحة</th><th>الهاتف</th><th>الحملة</th><th>الحالة</th><th>النص</th></tr></thead>
+        <tbody id="logRows"><tr><td colspan="6" class="hint">—</td></tr></tbody>
+      </table></div></div>
+    </section>
+  </main>
+</div>
+
+<!-- Modal confirm/detail -->
+<div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
+
+<script>
+const API='/admin/f-api/whatsapp';
+let PAGES=[], TEMPLATES=[], SELECTED=new Set();
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fmt(t){try{return t?new Date(t).toLocaleDateString('ar-EG'):'';}catch{return'';}}
+async function api(p,opt){const r=await fetch(API+p,opt);if(r.status===401){location.href='/admin/login';throw 0;}return r;}
+async function jget(p){return (await api(p)).json();}
+async function jpost(p,body){return (await api(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();}
+
+// ── التنقل ──
+document.querySelectorAll('.side button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.side button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); document.getElementById('v-'+b.dataset.v).classList.add('active');
+  if(b.dataset.v==='dash')loadStats();
+  if(b.dataset.v==='accounts')loadAccounts();
+  if(b.dataset.v==='campaigns')loadCampaigns();
+  if(b.dataset.v==='templates')loadTemplates();
+  if(b.dataset.v==='log')loadLog();
+});
+
+async function loadPages(){
+  PAGES=await jget('/pages');
+  const opts=PAGES.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  ['acc-page','cust-page','cmp-page'].forEach(id=>document.getElementById(id).innerHTML=opts);
+  document.getElementById('log-page').innerHTML='<option value="">الكل</option>'+opts;
+}
+
+// ── الإحصائيات ──
+async function loadStats(){
+  const s=await jget('/stats');
+  const cards=[['👥 إجمالي العملاء',s.total_customers],['📦 عملاء استلموا',s.delivered_customers],
+    ['🆕 عملاء آخر 30 يوم',s.new_30d],['📣 الحملات',s.campaigns],['✅ رسائل ناجحة',s.messages_sent],
+    ['❌ رسائل فاشلة',s.messages_failed],['🔁 طلبات إعادة شراء',s.reorders],['💰 مبيعات إعادة الشراء',s.reorder_revenue+'د']];
+  document.getElementById('statCards').innerHTML=cards.map(c=>`<div class="stat"><div class="n">${esc(c[1])}</div><div class="l">${c[0]}</div></div>`).join('');
+}
+
+// ── الحسابات ──
+async function loadAccounts(){
+  const a=await jget('/accounts');
+  document.getElementById('accRows').innerHTML = a.length? a.map(x=>`<tr>
+    <td>${esc(x.account_name)}</td><td>${esc(x.page_name)}</td><td class="num">${esc(x.wa_number||'—')}</td>
+    <td>${x.configured?'<span class="badge b-on">مهيأ</span>':'<span class="badge b-off">ناقص ENV</span>'}</td>
+    <td>${x.status==='connected'?'<span class="badge b-on">متصل</span>':'<span class="badge b-off">غير متصل</span>'}</td>
+    <td>${fmt(x.last_connected_at)}</td>
+    <td class="flex">
+      <button class="btn sm" onclick="verifyAcc(${x.id})">فحص الاتصال</button>
+      <button class="btn sec sm" onclick="discAcc(${x.id})">قطع</button>
+      <button class="btn dan sm" onclick="delAcc(${x.id})">حذف</button>
+    </td></tr>`).join('') : '<tr><td colspan="7" class="hint">لا حسابات بعد</td></tr>';
+}
+async function saveAccount(){
+  const b={page_id:acc_page.value,account_name:acc_name.value,wa_number:acc_num.value,token_env:acc_tokenv.value,phone_id_env:acc_phonev.value};
+  const r=await jpost('/accounts',b); if(r.error)return alert(r.error);
+  acc_name.value=acc_num.value=acc_tokenv.value=acc_phonev.value=''; loadAccounts();
+}
+async function verifyAcc(id){const r=await jpost('/accounts/'+id+'/verify',{});alert(r.ok?'✅ الاتصال ناجح':'❌ '+(r.error||'فشل'));loadAccounts();}
+async function discAcc(id){await jpost('/accounts/'+id+'/disconnect',{});loadAccounts();}
+async function delAcc(id){if(confirm('حذف الحساب؟')){await api('/accounts/'+id,{method:'DELETE'});loadAccounts();}}
+
+// ── العملاء ──
+let CUST=[];
+async function loadCustomers(){
+  const q=new URLSearchParams({page_id:cust_page.value,filter:cust_filter.value,days:cust_days.value,
+    product:cust_product.value,area:cust_area.value,min_value:cust_minval.value});
+  const d=await jget('/customers?'+q); CUST=d.customers||[]; SELECTED.clear();
+  document.getElementById('cust-count').textContent=d.count||0;
+  document.getElementById('custRows').innerHTML = CUST.length? CUST.map((c,i)=>`<tr>
+    <td><input type="checkbox" onclick="selRow('${esc(c.phone)}',this)"></td>
+    <td>${esc(c.name)||'—'}</td><td class="num">${esc(c.display)}</td><td class="num">${esc(c.e164||'')}</td>
+    <td>${esc(c.last_product).slice(0,22)}</td><td>${c.orders_count}</td><td>${c.last_total}د</td>
+    <td>${esc(c.last_status)}</td>
+    <td>${consentBadge(c.consent)}</td><td>${fmt(c.last_message_at)}</td>
+    <td class="flex">
+      <button class="btn sec sm" onclick="viewCust('${esc(c.phone)}')">عرض</button>
+      <button class="btn sec sm" onclick="setConsent('${esc(c.phone)}','${c.consent==='OPTED_OUT'?'OPTED_IN':'OPTED_OUT'}')">${c.consent==='OPTED_OUT'?'سماح':'منع'}</button>
+    </td></tr>`).join('') : '<tr><td colspan="11" class="hint">لا عملاء بهذا الفلتر</td></tr>';
+}
+function consentBadge(c){return c==='OPTED_IN'?'<span class="badge b-on">موافق</span>':c==='OPTED_OUT'?'<span class="badge b-off">ممنوع</span>':'<span class="badge b-un">غير معروف</span>';}
+function selRow(ph,el){el.checked?SELECTED.add(ph):SELECTED.delete(ph);}
+function toggleAll(el){document.querySelectorAll('#custRows input[type=checkbox]').forEach(cb=>{cb.checked=el.checked;});SELECTED.clear();if(el.checked)CUST.forEach(c=>SELECTED.add(c.phone));}
+async function setConsent(phone,status){await jpost('/consent',{page_id:cust_page.value,phone,status});loadCustomers();}
+async function bulkConsent(status){if(!SELECTED.size)return alert('حدّد عملاء أولاً');if(!confirm('تعليم '+SELECTED.size+' عميل كـ'+status+'؟ (أنت مسؤول عن صحة الموافقة قانونياً)'))return;for(const p of SELECTED)await jpost('/consent',{page_id:cust_page.value,phone:p,status});loadCustomers();}
+function exportCustomers(){if(!cust_page.value)return alert('اختر صفحة');location.href=API+'/export?page_id='+encodeURIComponent(cust_page.value);}
+async function viewCust(phone){
+  const d=await jget('/customer?page_id='+encodeURIComponent(cust_page.value)+'&phone='+encodeURIComponent(phone));
+  const tl=d.timeline.map(x=>`<div style="padding:8px 0;border-bottom:1px solid #eee">
+    <b>${fmt(x.t)}</b> — ${x.type==='order'?'🛒 طلب: '+esc(x.label)+' ('+(x.total||0)+'د) — '+esc(x.status):'💬 '+esc(x.label)+' — '+esc(x.status||'')}</div>`).join('');
+  showModal('<h3 style="color:#1b5e20;margin-bottom:10px">📋 ملف العميل <span class="num">'+esc(phone)+'</span></h3>'+
+    '<div><b>الطلبات:</b> '+d.orders.length+' · <b>الرسائل:</b> '+d.messages.length+'</div>'+
+    '<h4 style="margin:12px 0 6px">الخط الزمني</h4>'+(tl||'<div class="hint">لا نشاط</div>')+
+    '<div style="margin-top:14px"><button class="btn sec" onclick="closeModal()">إغلاق</button></div>');
+}
+
+// ── القوالب ──
+async function loadTemplates(){
+  TEMPLATES=await jget('/templates');
+  document.getElementById('cmp-template').innerHTML=TEMPLATES.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')||'<option value="">لا قوالب</option>';
+  document.getElementById('tplList').innerHTML = TEMPLATES.length? TEMPLATES.map(t=>`<div style="padding:11px 0;border-bottom:1px solid #eee">
+    <div class="flex" style="justify-content:space-between"><b>${esc(t.name)}</b> <span class="pill">${esc(t.category)}</span></div>
+    <div style="white-space:pre-wrap;color:#546e7a;font-size:13px;margin:5px 0">${esc(t.body)}</div>
+    <button class="btn sec sm" onclick='editTpl(${JSON.stringify(t)})'>تعديل</button>
+    <button class="btn dan sm" onclick="delTpl(${t.id})">حذف</button></div>`).join('') : '<div class="hint">لا قوالب — أنشئ واحداً فوق</div>';
+}
+function insVar(v){const t=document.getElementById('tpl-body');t.value+=v;t.focus();}
+function editTpl(t){tpl_id.value=t.id;tpl_name.value=t.name;tpl_cat.value=t.category;tpl_body.value=t.body;window.scrollTo(0,0);}
+function clearTpl(){tpl_id.value='';tpl_name.value='';tpl_body.value='';}
+async function saveTemplate(){const r=await jpost('/templates',{id:tpl_id.value||undefined,name:tpl_name.value,category:tpl_cat.value,body:tpl_body.value});if(r.error)return alert(r.error);clearTpl();loadTemplates();}
+async function delTpl(id){if(confirm('حذف القالب؟')){await api('/templates/'+id,{method:'DELETE'});loadTemplates();}}
+
+// ── الحملات ──
+async function loadCampaigns(){
+  if(!TEMPLATES.length)await loadTemplates();
+  const c=await jget('/campaigns');
+  document.getElementById('cmpRows').innerHTML = c.length? c.map(x=>`<tr>
+    <td>${esc(x.name)}</td><td>${esc(x.page_name)}</td><td>${x.eligible}/${x.targeted}</td>
+    <td>${x.sent}</td><td>${x.failed}</td><td id="ro-${x.id}">—</td><td id="rev-${x.id}">—</td>
+    <td>${campStatus(x.status)}</td>
+    <td class="flex">
+      <button class="btn sec sm" onclick="viewCamp(${x.id})">تفاصيل</button>
+      ${x.status!=='done'?`<button class="btn sm" onclick="startCamp(${x.id})">${x.status==='running'?'يعمل...':'▶ بدء'}</button>`:''}
+    </td></tr>`).join('') : '<tr><td colspan="9" class="hint">لا حملات بعد</td></tr>';
+  c.forEach(x=>fillReorder(x.id));
+}
+function campStatus(s){return {draft:'<span class="badge b-un">مسودة</span>',running:'<span class="badge b-on">يعمل</span>',paused:'<span class="badge b-un">موقوف</span>',done:'<span class="badge b-on">مكتمل</span>'}[s]||s;}
+async function fillReorder(id){try{const d=await jget('/campaign/'+id);const ro=document.getElementById('ro-'+id),rev=document.getElementById('rev-'+id);if(ro)ro.textContent=d.reorders;if(rev)rev.textContent=d.revenue+'د';}catch{}}
+async function previewCampaign(){
+  const b={page_id:cmp_page.value,filter:cmp_filter.value,days:cmp_days.value,exclude_no_consent:cmp_consent.checked};
+  const d=await jpost('/campaigns/preview',b);
+  document.getElementById('cmp-preview').innerHTML=`الجمهور: <b>${d.targeted}</b> · مؤهّل للإرسال: <b>${d.eligible}</b> · مستبعد (غير موافق): <b>${d.excluded}</b>
+    <button class="btn g" style="margin-right:10px" onclick="confirmCampaign()">✅ إنشاء الحملة</button>`;
+}
+async function confirmCampaign(){
+  if(!cmp_name.value)return alert('اكتب اسم الحملة');
+  if(!cmp_template.value)return alert('اختر قالباً');
+  const b={name:cmp_name.value,page_id:cmp_page.value,template_id:cmp_template.value,filter:cmp_filter.value,days:cmp_days.value,exclude_no_consent:cmp_consent.checked};
+  const pageName=PAGES.find(p=>p.id===cmp_page.value)?.name||'';
+  const d=await jpost('/campaigns',b); if(d.error)return alert(d.error);
+  document.getElementById('cmp-preview').innerHTML='';cmp_name.value='';
+  alert('تم إنشاء الحملة ✅ ('+d.eligible+' مؤهّل). اضغط «بدء» بالجدول لبدء الإرسال التدريجي.');
+  loadCampaigns();
+}
+async function startCamp(id){
+  const d=await jget('/campaign/'+id);const c=d.campaign;
+  showModal(`<h3 style="color:#1b5e20">🚨 تأكيد بدء الحملة</h3>
+    <table style="margin:12px 0"><tr><td class="pill">الحملة</td><td><b>${esc(c.name)}</b></td></tr>
+    <tr><td class="pill">الصفحة</td><td>${esc(c.page_name)}</td></tr>
+    <tr><td class="pill">المؤهّلون</td><td><b>${c.eligible}</b> عميل (مستبعد ${c.excluded})</td></tr></table>
+    <div class="note">الإرسال رسمي عبر Cloud API وتدريجي (دفعات صغيرة)، وبس للموافقين. كل رسالة فيها طريقة إيقاف.</div>
+    <div class="flex" style="margin-top:14px">
+      <button class="btn g" onclick="doStart(${id})">✅ تأكيد وبدء الإرسال</button>
+      <button class="btn sec" onclick="closeModal()">إلغاء</button></div>`);
+}
+async function doStart(id){const r=await jpost('/campaign/'+id+'/start',{});closeModal();if(r.error)return alert(r.error);alert('بدأ الإرسال التدريجي ✅');loadCampaigns();}
+async function viewCamp(id){
+  const d=await jget('/campaign/'+id);const c=d.campaign;
+  const rows=d.targets.slice(0,200).map(t=>`<tr><td class="num">${esc(t.phone)}</td><td>${esc(t.status)}</td><td>${t.order_after_id?'🔁 '+(t.revenue_after||0)+'د':''}</td><td style="color:#c00">${esc(t.error||'')}</td></tr>`).join('');
+  showModal(`<h3 style="color:#1b5e20">📣 ${esc(c.name)}</h3>
+    <div style="margin:8px 0">أُرسل: <b>${c.sent}</b> · فشل: <b>${c.failed}</b> · طلبات ناتجة: <b>${d.reorders}</b> · مبيعات: <b>${d.revenue}د</b> · نسبة إعادة الشراء: <b>${d.reorder_rate}%</b></div>
+    <div style="max-height:50vh;overflow:auto"><table><thead><tr><th>الهاتف</th><th>الحالة</th><th>إعادة شراء</th><th>خطأ</th></tr></thead><tbody>${rows||''}</tbody></table></div>
+    <div style="margin-top:12px"><button class="btn sec" onclick="closeModal()">إغلاق</button></div>`);
+}
+function addSelectedToCampaign(){alert('حدّد الجمهور من فلاتر الحملة مباشرة بتبويب «الحملات» — الأرقام المحدّدة يدوياً تُدعم عبر الفلاتر لضمان عدم الاختلاط بين الصفحات.');}
+
+// ── سجل الإرسال ──
+async function loadLog(){
+  const q=log_page.value?'?page_id='+encodeURIComponent(log_page.value):'';
+  const l=await jget('/log'+q);
+  document.getElementById('logRows').innerHTML = l.length? l.map(m=>`<tr>
+    <td>${fmt(m.created_at)}</td><td>${esc(PAGES.find(p=>p.id===m.page_id)?.name||m.page_id)}</td>
+    <td class="num">${esc(m.phone)}</td><td>${esc(m.template||'')}</td><td>${esc(m.status)}</td>
+    <td style="white-space:normal;max-width:280px">${esc((m.body||'').slice(0,80))}</td></tr>`).join('') : '<tr><td colspan="6" class="hint">لا رسائل</td></tr>';
+}
+
+// ── Modal ──
+function showModal(html){document.getElementById('modalBox').innerHTML=html;document.getElementById('modal').classList.add('show');}
+function closeModal(){document.getElementById('modal').classList.remove('show');}
+document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')closeModal();};
+
+// init
+loadPages().then(loadStats);
+</script>
+</body>
+</html>
