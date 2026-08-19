@@ -83,6 +83,27 @@
   color-scheme:light;
 }
 
+/* 6) 🔮 Violet — بنفسجي فاتح أنيق (الافتراضي) — مطابق للمرجع */
+[data-theme="violet"]{
+  --txt:#2c2e45; --mut:#8b90a6; --bg:#f6f5fc;
+  --brand:#6c5ce7; --brand-2:#5a49d6; --gold:#f0a933; --gold2:#dd9520; --ai:#3ba7f0;
+  --btn-fg:#ffffff;
+  --surface-1:#ffffff; --surface-2:#faf9ff;
+  --line:#ecebf6; --line-strong:#e0def0; --hair:#f0eff8;
+  --input-bg:#ffffff; --nav-bg:transparent; --hover:#f3f1fd; --hover-brand:#efecfe; --th-bg:transparent;
+  --header-bg:#ffffff;
+  --body-bg:
+    radial-gradient(900px 460px at 90% -6%, rgba(108,92,231,.10), transparent 62%),
+    radial-gradient(760px 460px at 8% 4%, rgba(236,72,153,.06), transparent 60%),
+    linear-gradient(180deg,#f8f7fd,#f4f2fb);
+  --shadow-xs:0 1px 2px rgba(60,50,120,.05);
+  --shadow:0 2px 8px rgba(60,50,120,.06), 0 18px 40px -28px rgba(60,50,120,.28);
+  --shadow-lg:0 30px 70px -34px rgba(60,50,120,.3);
+  --ring:0 0 0 3px rgba(108,92,231,.18);
+  --ok:#16a34a; --bad:#e0483d; --warn:#e0912a; --info:#2563eb; --new:#2563eb;
+  color-scheme:light;
+}
+
 /* ══════════════ الأساس ══════════════ */
 html{ scroll-behavior:smooth; }
 body{
@@ -333,6 +354,25 @@ tbody tr:hover td:last-child{ box-shadow:inset 3px 0 0 var(--brand); }
   html{ scroll-behavior:auto; }
 }
 [dir="rtl"] .side button{ border-right:3px solid transparent !important; }
+
+/* ════════════════════════════════════════════════════════════════
+   ✦ كروت المؤشرات بأيقونة ملوّنة (مطابق للمرجع) — يتكيّف مع أي ثيم
+   ════════════════════════════════════════════════════════════════ */
+.stat::before, .stat::after{ content:none !important; }   /* كروت نظيفة بلا زخارف */
+.stat{ display:flex !important; align-items:center; justify-content:space-between; gap:14px; padding:18px 20px !important; }
+.stat .stat-ic{ width:52px; height:52px; border-radius:14px; display:grid; place-items:center; font-size:22px; flex:0 0 auto;
+  background:color-mix(in srgb, var(--chip, var(--brand)) 15%, transparent); color:var(--chip, var(--brand)); }
+.stat .stat-tx{ text-align:start; min-width:0; }
+.stat .stat-tx .n, .stat .n{ font-family:var(--font) !important; font-weight:800 !important; font-size:26px !important; letter-spacing:-.4px; color:var(--txt) !important; text-shadow:none !important; line-height:1.1; }
+.stat .stat-tx .l, .stat .l{ text-transform:none !important; letter-spacing:0 !important; font-size:13px !important; margin-top:3px; }
+.ic-violet{ --chip:#6c5ce7 } .ic-blue{ --chip:#2f7ff0 } .ic-amber{ --chip:#f0912a } .ic-green{ --chip:#12b26a } .ic-pink{ --chip:#e0487f }
+
+/* شريط علوي رفيع ملوّن (لمسة المرجع) */
+.pm-topbar::before{ content:''; position:absolute; top:0; inset-inline:0; height:3px; background:linear-gradient(90deg, var(--brand), var(--ai)); }
+.pm-topbar{ position:sticky; }
+
+/* أفاتار المستخدم بالشريط */
+.pm-avatar{ width:30px; height:30px; border-radius:50%; display:inline-grid; place-items:center; font-size:14px; background:var(--hover-brand); color:var(--brand); border:1px solid var(--line); margin-inline-start:2px; }
 
 /* ══ موبايل ══ */
 @media(max-width:720px){

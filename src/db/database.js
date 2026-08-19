@@ -502,6 +502,80 @@ export function ordersStats() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// 📊 بيانات لوحة القيادة الغنية — كلها من طلبات حقيقية (بلا أي تلفيق)
+// ═══════════════════════════════════════════════════════════
+const GOVS = ["عمان","الزرقاء","اربد","المفرق","البلقاء","مادبا","الكرك",
+  "جرش","عجلون","الطفيلة","معان","العقبة"];
+
+export function dashboardData(opts = {}) {
+  const days = Math.min(Math.max(parseInt(opts.days,10) || 7, 7), 365);
+  const pageId = opts.pageId || null;
+  // فلتر المنصة (اختياري) — يُدمج بكل استعلام
+  const P = pageId ? " AND page_id=@pg" : "";
+  const bind = extra => Object.assign(pageId ? { pg: pageId } : {}, extra || {});
+  return retryDb(() => {
+    const now = Date.now(), DAY = 86400000;
+    const t0 = new Date(); t0.setHours(0,0,0,0); const today0 = t0.getTime();
+    const yest0 = today0 - DAY;
+    const m0 = new Date(); m0.setDate(1); m0.setHours(0,0,0,0); const month0 = m0.getTime();
+    const lm0 = new Date(m0); lm0.setMonth(lm0.getMonth()-1); const lastMonth0 = lm0.getTime();
+    const week0 = now - 7*DAY;
+    const sum = (from,to)=> db.prepare(
+      `SELECT COUNT(*) c, COALESCE(SUM(total),0) s FROM orders WHERE created_at>=@a${to?" AND created_at<@b":""}${P}`
+    ).get(bind(to?{a:from,b:to}:{a:from}));
+    const pct = (cur,prev)=> prev>0 ? Math.round((cur-prev)/prev*1000)/10 : (cur>0?100:0);
+
+    const all = sum(0), today = sum(today0), yest = sum(yest0,today0);
+    const thisM = sum(month0), lastM = sum(lastMonth0,month0);
+
+    // سلسلة آخر N يوم (للمخطط والرسوم المصغّرة)
+    const series = [];
+    for (let i=days-1;i>=0;i--){
+      const s = today0 - i*DAY, e = s + DAY;
+      const r = db.prepare("SELECT COUNT(*) c, COALESCE(SUM(total),0) s FROM orders WHERE created_at>=@a AND created_at<@b"+P).get(bind({a:s,b:e}));
+      const d = new Date(s);
+      series.push({ t:s, label:`${d.getDate()}/${d.getMonth()+1}`, sales:Math.round(r.s*100)/100, orders:r.c });
+    }
+
+    // مؤشرات حقيقية (تحترم فلتر المنصة)
+    const avgOrder = all.c>0 ? Math.round(all.s/all.c*100)/100 : 0;
+    const returning = db.prepare(`SELECT COUNT(*) c FROM (SELECT phone FROM orders WHERE phone!=''${P} GROUP BY phone HAVING COUNT(*)>1)`).get(bind()).c;
+    const newWeek = db.prepare(`SELECT COUNT(*) c FROM (SELECT phone, MIN(created_at) f FROM orders WHERE phone!=''${P} GROUP BY phone HAVING f>=@w)`).get(bind({w:week0})).c;
+    const delivered = db.prepare(`SELECT COUNT(*) c FROM orders WHERE status='تم التسليم'${P}`).get(bind()).c;
+    const completion = all.c>0 ? Math.round(delivered/all.c*1000)/10 : 0;
+
+    // رؤى النظام (كلها من البيانات)
+    const insights = [];
+    const wAvg = series.reduce((a,b)=>a+b.sales,0)/series.length;
+    if (today.s > wAvg && wAvg>0)
+      insights.push({ icon:"📈", text:`مبيعات اليوم أعلى من المتوسط بـ ${Math.round((today.s-wAvg)/wAvg*100)}%` });
+    const topPage = db.prepare(`SELECT page_name, COUNT(*) c FROM orders WHERE created_at>=@a AND page_name!=''${P} GROUP BY page_name ORDER BY c DESC LIMIT 1`).get(bind({a:today0}));
+    if (topPage) insights.push({ icon:"🏆", text:`منصة ${topPage.page_name} لديها أعلى عدد من الطلبات اليوم (${topPage.c})` });
+    if (newWeek>0) insights.push({ icon:"🧑", text:`${newWeek} عميل جديد هذا الأسبوع` });
+    let govBest=null;
+    for (const g of GOVS){ const c = db.prepare(`SELECT COUNT(*) c FROM orders WHERE area LIKE @g${P}`).get(bind({g:`%${g}%`})).c; if(!govBest||c>govBest.c) govBest={g,c}; }
+    if (govBest && all.c>0 && govBest.c>0) insights.push({ icon:"📍", text:`طلبات ${govBest.g} تمثّل ${Math.round(govBest.c/all.c*100)}% من إجمالي الطلبات` });
+
+    return {
+      kpis: {
+        today_sales:Math.round(today.s*100)/100, today_orders:today.c,
+        total_sales:Math.round(all.s*100)/100, total_orders:all.c,
+        d_today_sales:pct(today.s,yest.s), d_today_orders:pct(today.c,yest.c),
+        d_total_sales:pct(thisM.s,lastM.s), d_total_orders:pct(thisM.c,lastM.c)
+      },
+      series,
+      metrics: {
+        completion, d_completion:0,
+        avg_order:avgOrder,
+        returning, new_customers:newWeek
+      },
+      insights,
+      new_count: db.prepare(`SELECT COUNT(*) c FROM orders WHERE status='جديد'${P}`).get(bind()).c
+    };
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
 // دوال تغذية البوت بمعلومات إضافية (لكل صفحة)
 // ═══════════════════════════════════════════════════════════
 export function getKnowledge(pageId) {
