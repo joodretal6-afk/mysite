@@ -5,7 +5,9 @@
 //  • البوليصات والمبالغ طلعت صح
 //  • 15 = حبة و27 = حبتين (من جدول التسعير، مش تخمين)
 //  • مبلغ مش بالجدول = "غير معروف" مش رقم مخترع
-//  • أجرة 1.75 بتنخصم من المُحصّل وما بتنخصم من المرتجع
+//  • النظام بيستنتج عدد الحبّات لحاله من النمط (39 = 3 حبّات)
+//  • مبلغ 0 وأجرة 0 → عدد 0 وصافي 0
+//  • مبلغ 0 وأجرة -1.75 → رفض عند الاستلام، عدد 0، صافي -1.75
 //  • الحسابات (إجمالي/أجور/صافي) مضبوطة للقرش
 // ═══════════════════════════════════════════════════════════
 if (!process.env.DB_PATH || /platform\.db/.test(process.env.DB_PATH))
@@ -25,8 +27,10 @@ const ok = (c, m) => { if (c) { pass++; console.log("✅ " + m); } else { consol
 
 // ── نبني PDF فعلي (مضغوط FlateDecode) بنفس نمط الكشف: مبلغ ثم بوليصة ──
 function buildPdf(pairs) {
-  const ops = pairs.map(([amt, trk]) =>
-    `BT /F1 10 Tf 40 700 Td (${amt}) Tj ET BT /F1 10 Tf 200 700 Td (${trk}) Tj ET`).join("\n");
+  const ops = pairs.map(([amt, trk, fee]) =>
+    `BT /F1 10 Tf 40 700 Td (${amt}) Tj ET` +
+    (fee === undefined ? "" : ` BT /F1 10 Tf 120 700 Td (${fee}) Tj ET`) +
+    ` BT /F1 10 Tf 200 700 Td (${trk}) Tj ET`).join("\n");
   const stream = zlib.deflateSync(Buffer.from(ops, "latin1"));
   const chunks = [];
   const push = (s) => chunks.push(Buffer.isBuffer(s) ? s : Buffer.from(s, "latin1"));
@@ -40,9 +44,15 @@ function buildPdf(pairs) {
   return Buffer.concat(chunks);
 }
 
+// [مبلغ التحصيل، رقم البوليصة، أجرة التوصيل كما بالكشف]
 const PAIRS = [
-  ["15", "100506548034"], ["15", "100506548218"], ["27", "100506546382"],
-  ["0",  "100506548126"], ["17", "100506542049"], ["12", "100506078173"]
+  ["15", "100506548034", "-1.75"],   // حبة، تحصّلت
+  ["15", "100506548218", "-1.75"],   // حبة، تحصّلت
+  ["27", "100506546382", "-1.75"],   // حبتين، تحصّلت
+  ["0",  "100506548126", "-1.75"],   // 🔴 رفض عند الاستلام — دفعنا التوصيل
+  ["0",  "100506599001", "0"],       // ما وصل ولا كلّفنا شي
+  ["39", "100506542049", "-1.75"],   // 3 حبّات — بالنمط مش بالجدول
+  ["12", "100506078173", "-1.75"]    // مبلغ ما بينطبق عليه نمط → غير معروف
 ];
 const pdf = buildPdf(PAIRS);
 
@@ -50,52 +60,132 @@ const pdf = buildPdf(PAIRS);
 const t = pdfToText(pdf);
 ok(t.ok, "قراءة الـPDF نجحت");
 ok(t.streams >= 1, "لقينا مجرى نص واحد على الأقل");
-ok(numericTokens(t.segments).length >= 12, "استخرجنا كل الأرقام من الملف");
+ok(numericTokens(t.segments).length >= 14, "استخرجنا كل الأرقام من الملف");
+ok(numericTokens(t.segments).includes("-1.75"), "الأجرة السالبة -1.75 انقرأت بإشارتها");
 
 // رفض ملف مش PDF
 ok(pdfToText(Buffer.from("hello world")).ok === false, "ملف مش PDF بينرفض بدل ما ينهار");
 
 // ── 2) تحليل الكشف ──
-const { rows } = parseCodStatement(t.segments);
+const { rows } = parseCodStatement(t.segments, { feeRate: 1.75 });
 ok(rows.length === PAIRS.length, `عدد البوليصات = ${PAIRS.length}`);
 ok(rows.every((r, i) => r.tracking === PAIRS[i][1]), "أرقام البوليصات طلعت بالترتيب وصح");
 ok(rows.every((r, i) => r.amount === Number(PAIRS[i][0])), "المبالغ انربطت بالبوليصة الصح");
+ok(rows.filter((r, i) => PAIRS[i][2] === "-1.75").every(r => r.fee === -1.75),
+   "عمود أجرة التوصيل انفصل عن المبلغ وانقرأ بإشارته");
+ok(rows[4].fee === null, "أجرة 0 مش مقدارها 1.75 فما بتنحسب كعمود أجرة — والحساب بيرجع للقاعدة");
 
 // تكرار البوليصة ما بينحسب مرتين
-const dup = parseCodStatement(pdfToText(buildPdf([...PAIRS, ["15", "100506548034"]])).segments);
+const dup = parseCodStatement(pdfToText(buildPdf([...PAIRS, ["15", "100506548034", "-1.75"]])).segments, { feeRate: 1.75 });
 ok(dup.rows.length === PAIRS.length, "البوليصة المكرّرة ما بتنحسب مرتين");
 
-// ── 3) التسعير والحسابات ──
-const { enrichRow, summarize } = await import("../src/features/accounting.js");
+// ── 3) استنتاج عدد الحبّات والحسابات ──
+const { enrichRow, summarize, buildModel, derivePieces } = await import("../src/features/accounting.js");
 await new Promise(r => setTimeout(r, 500));
 
 const map = new Map([[15, { pieces: 1, product: "" }], [27, { pieces: 2, product: "" }]]);
 const RATE = 1.75;
-const enriched = rows.map(r => enrichRow(r, map, RATE));
+
+// النموذج الخطّي: سعر الحبة الأولى 15 والخطوة 12
+const model = buildModel(map);
+ok(model && model.base === 15 && model.step === 12, "النظام استنتج النمط لحاله: 15 + 12 لكل حبة زيادة");
+ok(derivePieces(39, map, model).pieces === 3, "39 دينار = 3 حبّات (استنتاج، مش إدخال يدوي)");
+ok(derivePieces(51, map, model).pieces === 4, "51 دينار = 4 حبّات");
+ok(derivePieces(39, map, model).basis.includes("نمط"), "الصف بيحمل معه أساس الاستنتاج");
+ok(derivePieces(12, map, model).pieces === null, "12 دينار ما بينطبق عليه النمط → غير معروف");
+ok(buildModel(new Map([[15, { pieces: 1 }]])) === null, "نقطة وحدة ما بتكفي لبناء نمط");
+ok(buildModel(new Map([[15, { pieces: 1 }], [27, { pieces: 2 }], [50, { pieces: 3 }]])) === null,
+   "نمط غير منتظم بينرفض بدل ما يخمّن");
+
+const enriched = rows.map(r => enrichRow(r, map, RATE, model));
 
 ok(enriched[0].pieces === 1, "15 دينار = حبة واحدة");
 ok(enriched[2].pieces === 2, "27 دينار = حبتين");
-ok(enriched[4].pieces === null, "17 دينار مش بالجدول → غير معروف (بلا اختراع)");
-ok(enriched[5].pieces === null, "12 دينار مش بالجدول → غير معروف (بلا اختراع)");
+ok(enriched[5].pieces === 3, "39 دينار = 3 حبّات بالكشف الفعلي");
+ok(enriched[6].pieces === null, "المبلغ اللي ما إلو أساس بيضل غير معروف");
 
-ok(enriched[0].fee === 1.75, "أجرة التوصيل 1.75 بتنخصم من الطرد المُحصّل");
+ok(enriched[0].fee === 1.75, "أجرة التوصيل انقرأت من الكشف كتكلفة موجبة");
 ok(enriched[0].net === 13.25, "صافي طرد الـ15 = 13.25");
 ok(enriched[2].net === 25.25, "صافي طرد الـ27 = 25.25");
 
-ok(enriched[3].state === "مرتجع", "مبلغ 0 = مرتجع");
-ok(enriched[3].fee === 0, "المرتجع ما بتنخصم عليه أجرة");
-ok(enriched[3].net === 0, "صافي المرتجع صفر");
+// 🔴 القاعدتين اللي طلبهم صاحب المشروع بالحرف
+ok(enriched[4].state === "ملغي بلا تكلفة", "مبلغ 0 وأجرة 0 → ما كلّفنا شي");
+ok(enriched[4].pieces === 0, "مبلغ 0 وأجرة 0 → العدد صفر");
+ok(enriched[4].net === 0, "مبلغ 0 وأجرة 0 → الصافي صفر");
+
+ok(enriched[3].state === "رفض عند الاستلام", "مبلغ 0 وأجرة 1.75 → الزبون رفض عند الباب");
+ok(enriched[3].pieces === 0, "الطرد المرفوض عدده صفر");
+ok(enriched[3].fee === 1.75, "الطرد المرفوض كلّفنا أجرة التوصيل");
+ok(enriched[3].net === -1.75, "🔴 الطرد المرفوض صافيه بالسالب — خسارة فعلية بتبين");
 
 // ── 4) الملخّص ──
-const s = summarize(enriched);
-const gross = PAIRS.reduce((a, [x]) => a + Number(x), 0);      // 86
-ok(s.count === 6, "عدد الصفوف بالملخّص = 6");
-ok(s.gross === gross, `إجمالي التحصيل = ${gross}`);
-ok(s.returned === 1 && s.delivered === 5, "تصنيف المُحصّل والمرتجع صحيح");
-ok(s.fees === 5 * RATE, "مجموع الأجور = عدد المُحصّل × 1.75");
-ok(s.net === Math.round((gross - 5 * RATE) * 100) / 100, "الصافي = الإجمالي − الأجور");
-ok(s.pieces === 4, "مجموع القطع المعروفة = 4 (حبة + حبة + حبتين)");
-ok(s.unknown === 2, "مبلغان مُحصّلان بلا تسعير محسوبين كغير معروف (المرتجع مستثنى)");
+const s2 = summarize(enriched);
+ok(s2.count === 7, "عدد الصفوف بالملخّص = 7");
+ok(s2.gross === 108, "إجمالي التحصيل = 108");
+ok(s2.delivered === 5, "5 طرود مُحصّلة");
+ok(s2.refused === 1, "طرد واحد مرفوض عند الاستلام");
+ok(s2.cancelled === 1, "طرد واحد ملغي بلا تكلفة");
+ok(s2.lost === 1.75, "🔴 الخسارة الصافية = 1.75 (توصيل الطرد المرفوض)");
+ok(s2.fees === 6 * RATE, "الأجور = 6 طرود × 1.75 (الملغي بلا أجرة)");
+ok(s2.net === Math.round((108 - 6 * RATE) * 100) / 100, "الصافي = الإجمالي − الأجور");
+ok(s2.pieces === 7, "مجموع الحبّات = 1+1+2+3 = 7");
+ok(s2.unknown === 1, "مبلغ واحد بس بلا أساس");
+
+// ── 4.5) قراءة الكشف كامل: صفحة صفحة وحساب حساب ──
+const { clientNameFrom, arNormalize, parseCodStatementByClient } = await import("../src/bot/pdfText.js");
+
+// أشكال العرض العربية (زي ما بتطلع من الـPDF) لازم ترجع حروف عادية
+ok(arNormalize("ﺍﺳﻢ ﺍﻟﺰﺑﻮﻥ") === "اسم الزبون", "أشكال العرض العربية بترجع حروف عادية");
+
+ok(clientNameFrom(["ﺍﺳﻢ ﺍﻟﺰﺑﻮﻥ: ﺍﺟﺒﺎﻥ ﻏﺰﺓ ﺟﺪﻳﺪ"]) === "اجبان غزة جديد",
+   "استخراج اسم الحساب من نفس المقطع");
+ok(clientNameFrom(["اسم الزبون:", "ريفان"]) === "ريفان", "استخراج الاسم من المقطع اللي بعده");
+ok(clientNameFrom(["كشف تحصيل", "المجموع 120"]) === "", "بلا عنوان حساب → ما منخترع اسم");
+
+// كشف من 3 صفحات: أول صفحتين لحساب، والثالثة لحساب تاني
+const P1 = ["اسم الزبون: اجبان غزة جديد", "15", "-1.75", "100500000001"];
+const P2 = ["27", "-1.75", "100500000002"];                       // امتداد نفس الحساب
+const P3 = ["اسم الزبون: ريفان", "39", "-1.75", "100500000003", "0", "-1.75", "100500000004"];
+const g = parseCodStatementByClient([P1, P2, P3], { feeRate: 1.75 });
+
+ok(g.pages.length === 3, "قرا الصفحات الثلاثة كلها");
+ok(g.pages[1].client === "اجبان غزة جديد", "الحساب بيمتد للصفحة اللي بعدها لمّا ما فيها عنوان");
+ok(g.clients.length === 2, "فصل الكشف لحسابين");
+const gaza = g.clients.find(c => c.client === "اجبان غزة جديد");
+const reefan = g.clients.find(c => c.client === "ريفان");
+ok(gaza && gaza.rows.length === 2, "حساب اجبان غزة إلو بوليصتين");
+ok(gaza && gaza.pages.join() === "1,2", "بوليصاته موزّعة على صفحتين");
+ok(reefan && reefan.rows.length === 2, "حساب ريفان إلو بوليصتين");
+ok(gaza.rows.every(r => r.page_no >= 1), "كل بوليصة بتحمل رقم صفحتها");
+
+const gazaSum = summarize(gaza.rows.map(r => enrichRow(r, map, RATE, model)));
+const reefanSum = summarize(reefan.rows.map(r => enrichRow(r, map, RATE, model)));
+ok(gazaSum.gross === 42, "تحصيل اجبان غزة لحاله = 42");
+ok(reefanSum.gross === 39, "تحصيل ريفان لحاله = 39");
+ok(reefanSum.refused === 1 && reefanSum.lost === 1.75, "رفض ريفان محسوب على حسابه هو مش على غيره");
+
+// ── الملف اللي فيه خريطة ToUnicode بيطلع عربي مقروء ──
+function pdfWithCMap() {
+  const cmapTxt = `/CIDInit /ProcSet findresource begin
+1 begincodespacerange <0000> <FFFF> endcodespacerange
+2 beginbfchar <0003> <0631> <0004> <064A> endbfchar
+1 beginbfrange <0010> <0012> <0641> endbfrange
+endcmap end`;
+  const content = "BT /F1 10 Tf 40 700 Td <0003 0004 0010> Tj ET";
+  const c1 = zlib.deflateSync(Buffer.from(cmapTxt, "latin1"));
+  const c2 = zlib.deflateSync(Buffer.from(content, "latin1"));
+  const chunks = [];
+  const push = (x) => chunks.push(Buffer.isBuffer(x) ? x : Buffer.from(x, "latin1"));
+  push("%PDF-1.4\n");
+  push(`5 0 obj<</Length ${c1.length}/Filter/FlateDecode>>stream\n`); push(c1); push("\nendstream endobj\n");
+  push(`4 0 obj<</Length ${c2.length}/Filter/FlateDecode>>stream\n`); push(c2); push("\nendstream endobj\n%%EOF");
+  return Buffer.concat(chunks);
+}
+const uni = pdfToText(pdfWithCMap());
+ok(uni.arabic === true, "خريطة ToUnicode فكّت العربي وطلع مقروء");
+ok(uni.text.includes("ر") && uni.text.includes("ي"), "bfchar انفكّ صح (ر، ي)");
+ok(uni.text.includes("ف"), "bfrange انفك صح (ف)");
+ok(pdfToText(pdf).arabic === false, "ملف بلا عربي بيتبلّغ عنه بصراحة مش بيتخيّل");
 
 // ── 5) الجداول انبنت والوحدة مركّبة ──
 const { db } = await import("../src/db/database.js");
@@ -108,6 +198,26 @@ const seeded = db.prepare("SELECT pieces FROM acc_pricing WHERE amount=15").get(
 ok(Number(seeded?.pieces) === 1, "التسعير المبدئي 15 = حبة انزرع بالقاعدة");
 const seed27 = db.prepare("SELECT pieces FROM acc_pricing WHERE amount=27").get();
 ok(Number(seed27?.pieces) === 2, "التسعير المبدئي 27 = حبتين انزرع بالقاعدة");
+
+// ── 6) التعلّم من طلبات البوت الحقيقية ──
+const { learnPricingFromOrders } = await import("../src/features/accounting.js");
+const now = Date.now();
+const insOrd = db.prepare(`INSERT INTO orders (page_id,page_name,sender_id,order_string,total,area,phone,status,created_at)
+                           VALUES ('p','ص','u',?,?,'','','جديد',?)`);
+insOrd.run("جبنة (3)", 39, now);
+insOrd.run("جبنة (3)", 39, now);
+insOrd.run("لبنة (5)", 63, now);
+insOrd.run("جبنة (2) + لبنة (2)", 44, now);   // نفس المبلغ باختلاف
+insOrd.run("جبنة (4)", 44, now);              // ⇒ تعارض: 4 مقابل 4؟ لا — 4 و4 متطابقين
+const learn = learnPricingFromOrders();
+const got = (a) => learn.learned.find(x => x.amount === a);
+ok(got(39) && got(39).pieces === 3, "تعلّم من طلبات حقيقية: 39 د = 3 حبّات (نفس ما استنتجه النمط)");
+ok(got(63) && got(63).pieces === 5, "تعلّم من طلبات حقيقية: 63 د = 5 حبّات");
+const conflict44 = learn.conflicts.find(c => c.amount === 44);
+ok(!conflict44, "44 د متّفق عليه (4 حبّات بالطلبتين) فما في تعارض");
+insOrd.run("جبنة (9)", 63, now);
+const learn2 = learnPricingFromOrders();
+ok(learn2.learned.every(x => x.amount !== 63), "المبلغ المتعلَّم سابقاً ما بينكتب فوقه");
 
 const { loadFeatures } = await import("../src/features/index.js");
 const mods = await loadFeatures();
