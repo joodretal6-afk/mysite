@@ -19,7 +19,7 @@ import { Router } from "express";
 import express from "express";
 import { db } from "../db/database.js";
 import { pdfToText, parseCodStatement, parseCodStatementByClient,
-         numericTokens, clientNameFrom } from "../bot/pdfText.js";
+         numericTokens, clientNameFrom, statedTotals } from "../bot/pdfText.js";
 import { readAnyFile, matchColumns, num } from "../bot/fileRead.js";
 
 export const slug = "accounting";
@@ -386,17 +386,39 @@ router.post("/parse", async (req, res) => {
     return bad(res, "ما لقينا ولا رقم بوليصة بالملف. إذا الكشف صورة ممسوحة (Scan) لازم نسخة PDF نصية.");
   }
 
+  // ✅ التحقق الذاتي: مجاميعنا مقابل المجاميع المكتوبة بالكشف
+  const sum0 = summarize(rows);
+  const stated = grouped.stated || {};
+  const dif = (a, b) => (a == null || b == null) ? null : r2(a - b);
+  const verify = {
+    stated_collection: stated.collection ?? null,
+    our_collection: sum0.gross,
+    diff_collection: dif(sum0.gross, stated.collection),
+    stated_delivery: stated.delivery ?? null,
+    our_delivery: sum0.fees,
+    diff_delivery: dif(sum0.fees, stated.delivery),
+    // الكشف بيقول كم أجرة دفعنا؛ منقسمها على سعر الطرد فبنعرف
+    // كم طرد اتحاسبنا عليه — مؤشر تاني على إنّ ما ضاع صف
+    implied_paid_parcels: stated.delivery != null && rate0 > 0
+      ? Math.round(stated.delivery / rate0) : null
+  };
+  verify.match = verify.stated_collection != null &&
+                 Math.abs(verify.diff_collection) < 0.011 &&
+                 (verify.stated_delivery == null || Math.abs(verify.diff_delivery) < 0.011);
+
   ok(res, {
     filename: String(req.body?.filename || "").slice(0, 200),
-    clients,
-    rows, summary: summarize(rows), fee_rate: rate0, model,
+    clients, verify,
+    rows, summary: sum0, fee_rate: rate0, model,
     diagnostics: {
       pages: p.pages.length,
       arabic: p.arabic,
       stats: p.stats || null,                       // انقرأ العربي ولا لأ — بنقولها بصراحة
       named: clients.filter((c) => c.client && c.client !== "بلا اسم").length,
       fee_column: grouped.clients.some((g) => g.rows.some((r) => r.fee != null)),
-      per_page: grouped.pages.map((x) => ({ page: x.page, client: x.client, rows: x.rows.length }))
+      track_len: grouped.trackLen || null,
+      per_page: grouped.pages.map((x) => ({ page: x.page, client: x.client,
+                                            rows: x.rows.length, stated: x.stated }))
     }
   });
  } catch (e) { bad(res, e && e.message ? e.message : "تعذّر قراءة الملف"); }
@@ -425,6 +447,7 @@ router.post("/diag", async (req, res) => {
         numbers: toks.length,
         trackings: rows.length,
         // الأرقام اللي مش بوليصات ولا انربطت بوحدة — هون بتبيّن الضايع
+        stated: statedTotals(segs),
         sample_numbers: toks.slice(0, 60),
         sample_text: segs.slice(0, 12)
       };

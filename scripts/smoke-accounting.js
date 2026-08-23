@@ -132,7 +132,8 @@ ok(s2.pieces === 7, "مجموع الحبّات = 1+1+2+3 = 7");
 ok(s2.unknown === 1, "مبلغ واحد بس بلا أساس");
 
 // ── 4.5) قراءة الكشف كامل: صفحة صفحة وحساب حساب ──
-const { clientNameFrom, arNormalize, parseCodStatementByClient } = await import("../src/bot/pdfText.js");
+const { clientNameFrom, arNormalize, parseCodStatementByClient,
+        detectTrackingLength, statedTotals } = await import("../src/bot/pdfText.js");
 
 // أشكال العرض العربية (زي ما بتطلع من الـPDF) لازم ترجع حروف عادية
 ok(arNormalize("ﺍﺳﻢ ﺍﻟﺰﺑﻮﻥ") === "اسم الزبون", "أشكال العرض العربية بترجع حروف عادية");
@@ -227,6 +228,97 @@ const cutPdf = Buffer.concat([
   cut, Buffer.from("\nendstream endobj\n%%EOF", "latin1")]);
 ok(pdfToText(cutPdf).text.includes("100506548034"),
    "🔴 المجرى المقطوع ما عاد يضيّع الصفحة — منرجّع اللي انفك منه");
+
+// ── 4.8) 🔴 كشف بنفس بنية الكشف الحقيقي بالضبط ──
+// (بيانات مخترعة — الكشف الحقيقي فيه أسماء وهواتف زبائن
+//  والريبو عام، فما بينحفظ. البنية هي هي: خط CID مقصوص،
+//  الأرقام كسلاسل عادية مش سداسية، هواتف 10 خانات، تواريخ،
+//  وثلاثة أعمدة مال: السعر والأجرة والإجمالي.)
+function cidPdf(pages) {
+  // منبني خريطة ToUnicode لكل حرف مستعمل بالملف — تماماً زي
+  // ما بتعمل شركة التوصيل بخطها المقصوص
+  const chars = [...new Set(pages.flat().join("").split(""))];
+  const code = new Map();
+  chars.forEach((ch, i) => code.set(ch, 0x13 + i));
+  const hex4 = (n) => n.toString(16).padStart(4, "0");
+  const uni = (ch) => ch.charCodeAt(0).toString(16).padStart(4, "0");
+  const cmapTxt = `/CIDInit /ProcSet findresource begin
+1 begincodespacerange <0000> <FFFF> endcodespacerange
+${chars.length} beginbfchar ${chars.map((c) => `<${hex4(code.get(c))}> <${uni(c)}>`).join(" ")} endbfchar
+endcmap end`;
+
+  // نص → سلسلة PDF عادية بترميز CID 2-بايت (زي الكشف الحقيقي).
+  // العربي بينكتب معكوساً — بترتيب العرض زي ما بيحفظه الـPDF.
+  const cid = (txt) => {
+    // بترتيب العرض بينعكس العربي بس — الأرقام بتضل بترتيبها
+    const hasAr = /[؀-ۿ]/.test(txt);
+    const t = hasAr
+      ? String(txt).split(/(\d+(?:\.\d+)?)/).filter(x => x !== "").reverse()
+          .map(x => /^\d/.test(x) ? x : [...x].reverse().join("")).join("")
+      : String(txt);
+    let out = "";
+    for (const ch of t) {
+      const c = code.get(ch) ?? 0x03;
+      out += "\\000" + "\\" + c.toString(8).padStart(3, "0");
+    }
+    return out;
+  };
+
+  const chunks = [];
+  const push = (x) => chunks.push(Buffer.isBuffer(x) ? x : Buffer.from(x, "latin1"));
+  push("%PDF-1.4\n");
+  const c1 = zlib.deflateSync(Buffer.from(cmapTxt, "latin1"));
+  push(`9 0 obj<</Length ${c1.length}/Filter/FlateDecode>>stream\n`); push(c1); push("\nendstream endobj\n");
+
+  pages.forEach((segs, i) => {
+    const ops = segs.map((t) => `BT /F1 10 Tf 40 700 Td (${cid(t)}) Tj ET`).join("\n");
+    const c = zlib.deflateSync(Buffer.from(ops, "latin1"));
+    push(`${20 + i} 0 obj<</Length ${c.length}/Filter/FlateDecode>>stream\n`); push(c); push("\nendstream endobj\n");
+  });
+  push("%%EOF");
+  return Buffer.concat(chunks);
+}
+
+// صف كامل زي الكشف: السعر، الأجرة، الإجمالي، هاتف، هاتف، تاريخ، بوليصة
+const rowOf = (price, fee, trk) => {
+  const net = Math.round((price - fee) * 100) / 100;
+  return [String(price), String(fee), String(net), "0772441092", "0772441092", "20/08/26", trk];
+};
+
+const REAL = cidPdf([
+  ["57 :مجموع التحصيل", "5.25 :مجموع سعر التوصيل", "اسم الزبون: اجبان غزة جديد",
+   ...rowOf(15, 1.75, "100506548034"), ...rowOf(27, 1.75, "100506546382"),
+   ...rowOf(15, 1.75, "100506542810"), "0", "0", "0", "0772441092", "20/08/26", "100506548126"],
+  ["34 :مجموع التحصيل", "3.5 :مجموع سعر التوصيل", "اسم الزبون: ريفان",
+   ...rowOf(17, 1.75, "100506585398"), ...rowOf(17, 1.75, "100506585848")]
+]);
+
+const rp = pdfToText(REAL);
+ok(rp.ok && rp.pages.length === 2, "كشف بخط CID: الصفحتين انقرأوا");
+ok(rp.text.includes("100506548034"), "🔴 الأرقام المكتوبة كسلسلة عادية بخط CID انفكّت — هون كانت العلة الكبرى");
+
+ok(detectTrackingLength(rp.segments) === 12, "النظام تعرّف على طول رقم البوليصة (12) من الملف نفسه");
+
+const rg = parseCodStatementByClient(rp.pages, { feeRate: 1.75 });
+const allRows = rg.clients.flatMap(c => c.rows);
+ok(allRows.length === 6, "🔴 كل الطرود طلعت (6) — الهواتف والتواريخ ما انحسبوا بوليصات");
+ok(!allRows.some(r => r.tracking.startsWith("07")), "رقم الهاتف ما بينحسب رقم بوليصة");
+
+// العلاقة: التحصيل = الإجمالي + الأجرة — هيك منعرف مين السعر
+const byTrk = Object.fromEntries(allRows.map(r => [r.tracking, r]));
+ok(byTrk["100506548034"].amount === 15, "🔴 عمود السعر (15) انختار مش الإجمالي (13.25)");
+ok(byTrk["100506546382"].amount === 27, "طرد الحبتين: السعر 27 مش 25.25");
+ok(byTrk["100506548126"].amount === 0 && byTrk["100506548126"].fee === null,
+   "الطرد اللي كل خاناته صفر: مبلغ 0 وبلا عمود أجرة");
+ok(allRows.every(r => r.amount !== 20 && r.amount !== 26), "أرقام التاريخ ما انحسبت مبالغ");
+
+// ✅ التحقق الذاتي مقابل مجاميع الكشف
+ok(rg.stated.collection === 91, "قرينا «مجموع التحصيل» من ترويسة الصفحات (57+34)");
+ok(rg.stated.delivery === 8.75, "قرينا «مجموع سعر التوصيل» (5.25+3.5)");
+const ourGross = allRows.reduce((a, r) => a + r.amount, 0);
+const ourFees = allRows.reduce((a, r) => a + Math.abs(r.fee || 0), 0);
+ok(ourGross === rg.stated.collection, "✅ مجموعنا يطابق مجموع الكشف بالضبط — دليل إنّ ما ضاع صف");
+ok(ourFees === rg.stated.delivery, "✅ مجموع الأجور يطابق الكشف كمان");
 
 // ── 5) الجداول انبنت والوحدة مركّبة ──
 const { db } = await import("../src/db/database.js");

@@ -90,6 +90,7 @@
     </div>
 
     <div id="preview" style="display:none">
+      <div id="pv-verify"></div>
       <div class="grid" id="pv-sum"></div>
       <div class="card"><h2>الحسابات داخل الكشف — كل واحد تحصيله لحاله</h2>
         <p class="hint" id="pv-diag"></p>
@@ -328,12 +329,31 @@ function renderPreview(j) {
     { n: s.pieces, l: "حبّات مباعة" },
     { n: s.unknown, l: "مبالغ بلا أساس", bad: s.unknown > 0 }
   ]);
+  // ✅ بانر التحقق الذاتي — أقوى إثبات إنّ ما ضاع ولا صف
+  const v = j.verify || {};
+  $("#pv-verify").innerHTML = v.stated_collection == null
+    ? `<div class="msg" style="display:block;background:#fff8e1;color:#ef6c00">
+         الكشف ما فيه سطر «مجموع التحصيل» نقارن فيه، فما بنقدر نتحقق تلقائياً.
+         قارن <b>${j.rows.length}</b> طرد و<b>${d2(j.summary.gross)}</b> د مع الكشف بعينك.</div>`
+    : v.match
+      ? `<div class="msg ok">✅ <b>مطابق للكشف تماماً.</b> الكشف بيقول مجموع التحصيل
+           <b>${d2(v.stated_collection)}</b> د واحنا حسبنا <b>${d2(v.our_collection)}</b> د،
+           ومجموع التوصيل <b>${d2(v.stated_delivery)}</b> د واحنا حسبنا <b>${d2(v.our_delivery)}</b> د.
+           يعني <b>${j.rows.length}</b> طرد هو العدد الكامل بالملف — ما ضاع ولا صف.</div>`
+      : `<div class="msg err">⚠️ <b>في فرق عن الكشف — يعني يمكن ضاع صف.</b><br>
+           مجموع التحصيل: الكشف <b>${d2(v.stated_collection)}</b> واحنا <b>${d2(v.our_collection)}</b>
+           (فرق <b>${d2(v.diff_collection)}</b>).<br>
+           مجموع التوصيل: الكشف <b>${d2(v.stated_delivery)}</b> واحنا <b>${d2(v.our_delivery)}</b>
+           (فرق <b>${d2(v.diff_delivery)}</b>).<br>
+           اضغط «طلعلي شو قرأت بالضبط» وابعتلي اللقطة.</div>`;
+
   const dg = j.diagnostics || {};
   const stt = dg.stats || {};
   $("#pv-diag").innerHTML = `قرينا <b>${dg.pages || 0}</b> صفحة و<b>${(j.clients||[]).length}</b> حساب و<b>${j.rows.length}</b> بوليصة.` +
     (stt.streams_failed ? ` <b style="color:var(--red)">⚠️ في ${stt.streams_failed} مجرى ما انفك — يمكن في صفحات ضايعة، اضغط «طلعلي شو قرأت».</b>` : "") +
     (dg.arabic ? " الأسماء العربية انقرأت من الملف."
                : " ⚠️ الأسماء العربية ما انقرأت (الملف بلا خريطة حروف) — الأرقام سليمة، بس الحسابات بتظهر «بلا اسم».") +
+    (dg.track_len ? ` رقم البوليصة بهالكشف <b>${dg.track_len}</b> خانة.` : "") +
     (dg.fee_column ? " وعمود أجرة التوصيل موجود بالكشف وانقرأ بإشارته."
                    : " والكشف ما فيه عمود أجرة واضح، فطبّقنا الأجرة الافتراضية على الطرود المُحصّلة.");
 

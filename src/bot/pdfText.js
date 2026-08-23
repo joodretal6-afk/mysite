@@ -208,25 +208,60 @@ function parseCMap(str, map) {
   return map;
 }
 
-// ── سلسلة سداسية <0045 0032> → نص، عبر خريطة ToUnicode إن وُجدت ──
+// ═══════════════════════════════════════════════════════════
+// 🔑 فك السلسلة عبر خريطة الحروف — للسلاسل النصية كمان
+//
+// 🔴 هون كانت العلة الكبرى اللي خلّت 8 صفحات تطلع 24 طرد:
+//    الكشف بيكتب الأرقام والعربي بخط CID مقصوص، وبيمرّرهم
+//    كسلسلة عادية (…) مش سداسية <…>. كنا نطبّق الخريطة على
+//    السداسية بس، فالأرقام بتطلع محارف تحكّم وبتضيع الصفوف.
+//    هلأ منجرّب الخريطة على الاتنين: 2-بايت أول (خطوط CID)،
+//    وبعدها 1-بايت، ومنعتمد اللي بيطابق فعلاً.
+// ═══════════════════════════════════════════════════════════
+function mapBytes(bytes, cmap) {
+  if (!cmap || !cmap.size) return null;
+
+  // محاولة 2-بايت (الشائع بخطوط CID المقصوصة)
+  if (bytes.length >= 2) {
+    let out = "", hits = 0, total = 0;
+    for (let i = 0; i + 1 < bytes.length; i += 2) {
+      total++;
+      const code = (bytes[i] << 8) | bytes[i + 1];
+      if (cmap.has(code)) { out += cmap.get(code); hits++; }
+      else out += String.fromCharCode(code);
+    }
+    if (total && hits / total >= 0.5) return out;
+  }
+  // محاولة 1-بايت
+  let out1 = "", hits1 = 0;
+  for (const b of bytes) {
+    if (cmap.has(b)) { out1 += cmap.get(b); hits1++; }
+    else out1 += String.fromCharCode(b);
+  }
+  return bytes.length && hits1 / bytes.length >= 0.5 ? out1 : null;
+}
+
+const bytesOf = (s) => {
+  const a = new Array(s.length);
+  for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i) & 0xff;
+  return a;
+};
+
+// ── سلسلة سداسية <0045 0032> → نص ──
 function hexToText(hex, cmap) {
   const h = hex.replace(/[^0-9a-fA-F]/g, "");
-  let out = "";
-  for (let i = 0; i + 1 < h.length; i += 2) {
-    const c = parseInt(h.substr(i, 2), 16);
-    out += String.fromCharCode(c);
-  }
-  if (!cmap || !cmap.size) return out;
+  const bytes = [];
+  for (let i = 0; i + 1 < h.length; i += 2) bytes.push(parseInt(h.substr(i, 2), 16));
+  return mapBytes(bytes, cmap) ?? bytes.map((b) => String.fromCharCode(b)).join("");
+}
 
-  // مع الخريطة: الترميز 2-بايت هو الشائع بخطوط CID
-  let mapped = "", hits = 0, total = 0;
-  for (let i = 0; i + 3 < h.length; i += 4) {
-    total++;
-    const code = parseInt(h.substr(i, 4), 16);
-    if (cmap.has(code)) { mapped += cmap.get(code); hits++; }
-    else mapped += String.fromCharCode(code);
-  }
-  return total && hits / total >= 0.5 ? mapped : out;
+// ── سلسلة عادية (…) → نص، مع تجربة خريطة الحروف كمان ──
+function litToText(raw, cmap) {
+  const s = unescapePdfString(raw);
+  // إذا السلسلة أصلاً نص لاتيني/عربي مقروء، ما إلها داعي للخريطة
+  const printable = [...s].filter((c) => c.charCodeAt(0) >= 32).length;
+  if (s.length && printable === s.length && !/[-ÿ]/.test(s)) return s;
+  return mapBytes(bytesOf(s), cmap) ?? s;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -241,7 +276,7 @@ function hexToText(hex, cmap) {
 const STR_TOK = /\((?:\\.|[^\\()])*\)|<[0-9A-Fa-f\s]+>/g;
 
 const decodeTok = (tok, cmap) =>
-  tok[0] === "(" ? unescapePdfString(tok.slice(1, -1)) : hexToText(tok.slice(1, -1), cmap);
+  tok[0] === "(" ? litToText(tok.slice(1, -1), cmap) : hexToText(tok.slice(1, -1), cmap);
 
 function textFromContent(str, cmap) {
   const parts = [];
@@ -347,54 +382,112 @@ export function numericTokens(segments) {
   return toks;
 }
 
-const isTracking = (t) => /^\d+$/.test(t) && t.length >= TRACK_MIN && t.length <= TRACK_MAX;
 const near = (a, b) => Math.abs(Math.abs(a) - Math.abs(b)) < 0.005;
+const latin = (s) => String(s ?? "")
+  .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+  .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0));
+
+// 🔴 رقم الهاتف الأردني 10 خانات وبيبدأ بصفر — نفس طول بعض
+//    البوليصات. لو حسبناه بوليصة بينكسر الصف كله.
+const isPhone = (t) => /^0\d{9}$/.test(t) || /^(?:00962|962)7\d{8}$/.test(t);
+// تاريخ زي 20/08/26 — أرقامه مش مبالغ
+const isDateSeg = (s) => /^\s*\d{1,4}[/\-.]\d{1,2}[/\-.]\d{1,4}(\s|$)/.test(s) ||
+                         /^\s*\d{1,2}:\d{2}/.test(s);
+
+/**
+ * يتعرّف على شكل رقم البوليصة من الملف نفسه بدل ما نفترضه:
+ * منجمع كل الأرقام الصافية بطول 9-16 اللي مش هواتف، ومنعتمد
+ * الطول الأكثر تكراراً. هيك بيشتغل مع أي شركة توصيل.
+ */
+export function detectTrackingLength(segments) {
+  const counts = new Map();
+  for (const seg of segments) {
+    if (isDateSeg(seg)) continue;
+    for (const t of latin(seg).match(/\d+/g) || []) {
+      if (t.length < 9 || t.length > 16 || isPhone(t)) continue;
+      counts.set(t.length, (counts.get(t.length) || 0) + 1);
+    }
+  }
+  let best = null, bestN = 0;
+  for (const [len, n] of counts) if (n > bestN || (n === bestN && best != null && len > best)) { best = len; bestN = n; }
+  return best;
+}
 
 /**
  * يحوّل نص الكشف لصفوف طرود.
  *
- * كل بوليصة منجمعلها الأرقام اللي قبلها (نافذة الصف)، وبعدين:
- *  • أجرة التوصيل = الرقم اللي مقداره يساوي الأجرة المعروفة (1.75)
- *    — وبنحتفظ بإشارته: سالب يعني انخصمت علينا.
- *  • مبلغ التحصيل = آخر رقم موجب باقي بالنافذة.
- * إذا ما لقينا عمود أجرة بالكشف، منرجّع fee=null والمحاسبة
- * بتطبّق الأجرة الافتراضية — بلا ما نخترع رقم من الملف.
+ * منمشي على المقاطع بالترتيب. لمّا نلاقي رقم بوليصة، الأرقام
+ * اللي قبله هي أرقام صفّه، ومنفكّها هيك:
+ *  • أجرة التوصيل = الرقم اللي مقداره يساوي الأجرة المعروفة،
+ *    وبنحتفظ بإشارته (سالب = انخصمت علينا).
+ *  • مبلغ التحصيل: منستعمل علاقة الكشف نفسها —
+ *        التحصيل = الإجمالي + الأجرة
+ *    فلمّا نلاقي رقمين بينطبق عليهم هالشرط منعرف مين مين
+ *    بلا تخمين. وإذا ما انطبق، منرجع لأول رقم بالصف.
+ *  • التواريخ وأرقام الهواتف بتنشال قبل الحساب.
  *
  * @param {string[]} segments مقاطع النص من pdfToText
- * @param {{feeRate?:number}} [opts]
- * @returns {{rows:Array<{tracking:string,amount:number,fee:number|null,tokens:number[]}>, tokens:number}}
+ * @param {{feeRate?:number, trackLen?:number}} [opts]
  */
 export function parseCodStatement(segments, opts = {}) {
   const feeRate = Number(opts.feeRate) > 0 ? Number(opts.feeRate) : null;
-  const toks = numericTokens(segments);
+  const trackLen = Number(opts.trackLen) || detectTrackingLength(segments);
+  const isTracking = (t) =>
+    /^\d+$/.test(t) && !isPhone(t) &&
+    (trackLen ? t.length === trackLen : t.length >= TRACK_MIN && t.length <= TRACK_MAX);
+
   const rows = [];
   const seen = new Set();
   let win = [];                            // أرقام الصف الحالي
+  let tokens = 0;
 
-  for (const t of toks) {
-    if (isTracking(t)) {
-      if (seen.has(t)) { win = []; continue; }        // بوليصة مكرّرة = تجاهل
-      seen.add(t);
+  const flush = (t) => {
+    let fee = null, rest = win;
+    if (feeRate != null) {
+      const i = win.findIndex((n) => near(n, feeRate));
+      if (i >= 0) { fee = win[i]; rest = win.filter((_, j) => j !== i); }
+    }
+    const cands = rest.filter((n) => n >= -2000 && n <= 2000);
 
-      let fee = null, rest = win;
-      if (feeRate != null) {
-        const i = win.findIndex((n) => near(n, feeRate));
-        if (i >= 0) { fee = win[i]; rest = win.filter((_, j) => j !== i); }
+    // العلاقة الحاسمة: التحصيل = الإجمالي + الأجرة
+    let amount = null;
+    if (fee != null) {
+      const f = Math.abs(fee);
+      outer:
+      for (const a of cands) for (const b of cands) {
+        if (a === b) continue;
+        if (Math.abs(a - (b + f)) < 0.011) { amount = a; break outer; }
       }
-      const amounts = rest.filter((n) => n >= 0 && n <= 2000);
-      rows.push({
-        tracking: t,
-        amount: amounts.length ? amounts[amounts.length - 1] : 0,
-        fee,
-        tokens: win.slice()
-      });
-      win = [];
-    } else {
-      const n = Number(t);
-      if (Number.isFinite(n) && n >= -2000 && n <= 2000) win.push(n);
+      // الطرد المرفوض: التحصيل صفر والإجمالي بالسالب بنفس الأجرة
+      if (amount == null && cands.some((b) => Math.abs(b + f) < 0.011) && cands.includes(0)) amount = 0;
+    }
+    if (amount == null) {
+      const pos = cands.filter((n) => n >= 0);
+      amount = pos.length ? pos[0] : 0;     // أول رقم بالصف = عمود السعر
+    }
+    rows.push({ tracking: t, amount, fee, tokens: win.slice() });
+    win = [];
+  };
+
+  for (const seg of segments) {
+    if (isDateSeg(seg)) continue;                       // سطر تاريخ/وقت — مش أرقام صف
+    const s = latin(seg);
+    for (const m of s.match(/-?\d+(?:\.\d+)?/g) || []) {
+      tokens++;
+      const digits = m.replace(/^-/, "");
+      if (isTracking(digits)) {
+        if (seen.has(digits)) { win = []; continue; }   // بوليصة مكرّرة = تجاهل
+        seen.add(digits);
+        flush(digits);
+      } else if (isPhone(digits)) {
+        continue;                                        // هاتف — مش مبلغ ولا بوليصة
+      } else {
+        const n = Number(m);
+        if (Number.isFinite(n) && n >= -2000 && n <= 2000) win.push(n);
+      }
     }
   }
-  return { rows, tokens: toks.length };
+  return { rows, tokens, trackLen };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -417,27 +510,75 @@ export function arNormalize(s) {
 
 const CLIENT_LABELS = ["اسم الزبون", "اسمالزبون", "الزبون", "اسم العميل", "المرسل"];
 
+/**
+ * 🔴 العربي بالـPDF بينحفظ بترتيب العرض (معكوس منطقياً).
+ * يعني "اسم الزبون" بتطلع "نوبزلا مسا". منجرّب المقطع كما هو
+ * ومعكوساً، ومنعتمد اللي بينطابق مع العنوان — بلا تخمين.
+ */
+const flip = (s) => [...s].reverse().join("");
+
+/** يرجّع نسختين للمقطع: كما هو، ومعكوساً */
+function bothOrders(s) {
+  const n = arNormalize(s);
+  return [n, flip(n)];
+}
+
 /** يطلع اسم الحساب من مقاطع صفحة، أو "" إذا ما لقيه */
 export function clientNameFrom(segments) {
-  const norm = segments.map(arNormalize);
-  for (let i = 0; i < norm.length; i++) {
-    const flat = norm[i].replace(/\s/g, "");
-    const lbl = CLIENT_LABELS.find((l) => flat.includes(l.replace(/\s/g, "")));
-    if (!lbl) continue;
-
-    // الاسم إمّا بعد النقطتين بنفس المقطع، أو بالمقطع اللي بعده
-    const after = norm[i].split(/[:：]/).slice(1).join(":").trim();
-    let name = after;
-    if (!name) {
-      for (let j = i + 1; j < Math.min(i + 4, norm.length); j++) {
-        const c = norm[j].trim();
-        if (c && !/^\d/.test(c) && !CLIENT_LABELS.some((l) => c.includes(l))) { name = c; break; }
-      }
+  for (const seg of segments) {
+    for (const norm of bothOrders(seg)) {
+      const flat = norm.replace(/\s/g, "");
+      const lbl = CLIENT_LABELS.find((l) => flat.includes(l.replace(/\s/g, "")));
+      if (!lbl) continue;
+      // الاسم بعد النقطتين
+      const parts = norm.split(/[:：]/);
+      if (parts.length < 2) continue;
+      const name = parts.slice(1).join(":").replace(/^[:\s]+/, "").trim();
+      if (name && !/^\d+$/.test(name)) return name.slice(0, 120);
     }
-    name = name.replace(/^[:\s]+/, "").trim();
-    if (name) return name.slice(0, 120);
+  }
+  // العنوان بمقطع والاسم بالمقطع اللي بعده
+  for (let i = 0; i < segments.length; i++) {
+    const hit = bothOrders(segments[i]).some((n) =>
+      CLIENT_LABELS.some((l) => n.replace(/\s/g, "").includes(l.replace(/\s/g, ""))));
+    if (!hit) continue;
+    for (let j = i + 1; j < Math.min(i + 4, segments.length); j++) {
+      const c = arNormalize(segments[j]).trim();
+      if (c && !/^\d/.test(c)) return c.slice(0, 120);
+    }
   }
   return "";
+}
+
+// ═══════════════════════════════════════════════════════════
+// ✅ التحقق الذاتي — الكشف بيحمل مجاميعه معه
+//
+// أغلب الكشوفات بتكتب "مجموع التحصيل" و"مجموع سعر التوصيل"
+// بترويسة كل صفحة. منقرأهم ومنقارنهم بالمجموع اللي حسبناه.
+// لو تطابقوا للقرش، معناها ما ضاع ولا صف — وهاد أقوى إثبات
+// من أي كلام. ولو اختلفوا، منقول للمستخدم بصراحة قد إيش.
+// ═══════════════════════════════════════════════════════════
+const TOTAL_LABELS = {
+  collection: ["مجموع التحصيل", "اجمالي التحصيل", "المجموع المحصل"],
+  delivery:   ["مجموع سعر التوصيل", "مجموع التوصيل", "اجمالي التوصيل"]
+};
+
+/** يستخرج المجاميع المكتوبة بترويسة الصفحة */
+export function statedTotals(segments) {
+  const out = {};
+  for (const seg of segments) {
+    const nums = (latin(seg).match(/-?\d+(?:\.\d+)?/g) || []).map(Number);
+    if (!nums.length) continue;
+    for (const norm of bothOrders(seg)) {
+      const flat = norm.replace(/\s/g, "");
+      for (const [key, labels] of Object.entries(TOTAL_LABELS)) {
+        if (out[key] != null) continue;
+        // منطابق الأطول أول حتى "مجموع سعر التوصيل" ما تصير "مجموع التوصيل"
+        if (labels.some((l) => flat.includes(l.replace(/\s/g, "")))) out[key] = nums[0];
+      }
+    }
+  }
+  return out;
 }
 
 /**
@@ -450,12 +591,17 @@ export function clientNameFrom(segments) {
 export function parseCodStatementByClient(pages, opts = {}) {
   const out = [];
   let carried = "";                      // الحساب بيمتد لصفحات متتالية
+  // شكل رقم البوليصة بينتحدد من الملف كله مرة وحدة — أدق من
+  // تحديده لكل صفحة، لأنّ صفحة فيها صف واحد ما بتكفي للحكم.
+  const trackLen = Number(opts.trackLen) || detectTrackingLength(pages.flat());
+  const o = { ...opts, trackLen };
 
   pages.forEach((segs, i) => {
     const client = clientNameFrom(segs) || carried;
     if (client) carried = client;
-    const { rows } = parseCodStatement(segs, opts);
-    out.push({ page: i + 1, client, rows: rows.map((r) => ({ ...r, page_no: i + 1 })) });
+    const { rows } = parseCodStatement(segs, o);
+    out.push({ page: i + 1, client, stated: statedTotals(segs),
+               rows: rows.map((r) => ({ ...r, page_no: i + 1 })) });
   });
 
   // تجميع حسب الحساب — لأنّ تحصيل كل حساب لحاله
@@ -469,5 +615,13 @@ export function parseCodStatementByClient(pages, opts = {}) {
     for (const r of p.rows) if (!seen.has(r.tracking)) g.rows.push(r);
     byClient.set(key, g);
   }
-  return { pages: out, clients: [...byClient.values()] };
+  // مجموع اللي الكشف نفسه بيقوله — للتحقق الذاتي
+  const stated = { collection: null, delivery: null };
+  for (const p of out) {
+    if (p.stated.collection != null) stated.collection = (stated.collection || 0) + p.stated.collection;
+    if (p.stated.delivery != null) stated.delivery = (stated.delivery || 0) + p.stated.delivery;
+  }
+  const r2 = (v) => v == null ? null : Math.round(v * 100) / 100;
+  return { pages: out, clients: [...byClient.values()], trackLen,
+           stated: { collection: r2(stated.collection), delivery: r2(stated.delivery) } };
 }
