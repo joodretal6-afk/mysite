@@ -18,7 +18,8 @@
 import { Router } from "express";
 import express from "express";
 import { db } from "../db/database.js";
-import { pdfToText, parseCodStatement, parseCodStatementByClient } from "../bot/pdfText.js";
+import { pdfToText, parseCodStatement, parseCodStatementByClient,
+         numericTokens, clientNameFrom } from "../bot/pdfText.js";
 import { readAnyFile, matchColumns, num } from "../bot/fileRead.js";
 
 export const slug = "accounting";
@@ -391,13 +392,53 @@ router.post("/parse", async (req, res) => {
     rows, summary: summarize(rows), fee_rate: rate0, model,
     diagnostics: {
       pages: p.pages.length,
-      arabic: p.arabic,                       // انقرأ العربي ولا لأ — بنقولها بصراحة
+      arabic: p.arabic,
+      stats: p.stats || null,                       // انقرأ العربي ولا لأ — بنقولها بصراحة
       named: clients.filter((c) => c.client && c.client !== "بلا اسم").length,
       fee_column: grouped.clients.some((g) => g.rows.some((r) => r.fee != null)),
       per_page: grouped.pages.map((x) => ({ page: x.page, client: x.client, rows: x.rows.length }))
     }
   });
  } catch (e) { bad(res, e && e.message ? e.message : "تعذّر قراءة الملف"); }
+});
+
+// ═══════════════ 🔬 تشخيص الملف — شو قرينا بالضبط ═══════════════
+// لمّا يطلع عدد الطرود أقل من المتوقّع، هون بتشوف بعينك شو
+// وصلنا من الملف: كم صفحة، كم مجرى انفك وكم فشل، وكل رقم
+// قرأناه. بلا تخمين ولا تفسير — الأرقام الخام زي ما هي.
+router.post("/diag", async (req, res) => {
+  try {
+    const b64 = String(req.body?.base64 || "").replace(/^data:.*?;base64,/, "");
+    if (!b64) return bad(res, "ما وصل ملف");
+    const buf = Buffer.from(b64, "base64");
+    const p = pdfToText(buf);
+    if (!p.ok) return bad(res, p.error || "تعذّر قراءة الملف");
+
+    const rate0 = feeRate();
+    const pages = p.pages.map((segs, i) => {
+      const toks = numericTokens(segs);
+      const { rows } = parseCodStatement(segs, { feeRate: rate0 });
+      return {
+        page: i + 1,
+        client: clientNameFrom(segs),
+        segments: segs.length,
+        numbers: toks.length,
+        trackings: rows.length,
+        // الأرقام اللي مش بوليصات ولا انربطت بوحدة — هون بتبيّن الضايع
+        sample_numbers: toks.slice(0, 60),
+        sample_text: segs.slice(0, 12)
+      };
+    });
+
+    ok(res, {
+      size_kb: Math.round(buf.length / 1024),
+      arabic: p.arabic,
+      stats: p.stats,
+      total_trackings: pages.reduce((a, x) => a + x.trackings, 0),
+      total_numbers: pages.reduce((a, x) => a + x.numbers, 0),
+      pages
+    });
+  } catch (e) { bad(res, e && e.message ? e.message : "فشل التشخيص"); }
 });
 
 // ═══════════════ حفظ كشف بعد المعاينة ═══════════════

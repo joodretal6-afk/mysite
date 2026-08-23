@@ -12,30 +12,137 @@
 // ═══════════════════════════════════════════════════════════
 import zlib from "node:zlib";
 
-// ── فك أي مجرى مضغوط بأمان (المجرى التالف يُتخطّى ولا يوقف الملف) ──
+// ═══════════════════════════════════════════════════════════
+// 🔓 فك الضغط — متسامح عمداً
+//
+// 🔴 هون كانت العلة اللي بتخلّي كشف من 5 صفحات يطلع صفحة:
+//    لمّا حدود المجرى تزحّ بايت أو المجرى ينقطع، zlib بترمي
+//    خطأ فبتضيع الصفحة كلها بصمت. مع Z_SYNC_FLUSH منرجّع
+//    الجزء اللي انفك بدل ما نخسر الصفحة.
+// ═══════════════════════════════════════════════════════════
+const Z = { finishFlush: zlib.constants.Z_SYNC_FLUSH };
+
 function inflateSafe(buf) {
-  for (const fn of [zlib.inflateSync, zlib.inflateRawSync]) {
-    try { return fn(buf); } catch { /* جرّب اللي بعده */ }
+  const tries = [
+    () => zlib.inflateSync(buf, Z),
+    () => zlib.inflateRawSync(buf, Z),
+    () => zlib.unzipSync(buf, Z),
+    // بعض المولّدات بتزيد بايت أو بايتين قبل رأس zlib
+    () => zlib.inflateSync(buf.subarray(1), Z),
+    () => zlib.inflateRawSync(buf.subarray(1), Z)
+  ];
+  let best = null;
+  for (const fn of tries) {
+    try {
+      const out = fn();
+      if (out && out.length && (!best || out.length > best.length)) best = out;
+    } catch { /* جرّب اللي بعده */ }
   }
-  return null;
+  return best;
 }
 
-// ── استخراج كل مجاري (stream…endstream) من ملف PDF ──
+// ── ASCII85 / ASCIIHex — مرشّحات بتيجي قبل Flate بسلسلة الفلاتر ──
+function a85Decode(buf) {
+  const s = buf.toString("latin1").replace(/\s/g, "").replace(/^<~/, "").replace(/~>$/, "");
+  const out = [];
+  let tup = 0, n = 0;
+  for (const ch of s) {
+    if (ch === "z" && n === 0) { out.push(0, 0, 0, 0); continue; }
+    const v = ch.charCodeAt(0) - 33;
+    if (v < 0 || v > 84) continue;
+    tup = tup * 85 + v; n++;
+    if (n === 5) { out.push((tup >>> 24) & 255, (tup >>> 16) & 255, (tup >>> 8) & 255, tup & 255); tup = 0; n = 0; }
+  }
+  if (n > 1) {
+    for (let i = n; i < 5; i++) tup = tup * 85 + 84;
+    const b = [(tup >>> 24) & 255, (tup >>> 16) & 255, (tup >>> 8) & 255, tup & 255];
+    out.push(...b.slice(0, n - 1));
+  }
+  return Buffer.from(out);
+}
+const ahxDecode = (buf) =>
+  Buffer.from(buf.toString("latin1").split(">")[0].replace(/[^0-9A-Fa-f]/g, ""), "hex");
+
+/** يطبّق سلسلة الفلاتر المذكورة بقاموس المجرى */
+function applyFilters(raw, filters) {
+  let b = raw;
+  for (const f of filters) {
+    if (/ASCII85/.test(f)) b = a85Decode(b);
+    else if (/ASCIIHex/.test(f)) b = ahxDecode(b);
+    else if (/Fl(ate)?/.test(f)) { const d = inflateSafe(b); if (!d) return null; b = d; }
+    else if (/DCT|JPX|CCITT|JBIG2|RunLength/.test(f)) return null;   // صور — مش نص
+  }
+  return b;
+}
+
+// ── خريطة "رقم الكائن → موقعه" لحلّ /Length غير المباشر ──
+function objectOffsets(pdf) {
+  const map = new Map();
+  const re = /(\d+)\s+(\d+)\s+obj\b/g;
+  const s = pdf.toString("latin1");
+  let m;
+  while ((m = re.exec(s))) map.set(Number(m[1]), m.index);
+  return { map, s };
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📦 استخراج المجاري — بحدود مضبوطة من /Length مش بالتخمين
+// ═══════════════════════════════════════════════════════════
 function extractStreams(pdf) {
   const out = [];
-  const S = Buffer.from("stream");
-  const E = Buffer.from("endstream");
+  const { map: objs, s: str } = objectOffsets(pdf);
+  const isWS = (c) => c === 0x20 || c === 0x0a || c === 0x0d || c === 0x09 || c === 0x00 || c === 0x0c;
+
   let i = 0;
   while (i < pdf.length) {
-    const s = pdf.indexOf(S, i);
+    const s = pdf.indexOf("stream", i);
     if (s < 0) break;
-    let b = s + S.length;
+    // "endstream" كمان بتحتوي "stream" — منتخطّاها
+    if (s >= 3 && str.startsWith("end", s - 3)) { i = s + 6; continue; }
+
+    // قاموس المجرى: منرجع لورا لحد "<<" المقابلة
+    const dictStart = str.lastIndexOf("<<", s);
+    const dict = dictStart >= 0 && s - dictStart < 4000 ? str.slice(dictStart, s) : "";
+
+    // الفلاتر بالترتيب
+    const fm = /\/Filter\s*(\[[^\]]*\]|\/[A-Za-z0-9]+)/.exec(dict);
+    const filters = fm ? (fm[1].match(/\/([A-Za-z0-9]+)/g) || []).map((x) => x.slice(1)) : [];
+
+    // بداية البيانات: بعد الكلمة وسطر النهاية
+    let b = s + 6;
     if (pdf[b] === 0x0d) b++;
     if (pdf[b] === 0x0a) b++;
-    const e = pdf.indexOf(E, b);
-    if (e < 0) break;
-    out.push(pdf.subarray(b, e));
-    i = e + E.length;
+
+    // الطول: رقم مباشر، أو إحالة لكائن تاني منحلّها
+    let len = null;
+    const lm = /\/Length\s+(\d+)(?:\s+(\d+)\s+R)?/.exec(dict);
+    if (lm) {
+      if (lm[2] !== undefined) {
+        const off = objs.get(Number(lm[1]));
+        if (off != null) {
+          const v = /obj\s+(\d+)/.exec(str.slice(off, off + 200));
+          if (v) len = Number(v[1]);
+        }
+      } else len = Number(lm[1]);
+    }
+
+    let e = -1;
+    if (len != null && len > 0 && b + len <= pdf.length) {
+      // منتحقق إنّ "endstream" فعلاً بعد الطول المذكور
+      let k = b + len;
+      while (k < pdf.length && isWS(pdf[k])) k++;
+      if (str.startsWith("endstream", k)) e = b + len;
+    }
+    // الطول غلط أو مش موجود → منرجع للبحث عن "endstream"
+    if (e < 0) {
+      e = pdf.indexOf("endstream", b);
+      if (e < 0) break;
+      // منشيل سطر النهاية اللي قبل الكلمة
+      while (e > b && isWS(pdf[e - 1])) e--;
+    }
+
+    out.push({ raw: pdf.subarray(b, e), filters });
+    i = Math.max(e + 1, s + 6);
   }
   return out;
 }
@@ -122,15 +229,46 @@ function hexToText(hex, cmap) {
   return total && hits / total >= 0.5 ? mapped : out;
 }
 
-// ── استخراج النص من محتوى صفحة (عوامل Tj / TJ / ' / ") ──
+// ═══════════════════════════════════════════════════════════
+// ✂️ استخراج النص من محتوى صفحة (عوامل Tj / TJ / ' / ")
+//
+// 🔴 علة ثانية كانت بتضيّع بوليصات: مصفوفة TJ بتقسّم النص
+//    لقطع عشان تباعد الحروف — يعني رقم بوليصة واحد بيطلع
+//    [(1005)-20(06548034)]. لو حسبنا كل قطعة لحالها، ما بيصير
+//    ولا وحدة 12 خانة فبتضيع البوليصة كلها.
+//    الحل: كل قطع نفس عامل TJ بتنلزق مقطع واحد.
+// ═══════════════════════════════════════════════════════════
+const STR_TOK = /\((?:\\.|[^\\()])*\)|<[0-9A-Fa-f\s]+>/g;
+
+const decodeTok = (tok, cmap) =>
+  tok[0] === "(" ? unescapePdfString(tok.slice(1, -1)) : hexToText(tok.slice(1, -1), cmap);
+
 function textFromContent(str, cmap) {
   const parts = [];
-  // كل السلاسل داخل مصفوفات TJ أو قبل Tj
-  const re = /\((?:\\.|[^\\()])*\)|<[0-9A-Fa-f\s]+>/g;
-  let m;
+  // إمّا مصفوفة [...] TJ كاملة، أو سلسلة وحدها قبل Tj / ' / "
+  const re = /\[((?:\((?:\\.|[^\\()])*\)|<[0-9A-Fa-f\s]+>|[^\[\]])*)\]\s*TJ|((?:\((?:\\.|[^\\()])*\)|<[0-9A-Fa-f\s]+>))\s*(?:Tj|'|")/g;
+  let m, last = 0;
   while ((m = re.exec(str))) {
-    const tok = m[0];
-    parts.push(tok[0] === "(" ? unescapePdfString(tok.slice(1, -1)) : hexToText(tok.slice(1, -1), cmap));
+    last = re.lastIndex;
+    if (m[1] !== undefined) {
+      // مصفوفة TJ: منلزق كل السلاسل جوّاها مقطع واحد
+      // (الأرقام اللي بينها تباعد حروف — مش نص، منتجاهلها)
+      const inner = m[1].match(STR_TOK) || [];
+      const joined = inner.map((t) => decodeTok(t, cmap)).join("");
+      if (joined) parts.push(joined);
+    } else if (m[2]) {
+      const t = decodeTok(m[2], cmap);
+      if (t) parts.push(t);
+    }
+  }
+  // ملف بشكل غير متوقّع ما طابق ولا عامل → منرجع للطريقة العامة
+  if (!parts.length && last === 0) {
+    let x;
+    STR_TOK.lastIndex = 0;
+    while ((x = STR_TOK.exec(str))) {
+      const t = decodeTok(x[0], cmap);
+      if (t) parts.push(t);
+    }
   }
   return parts;
 }
@@ -146,8 +284,15 @@ export function pdfToText(buffer) {
   if (!Buffer.isBuffer(buffer) || buffer.length < 5) return fail("ملف فارغ أو غير صالح");
   if (buffer.subarray(0, 5).toString("latin1") !== "%PDF-") return fail("الملف مش PDF");
 
-  // تمريرة أولى: نجمع كل خرائط ToUnicode قبل ما نفك أي نص
-  const streams = extractStreams(buffer).map((raw) => (inflateSafe(raw) || raw).toString("latin1"));
+  // تمريرة أولى: نفك كل المجاري ونجمع خرائط ToUnicode
+  const found = extractStreams(buffer);
+  const streams = [];
+  let failed = 0;
+  for (const st of found) {
+    const dec = st.filters.length ? applyFilters(st.raw, st.filters) : st.raw;
+    if (!dec) { failed++; continue; }             // صورة أو مجرى تالف
+    streams.push(dec.toString("latin1"));
+  }
   const cmap = new Map();
   for (const str of streams) if (/beginbfchar|beginbfrange/.test(str)) parseCMap(str, cmap);
 
@@ -165,6 +310,10 @@ export function pdfToText(buffer) {
   const text = segments.join(" ");
   return {
     ok: true, text, segments, pages, streams: pages.length,
+    // تشخيص صريح — حتى لو طلع ناقص تعرف وين ضاع
+    stats: { streams_found: found.length, streams_decoded: streams.length,
+             streams_failed: failed, text_streams: pages.length,
+             segments: segments.length, cmap: cmap.size },
     // هل طلع عربي مقروء فعلاً؟ الواجهة بتقول للمستخدم بصراحة
     arabic: /[؀-ۿ]/.test(text) || /[ﭐ-﻿]/.test(text)
   };

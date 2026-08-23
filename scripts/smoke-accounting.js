@@ -187,6 +187,47 @@ ok(uni.text.includes("ر") && uni.text.includes("ي"), "bfchar انفكّ صح (
 ok(uni.text.includes("ف"), "bfrange انفك صح (ف)");
 ok(pdfToText(pdf).arabic === false, "ملف بلا عربي بيتبلّغ عنه بصراحة مش بيتخيّل");
 
+// ── 4.7) 🔴 العلة اللي كانت بتضيّع بوليصات ──
+// مصفوفة TJ بتقسّم النص لقطع عشان تباعد الحروف. لو حسبنا كل
+// قطعة لحالها، رقم البوليصة ما بيصير 12 خانة فبتضيع البوليصة.
+function pdfWithSplitTJ() {
+  // نفس الصفوف بس البوليصة مقسّمة لقطعتين جوّا نفس عامل TJ
+  const ops = [
+    ["15", "1005", "06548034"], ["27", "10050", "6546382"], ["39", "100506", "542049"]
+  ].map(([amt, a, b]) =>
+    `BT /F1 10 Tf 40 700 Td [(${amt})] TJ ET BT /F1 10 Tf 120 700 Td [(-1.75)] TJ ET` +
+    ` BT /F1 10 Tf 200 700 Td [(${a})-18(${b})] TJ ET`).join("\n");
+  const st = zlib.deflateSync(Buffer.from(ops, "latin1"));
+  const c = [];
+  const push = (x) => c.push(Buffer.isBuffer(x) ? x : Buffer.from(x, "latin1"));
+  push("%PDF-1.4\n");
+  push(`4 0 obj<</Length ${st.length}/Filter/FlateDecode>>stream\n`); push(st);
+  push("\nendstream endobj\n%%EOF");
+  return Buffer.concat(c);
+}
+const split = pdfToText(pdfWithSplitTJ());
+const splitRows = parseCodStatement(split.segments, { feeRate: 1.75 }).rows;
+ok(splitRows.length === 3, "🔴 البوليصة المقسّمة بتباعد الحروف ما عادت تضيع — طلعت الثلاثة");
+ok(splitRows[0].tracking === "100506548034", "قطع الـTJ انلزقت ورجّعت رقم البوليصة كامل");
+ok(splitRows[2].amount === 39 && splitRows[2].fee === -1.75, "المبلغ والأجرة انربطوا صح مع البوليصة الملزوقة");
+
+// أرقام تباعد الحروف جوّا TJ ما بتنحسب كمبالغ
+ok(splitRows.every(r => r.amount !== 18 && r.amount !== -18),
+   "أرقام التباعد جوّا مصفوفة TJ ما بتنقرأ كمبالغ");
+
+// التشخيص بيقول شو صار بالضبط
+ok(split.stats && split.stats.streams_found >= 1, "التشخيص بيعدّ المجاري اللي لقيناها");
+ok(split.stats.streams_decoded >= 1, "التشخيص بيعدّ المجاري اللي انفكّت");
+
+// مجرى مقطوع/تالف بيرجّع اللي انفك منه بدل ما تضيع الصفحة كلها
+const full = zlib.deflateSync(Buffer.from("BT /F1 10 Tf (100506548034) Tj ET BT (15) Tj ET", "latin1"));
+const cut = full.subarray(0, full.length - 3);
+const cutPdf = Buffer.concat([
+  Buffer.from(`%PDF-1.4\n4 0 obj<</Length ${cut.length}/Filter/FlateDecode>>stream\n`, "latin1"),
+  cut, Buffer.from("\nendstream endobj\n%%EOF", "latin1")]);
+ok(pdfToText(cutPdf).text.includes("100506548034"),
+   "🔴 المجرى المقطوع ما عاد يضيّع الصفحة — منرجّع اللي انفك منه");
+
 // ── 5) الجداول انبنت والوحدة مركّبة ──
 const { db } = await import("../src/db/database.js");
 for (const tbl of ["acc_shipments", "acc_statements", "acc_rows", "acc_pricing", "acc_settings"]) {
