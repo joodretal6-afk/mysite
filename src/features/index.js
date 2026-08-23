@@ -14,7 +14,9 @@ const SLUGS = [
   // ── الطبقة الخامسة: رادار السوق اليومي ──
   "radar",
   // ── الطبقة السادسة: مركز إعادة التواصل عبر واتساب ──
-  "whatsapp"
+  "whatsapp",
+  // ── الطبقة السابعة: المحاسبة والأحمال وكشوفات التوصيل ──
+  "accounting"
 ];
 
 export async function loadFeatures() {
