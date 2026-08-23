@@ -16,7 +16,9 @@ const SLUGS = [
   // ── الطبقة السادسة: مركز إعادة التواصل عبر واتساب ──
   "whatsapp",
   // ── الطبقة السابعة: المحاسبة والأحمال وكشوفات التوصيل ──
-  "accounting"
+  "accounting",
+  // ── الطبقة الثامنة: الجرد والمخزون ──
+  "stock"
 ];
 
 export async function loadFeatures() {

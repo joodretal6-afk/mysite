@@ -80,8 +80,8 @@
         <b>ما منخترع:</b> أي مبلغ ما إلو أساس بيتكتب «غير معروف». وإذا الكشف صورة ممسوحة مش PDF نصي، ما رح نقدر نقراه.
       </p>
       <div class="msg" id="stmt-msg"></div>
-      <div class="drop" id="drop">📄 اضغط هون لاختيار ملف PDF — أو اسحبه ورميه</div>
-      <input type="file" id="file" accept="application/pdf" hidden>
+      <div class="drop" id="drop">📄 اضغط هون لاختيار الملف (PDF / إكسل / CSV) — أو اسحبه ورميه</div>
+      <input type="file" id="file" accept=".pdf,.xlsx,.xlsm,.csv,.tsv,.json" hidden>
     </div>
 
     <div id="preview" style="display:none">
@@ -246,7 +246,8 @@ $("#file").onchange = (e) => e.target.files[0] && handleFile(e.target.files[0]);
 
 function handleFile(f) {
   clear($("#stmt-msg"));
-  if (!/\.pdf$/i.test(f.name)) return say($("#stmt-msg"), "لازم ملف PDF", "err");
+  if (!/\.(pdf|xlsx|xlsm|csv|tsv|json)$/i.test(f.name))
+    return say($("#stmt-msg"), "المدعوم: PDF، إكسل (xlsx)، CSV، TSV، JSON", "err");
   $("#drop").textContent = "⏳ عم نقرأ " + f.name + " …";
   const rd = new FileReader();
   rd.onload = async () => {
@@ -259,7 +260,7 @@ function handleFile(f) {
       renderPreview(j);
       say($("#stmt-msg"), `تمت قراءة ${j.rows.length} بوليصة من الملف.`, "ok");
     } catch (e) { say($("#stmt-msg"), e.message, "err"); $("#preview").style.display = "none"; }
-    $("#drop").textContent = "📄 اضغط هون لاختيار ملف PDF — أو اسحبه ورميه";
+    $("#drop").textContent = "📄 اضغط هون لاختيار الملف (PDF / إكسل / CSV) — أو اسحبه ورميه";
     $("#drop").classList.remove("on");
     $("#file").value = "";
   };

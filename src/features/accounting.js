@@ -19,6 +19,7 @@ import { Router } from "express";
 import express from "express";
 import { db } from "../db/database.js";
 import { pdfToText, parseCodStatement, parseCodStatementByClient } from "../bot/pdfText.js";
+import { readAnyFile, matchColumns, num } from "../bot/fileRead.js";
 
 export const slug = "accounting";
 export const title = "المحاسبة والأحمال";
@@ -326,17 +327,50 @@ router.delete("/shipments/:id", (req, res) => {
 });
 
 // ═══════════════ قراءة كشف PDF (معاينة فقط — بلا حفظ) ═══════════════
-router.post("/parse", (req, res) => {
+router.post("/parse", async (req, res) => {
+ try {
   const b64 = String(req.body?.base64 || "").replace(/^data:.*?;base64,/, "");
   if (!b64) return bad(res, "ما وصل ملف");
   let buf;
   try { buf = Buffer.from(b64, "base64"); } catch { return bad(res, "الملف غير صالح"); }
-  if (buf.length > 25 * 1024 * 1024) return bad(res, "الملف أكبر من 25 ميجا");
 
-  const p = pdfToText(buf);
-  if (!p.ok) return bad(res, p.error || "تعذّر قراءة الـPDF");
+  const f = await readAnyFile(buf, req.body?.filename);
+  if (!f.ok) return bad(res, f.error);
 
   const rate0 = feeRate();
+
+  // ── كشف بشكل جدول (إكسل / CSV): منقرأ الأعمدة باسمها ──
+  if (f.kind !== "pdf") {
+    if (!f.table.rows.length) return bad(res, "الملف ما فيه جدول نقراه");
+    const cols = matchColumns(f.table.headers);
+    const trackCol = cols.barcode || f.table.headers.find((h) => /بوليصة|تتبع|track|awb|شحنة/i.test(h));
+    const amtCol = f.table.headers.find((h) => /تحصيل|المبلغ|cod|amount|قيمة/i.test(h)) || cols.qty;
+    if (!trackCol || !amtCol)
+      return bad(res, `ما عرفنا الأعمدة. لقينا: ${f.table.headers.join("، ")}. لازم عمود لرقم البوليصة وعمود لمبلغ التحصيل.`);
+    const feeCol = f.table.headers.find((h) => /توصيل|أجرة|اجرة|delivery|fee|شحن/i.test(h));
+
+    const map0 = pricingMap(), model0 = buildModel(map0);
+    const seen0 = new Set();
+    const rows0 = [];
+    for (const r of f.table.rows) {
+      const tr = String(r[trackCol] ?? "").replace(/\D/g, "");
+      if (!tr || seen0.has(tr)) continue;
+      seen0.add(tr);
+      rows0.push(enrichRow({ tracking: tr, amount: num(r[amtCol]) ?? 0,
+                             fee: feeCol ? num(r[feeCol]) : null }, map0, rate0, model0));
+    }
+    if (!rows0.length) return bad(res, "ما لقينا ولا رقم بوليصة بالجدول");
+    return ok(res, {
+      filename: String(req.body?.filename || "").slice(0, 200),
+      clients: [{ client: "", pages: [1], rows: rows0, summary: summarize(rows0) }],
+      rows: rows0, summary: summarize(rows0), fee_rate: rate0, model: model0,
+      diagnostics: { pages: 1, arabic: true, named: 0, fee_column: !!feeCol,
+                     source: f.kind, columns: { tracking: trackCol, amount: amtCol, fee: feeCol || null },
+                     per_page: [{ page: 1, client: "", rows: rows0.length }] }
+    });
+  }
+
+  const p = { pages: f.pages, arabic: f.arabic };
   const grouped = parseCodStatementByClient(p.pages, { feeRate: rate0 });
   const map = pricingMap(), model = buildModel(map);
 
@@ -363,6 +397,7 @@ router.post("/parse", (req, res) => {
       per_page: grouped.pages.map((x) => ({ page: x.page, client: x.client, rows: x.rows.length }))
     }
   });
+ } catch (e) { bad(res, e && e.message ? e.message : "تعذّر قراءة الملف"); }
 });
 
 // ═══════════════ حفظ كشف بعد المعاينة ═══════════════
@@ -579,7 +614,7 @@ router.get("/export.csv", (req, res) => {
   }
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", 'attachment; filename="accounting.csv"');
-  res.send("﻿" + lines.join("\r\n"));      // BOM حتى إكسل يقرأ العربي صح
+  res.send("\uFEFF" + lines.join("\r\n"));      // BOM حتى إكسل يقرأ العربي صح
 });
 
 // ═══════════════ المطابقة مع أحمالك ومع طلبات البوت ═══════════════

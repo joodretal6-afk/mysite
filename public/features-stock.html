@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>📦 الجرد والمخزون — منصة الأجبان</title>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"violet")}catch(e){}</script>
+  <link rel="stylesheet" href="/premium.css">
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; --amber:#ef6c00; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:linear-gradient(120deg,var(--green2),var(--green)); color:#fff; padding:16px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:20px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1280px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 12px; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .tab .dot { display:inline-block; min-width:18px; padding:0 5px; margin-inline-start:6px; background:var(--red); color:#fff; border-radius:9px; font-size:11px; }
+    .panel { display:none; } .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.8; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:12.5px; color:var(--mut); font-weight:600; }
+    input, select, textarea { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; min-width:120px; }
+    input:focus, select:focus { outline:none; border-color:var(--green); }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .btn.gray { background:#eceff1; color:#37474f; } .btn.red { background:var(--red); }
+    .btn.sm { padding:5px 11px; font-size:12px; border-radius:8px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:9px 11px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    tr:hover { background:#fafcfa; }
+    td input { padding:5px 7px; font-size:13px; min-width:70px; border-radius:7px; }
+    .empty { text-align:center; padding:34px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .n.bad { color:var(--red); } .sc .n.warn { color:var(--amber); }
+    .sc .l { font-size:12px; color:var(--mut); margin-top:4px; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11.5px; font-weight:700; }
+    .pill.ok { background:#e8f5e9; color:#1b5e20; }
+    .pill.no { background:#ffebee; color:#c62828; }
+    .pill.unk { background:#fff8e1; color:#ef6c00; }
+    .drop { border:2px dashed var(--line); border-radius:14px; padding:24px; text-align:center; cursor:pointer; color:var(--mut); font-size:14px; }
+    .drop.on { border-color:var(--green); background:#f1f8f2; color:var(--green2); }
+    .msg { padding:10px 13px; border-radius:10px; font-size:13.5px; margin-bottom:10px; display:none; line-height:1.7; }
+    .msg.err { background:#ffebee; color:#c62828; display:block; }
+    .msg.ok { background:#e8f5e9; color:#1b5e20; display:block; }
+    .bar { height:6px; background:var(--line); border-radius:6px; overflow:hidden; min-width:70px; }
+    .bar i { display:block; height:100%; background:var(--green); }
+    .bar i.low { background:var(--amber); } .bar i.out { background:var(--red); }
+  </style>
+</head>
+<body>
+<header>
+  <h1>📦 الجرد والمخزون</h1>
+  <a href="/admin/features">← كل الميزات</a>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-p="stock">📊 المخزون</button>
+    <button class="tab" data-p="alerts">🔔 التنبيهات <span class="dot" id="alert-dot" style="display:none">0</span></button>
+    <button class="tab" data-p="move">🔁 الحركات</button>
+    <button class="tab" data-p="count">📋 جلسات الجرد</button>
+    <button class="tab" data-p="batch">📅 الدفعات والصلاحية</button>
+    <button class="tab" data-p="val">💎 التقييم</button>
+    <button class="tab" data-p="sync">🔗 الربط التلقائي</button>
+  </div>
+
+  <!-- ══════════ المخزون ══════════ -->
+  <div class="panel active" id="p-stock">
+    <div class="grid" id="st-sum"></div>
+    <div class="card">
+      <h2>أضف / عدّل صنف</h2>
+      <p class="hint">حد الطلب = لمّا الرصيد ينزل عنه بينبّهك. الصلاحية بالأيام بتستخدمها لمّا تستلم دفعة جديدة.</p>
+      <div class="msg" id="it-msg"></div>
+      <div class="row">
+        <div class="field"><label>الصنف</label><input id="it-name" placeholder="مثال: جبنة نابلسية"></div>
+        <div class="field"><label>الوحدة</label><input id="it-unit" value="حبة" style="min-width:90px"></div>
+        <div class="field"><label>الباركود</label><input id="it-code" placeholder="اختياري"></div>
+        <div class="field"><label>التكلفة</label><input type="number" step="0.01" id="it-cost" value="0"></div>
+        <div class="field"><label>سعر البيع</label><input type="number" step="0.01" id="it-price" value="0"></div>
+        <div class="field"><label>حد الطلب</label><input type="number" step="0.001" id="it-rop" value="0"></div>
+        <div class="field"><label>الصلاحية (يوم)</label><input type="number" id="it-life" value="0"></div>
+        <button class="btn" id="it-add">💾 حفظ</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">الأصناف والأرصدة</h2>
+        <div class="row">
+          <button class="btn gray sm" onclick="location.href=API+'/export.csv'">⬇️ تصدير الجرد</button>
+          <button class="btn gray sm" onclick="location.href=API+'/countsheet.csv'">🖨️ ورقة جرد فارغة</button>
+        </div>
+      </div>
+      <p class="hint">الرصيد محسوب من الحركات — مش رقم مكتوب بالإيد. «تغطية» = كم يوم بيكفيك الرصيد على سرعة بيعك الفعلية.</p>
+      <div class="tbl-scroll"><table id="st-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ التنبيهات ══════════ -->
+  <div class="panel" id="p-alerts">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>حذّرني قبل الصلاحية بـ (يوم)</label><input type="number" id="al-warn" value="30"></div>
+        <button class="btn" id="al-go">تحديث</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>🔻 نقص وقرب النفاد</h2>
+      <p class="hint">«الكمية المقترحة» محسوبة من سرعة بيعك الفعلية لتغطية 30 يوم. إذا ما في مبيعات مسجّلة بتظهر «—» بدل رقم مخترع.</p>
+      <div class="tbl-scroll"><table id="al-low"></table></div>
+    </div>
+    <div class="card">
+      <h2>📅 صلاحيات قريبة أو منتهية</h2>
+      <div class="tbl-scroll"><table id="al-exp"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الحركات ══════════ -->
+  <div class="panel" id="p-move">
+    <div class="card">
+      <h2>سجّل حركة</h2>
+      <p class="hint">الاستلام والمرتجع بيزيدوا الرصيد. البيع والهدر بينقّصوه. كل حركة بتنكتب بتاريخها وسببها.</p>
+      <div class="msg" id="mv-msg"></div>
+      <div class="row">
+        <div class="field"><label>الصنف</label><select id="mv-item"></select></div>
+        <div class="field"><label>النوع</label><select id="mv-kind"></select></div>
+        <div class="field"><label>الكمية</label><input type="number" step="0.001" id="mv-qty"></div>
+        <div class="field"><label>التاريخ</label><input type="date" id="mv-day"></div>
+        <div class="field"><label>الدفعة</label><input id="mv-batch" placeholder="اختياري"></div>
+        <div class="field"><label>الصلاحية</label><input type="date" id="mv-exp"></div>
+        <div class="field"><label>ملاحظة / السبب</label><input id="mv-note" placeholder="اختياري"></div>
+        <button class="btn" id="mv-add">➕ سجّل</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">آخر الحركات</h2>
+        <div class="row">
+          <div class="field"><label>تصفية بالنوع</label><select id="mv-filter"><option value="">الكل</option></select></div>
+          <button class="btn gray sm" onclick="location.href=API+'/moves.csv'">⬇️ تصدير</button>
+        </div>
+      </div>
+      <div class="tbl-scroll"><table id="mv-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ جلسات الجرد ══════════ -->
+  <div class="panel" id="p-count">
+    <div class="card">
+      <h2>ابدأ جلسة جرد</h2>
+      <p class="hint">لحظة ما تفتح الجلسة بنثبّت «المتوقّع» لكل صنف. بعدها بتعدّ على الأرض وبتدخّل العدد الفعلي — يدوي أو برفع ملف. لمّا تقفل، كل فرق بينكتب كحركة «تسوية جرد» موثّقة.</p>
+      <div class="msg" id="ct-msg"></div>
+      <div class="row">
+        <div class="field"><label>اسم الجلسة</label><input id="ct-name" placeholder="مثلاً: جرد آخر الشهر"></div>
+        <button class="btn" id="ct-new">📋 افتح جلسة</button>
+        <div class="field"><label>افتح جلسة سابقة</label><select id="ct-pick"><option value="">—</option></select></div>
+      </div>
+    </div>
+    <div id="ct-open" style="display:none">
+      <div class="grid" id="ct-sum"></div>
+      <div class="card">
+        <h2>ارفع ملف الجرد (إكسل / CSV / PDF)</h2>
+        <p class="hint">النظام بيتعرّف على الأعمدة لحاله — «الصنف / المنتج / item» و«الكمية / العدد / qty». الصنف اللي مش بدليلك بينتقال لإلك بالاسم وما بينضاف من راسه.</p>
+        <div class="drop" id="ct-drop">📄 اضغط لاختيار الملف — أو اسحبه ورميه</div>
+        <input type="file" id="ct-file" accept=".xlsx,.xlsm,.csv,.tsv,.txt,.json,.pdf" hidden>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between;margin-bottom:10px">
+          <h2 style="margin:0">ورقة العد — <span id="ct-title"></span></h2>
+          <div class="row">
+            <button class="btn gray sm" id="ct-csv">⬇️ تصدير</button>
+            <button class="btn" id="ct-close">🔒 أقفل ورحّل الفروقات</button>
+          </div>
+        </div>
+        <div class="tbl-scroll"><table id="ct-tbl"></table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ الدفعات ══════════ -->
+  <div class="panel" id="p-batch">
+    <div class="card">
+      <h2>الدفعات المتبقّية</h2>
+      <p class="hint">كل دفعة سجّلتها برقمها أو بتاريخ صلاحيتها، ورصيدها المتبقّي. الأقرب للانتهاء بيطلع أول.</p>
+      <div class="tbl-scroll"><table id="bt-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ التقييم ══════════ -->
+  <div class="panel" id="p-val">
+    <div class="grid" id="vl-sum"></div>
+    <div class="card">
+      <h2>قيمة المخزون</h2>
+      <p class="hint">بالتكلفة = فلوسك المجمّدة بالبضاعة. بالبيع = كم بتساوي لو انباعت كلها. الفرق هو ربحك الكامن.</p>
+      <div class="tbl-scroll"><table id="vl-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الربط ══════════ -->
+  <div class="panel" id="p-sync">
+    <div class="card">
+      <h2>🔗 اخصم الأحمال من المخزون</h2>
+      <p class="hint">بياخد الأحمال اللي سجّلتها بوحدة المحاسبة وبيخصم قطعها من الصنف اللي بتختاره. الحمولة الوحدة ما بتنخصم مرتين مهما ضغطت.</p>
+      <div class="msg" id="sy-msg1"></div>
+      <div class="row">
+        <div class="field"><label>الصنف</label><select id="sy-item1"></select></div>
+        <div class="field"><label>من</label><input type="date" id="sy-from"></div>
+        <div class="field"><label>إلى</label><input type="date" id="sy-to"></div>
+        <button class="btn" id="sy-go1">اخصم</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>↩️ رجّع الطرود المرفوضة للمخزون</h2>
+      <p class="hint">الطرد اللي رجع من عند الزبون بضاعته رجعت لعندك. الكشف ما بيقول كم حبة كان جوّاه (لأنه ما تحصّل)، فلازم تقلّي إنت كم حبة بالطرد — ما منستنتجها من راسنا.</p>
+      <div class="msg" id="sy-msg2"></div>
+      <div class="row">
+        <div class="field"><label>الصنف</label><select id="sy-item2"></select></div>
+        <div class="field"><label>كم حبة بالطرد؟</label><input type="number" min="1" id="sy-per" value="1"></div>
+        <button class="btn" id="sy-go2">رجّع</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/theme.js"></script>
+<script>
+const API = "/admin/f-api/stock";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const d2 = (n) => (Math.round((Number(n)||0)*100)/100).toFixed(2);
+const n3 = (n) => { const v = Math.round((Number(n)||0)*1000)/1000; return String(v); };
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  const j = await r.json().catch(() => ({ ok:false, error:"رد غير مفهوم من الخادم" }));
+  if (!j.ok) throw new Error(j.error || "خطأ");
+  return j;
+}
+const jpost = (body) => ({ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+function say(el, text, kind) { el.className = "msg " + kind; el.innerHTML = text; }
+function clear(el) { el.className = "msg"; el.textContent = ""; }
+function cards(el, items) {
+  el.innerHTML = items.map(i =>
+    `<div class="sc"><div class="n${i.k?" "+i.k:""}">${esc(i.n)}</div><div class="l">${esc(i.l)}</div></div>`).join("");
+}
+const statePill = (s) => {
+  const k = s === "سليم" ? "ok" : (s === "نفد" || s === "منتهي الصلاحية") ? "no" : "unk";
+  return `<span class="pill ${k}">${esc(s)}</span>`;
+};
+
+let ITEMS = [], KINDS = [];
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  $("#p-" + t.dataset.p).classList.add("active");
+  ({ stock: loadItems, alerts: loadAlerts, move: loadMoves, count: loadCounts,
+     batch: loadBatches, val: loadValuation })[t.dataset.p]?.();
+});
+
+// ══════════ المخزون ══════════
+async function loadItems() {
+  const j = await api("/items").catch(() => null);
+  if (!j) return;
+  ITEMS = j.rows;
+  const t = j.totals;
+  cards($("#st-sum"), [
+    { n: t.items, l: "صنف" },
+    { n: n3(t.units), l: "وحدة بالمخزون" },
+    { n: d2(t.value_cost), l: "القيمة بالتكلفة (د)" },
+    { n: d2(t.value_sale), l: "القيمة بالبيع (د)" },
+    { n: t.low, l: "تحت حد الطلب", k: t.low ? "warn" : "" },
+    { n: t.out, l: "نفد", k: t.out ? "bad" : "" },
+    { n: t.expiring, l: "صلاحية قريبة", k: t.expiring ? "warn" : "" }
+  ]);
+
+  $("#st-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في أصناف بعد — أضف أول صنف من فوق</td></tr>'
+    : "<tr><th>الصنف</th><th>الرصيد</th><th>مستوى</th><th>حد الطلب</th><th>بيع/يوم</th><th>تغطية</th>" +
+      "<th>التكلفة</th><th>السعر</th><th>قيمة بالتكلفة</th><th>أقرب صلاحية</th><th>الحالة</th><th></th></tr>" +
+      j.rows.map(r => {
+        const pct = r.reorder_point > 0 ? Math.min(100, (r.stock / (r.reorder_point * 2)) * 100) : (r.stock > 0 ? 100 : 0);
+        const cls = r.stock <= 0 ? "out" : (r.reorder_point > 0 && r.stock <= r.reorder_point) ? "low" : "";
+        return `<tr${r.active ? "" : ' style="opacity:.5"'}>
+          <td><b>${esc(r.name)}</b> <span style="color:var(--mut)">${esc(r.unit)}</span></td>
+          <td><b>${n3(r.stock)}</b></td>
+          <td><div class="bar"><i class="${cls}" style="width:${pct}%"></i></div></td>
+          <td>${n3(r.reorder_point)}</td>
+          <td>${r.velocity == null ? "—" : n3(r.velocity)}</td>
+          <td>${r.cover == null ? "—" : r.cover + " يوم"}</td>
+          <td>${d2(r.cost)}</td><td>${d2(r.price)}</td><td>${d2(r.value_cost)}</td>
+          <td>${esc(r.nearest_expiry || "—")}</td>
+          <td>${statePill(r.status)}</td>
+          <td><button class="btn gray sm" onclick="ledger(${r.id})">كشف</button>
+              <button class="btn gray sm" onclick="toggleItem(${r.id})">${r.active ? "إيقاف" : "تفعيل"}</button>
+              <button class="btn red sm" onclick="delItem(${r.id})">حذف</button></td></tr>`;
+      }).join("");
+
+  const opts = '<option value="">اختر…</option>' +
+    ITEMS.filter(i => i.active).map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join("");
+  ["#mv-item", "#sy-item1", "#sy-item2"].forEach(s => { const el = $(s); const k = el.value; el.innerHTML = opts; el.value = k; });
+  refreshAlertDot();
+}
+
+$("#it-add").onclick = async () => {
+  clear($("#it-msg"));
+  try {
+    await api("/items", jpost({
+      name: $("#it-name").value, unit: $("#it-unit").value, barcode: $("#it-code").value,
+      cost: $("#it-cost").value, price: $("#it-price").value,
+      reorder_point: $("#it-rop").value, shelf_life: $("#it-life").value
+    }));
+    say($("#it-msg"), "انحفظ الصنف.", "ok");
+    $("#it-name").value = $("#it-code").value = "";
+    loadItems();
+  } catch (e) { say($("#it-msg"), e.message, "err"); }
+};
+
+window.toggleItem = async (id) => { await api(`/items/${id}/toggle`, { method:"POST" }); loadItems(); };
+window.delItem = async (id) => {
+  if (!confirm("تحذف الصنف؟")) return;
+  const j = await api("/items/" + id, { method:"DELETE" });
+  if (j.archived) alert(`الصنف إلو ${j.moves} حركة مسجّلة، فما بينمسح — وقّفناه بدل ما نمحي تاريخه.`);
+  loadItems();
+};
+
+window.ledger = async (id) => {
+  const j = await api(`/items/${id}/ledger`).catch(e => { alert(e.message); });
+  if (!j) return;
+  const w = window.open("", "_blank");
+  w.document.write(`<html dir="rtl"><head><meta charset="utf-8"><title>كشف ${esc(j.item.name)}</title>
+    <style>body{font-family:Tahoma;padding:20px}table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border:1px solid #ddd;padding:7px;text-align:right}th{background:#f0f4f1}</style></head><body>
+    <h2>كشف حركة: ${esc(j.item.name)}</h2>
+    <p>داخل: <b>${n3(j.in)}</b> · خارج: <b>${n3(j.out)}</b> · الرصيد: <b>${n3(j.balance)}</b></p>
+    <table><tr><th>التاريخ</th><th>النوع</th><th>الكمية</th><th>الرصيد بعدها</th><th>المرجع</th><th>ملاحظة</th></tr>
+    ${j.rows.map(r => `<tr><td>${new Date(r.at).toLocaleDateString("ar-JO")}</td><td>${esc(r.kind)}</td>
+      <td>${n3(r.qty)}</td><td>${n3(r.balance)}</td>
+      <td>${esc(r.ref_type ? r.ref_type + ":" + r.ref_id : "—")}</td><td>${esc(r.note)}</td></tr>`).join("")}
+    </table></body></html>`);
+  w.document.close();
+};
+
+// ══════════ التنبيهات ══════════
+async function refreshAlertDot() {
+  const j = await api("/alerts?warn=" + ($("#al-warn").value || 30)).catch(() => null);
+  if (!j) return;
+  const n = j.counts.low + j.counts.expiring;
+  const d = $("#alert-dot");
+  d.style.display = n ? "" : "none";
+  d.textContent = n;
+}
+$("#al-go").onclick = loadAlerts;
+
+async function loadAlerts() {
+  const j = await api("/alerts?warn=" + ($("#al-warn").value || 30)).catch(() => null);
+  if (!j) return;
+  $("#al-low").innerHTML = !j.low.length
+    ? '<tr><td class="empty">ما في صنف تحت الحد — تمام 👌</td></tr>'
+    : "<tr><th>الصنف</th><th>الرصيد</th><th>حد الطلب</th><th>تغطية</th><th>الحالة</th><th>الكمية المقترحة</th></tr>" +
+      j.low.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${n3(r.stock)}</td><td>${n3(r.reorder_point)}</td>
+        <td>${r.cover == null ? "—" : r.cover + " يوم"}</td><td>${statePill(r.status)}</td>
+        <td><b>${r.suggest == null ? "—" : r.suggest}</b></td></tr>`).join("");
+
+  $("#al-exp").innerHTML = !j.expiring.length
+    ? '<tr><td class="empty">ما في صلاحيات قريبة</td></tr>'
+    : "<tr><th>الصنف</th><th>الدفعة</th><th>الصلاحية</th><th>باقي</th><th>الكمية</th></tr>" +
+      j.expiring.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.batch || "—")}</td>
+        <td>${esc(r.expiry)}</td>
+        <td><span class="pill ${r.days_left < 0 ? "no" : "unk"}">${r.days_left < 0 ? "منتهية" : r.days_left + " يوم"}</span></td>
+        <td>${n3(r.qty)}</td></tr>`).join("");
+  refreshAlertDot();
+}
+
+// ══════════ الحركات ══════════
+async function loadMoves() {
+  if (!KINDS.length) {
+    const m = await api("/meta").catch(() => null);
+    KINDS = m ? m.kinds : [];
+    $("#mv-kind").innerHTML = KINDS.map(k => `<option>${esc(k)}</option>`).join("");
+    $("#mv-filter").innerHTML = '<option value="">الكل</option>' + KINDS.map(k => `<option>${esc(k)}</option>`).join("");
+  }
+  if (!ITEMS.length) await loadItems();
+  const j = await api("/moves?kind=" + encodeURIComponent($("#mv-filter").value)).catch(() => null);
+  if (!j) return;
+  $("#mv-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في حركات بعد</td></tr>'
+    : "<tr><th>التاريخ</th><th>الصنف</th><th>النوع</th><th>الكمية</th><th>الدفعة</th><th>الصلاحية</th><th>المرجع</th><th>ملاحظة</th><th></th></tr>" +
+      j.rows.map(r => `<tr>
+        <td>${new Date(r.at).toLocaleDateString("ar-JO")}</td>
+        <td><b>${esc(r.name)}</b></td><td>${esc(r.kind)}</td>
+        <td style="color:${r.qty < 0 ? "var(--red)" : "var(--green2)"}"><b>${n3(r.qty)}</b></td>
+        <td>${esc(r.batch || "—")}</td><td>${esc(r.expiry || "—")}</td>
+        <td style="color:var(--mut);font-size:12px">${esc(r.ref_type ? r.ref_type + ":" + r.ref_id : "—")}</td>
+        <td>${esc(r.note)}</td>
+        <td><button class="btn red sm" onclick="delMove(${r.id})">حذف</button></td></tr>`).join("");
+}
+$("#mv-filter").onchange = loadMoves;
+
+$("#mv-add").onclick = async () => {
+  clear($("#mv-msg"));
+  try {
+    await api("/moves", jpost({
+      item_id: $("#mv-item").value, kind: $("#mv-kind").value, qty: $("#mv-qty").value,
+      day: $("#mv-day").value || undefined, batch: $("#mv-batch").value,
+      expiry: $("#mv-exp").value, note: $("#mv-note").value
+    }));
+    say($("#mv-msg"), "انسجّلت الحركة.", "ok");
+    $("#mv-qty").value = $("#mv-note").value = "";
+    loadMoves(); loadItems();
+  } catch (e) { say($("#mv-msg"), e.message, "err"); }
+};
+window.delMove = async (id) => {
+  if (!confirm("تحذف الحركة؟ الرصيد رح يتغيّر.")) return;
+  await api("/moves/" + id, { method:"DELETE" }); loadMoves(); loadItems();
+};
+
+// ══════════ جلسات الجرد ══════════
+let CT = null;
+
+async function loadCounts() {
+  const j = await api("/counts").catch(() => null);
+  if (!j) return;
+  $("#ct-pick").innerHTML = '<option value="">—</option>' +
+    j.rows.map(c => `<option value="${c.id}">#${c.id} — ${esc(c.name)} (${esc(c.status)})</option>`).join("");
+}
+$("#ct-pick").onchange = () => { if ($("#ct-pick").value) openCount(Number($("#ct-pick").value)); };
+
+$("#ct-new").onclick = async () => {
+  clear($("#ct-msg"));
+  try {
+    const j = await api("/counts", jpost({ name: $("#ct-name").value }));
+    $("#ct-name").value = "";
+    await loadCounts();
+    openCount(j.id);
+  } catch (e) { say($("#ct-msg"), e.message, "err"); }
+};
+
+async function openCount(id) {
+  const j = await api("/counts/" + id).catch(e => { say($("#ct-msg"), e.message, "err"); });
+  if (!j) return;
+  CT = j;
+  $("#ct-open").style.display = "";
+  $("#ct-title").textContent = `#${j.count.id} ${j.count.name} (${j.count.status})`;
+  const s = j.summary;
+  cards($("#ct-sum"), [
+    { n: s.items, l: "صنف بالجلسة" }, { n: s.counted, l: "انعدّ" },
+    { n: s.pending, l: "باقي", k: s.pending ? "warn" : "" },
+    { n: s.exact, l: "مطابق" },
+    { n: s.surplus, l: "زيادة" }, { n: s.shortage, l: "نقص", k: s.shortage ? "bad" : "" },
+    { n: d2(s.variance_value), l: "قيمة الفرق (د)", k: s.variance_value < 0 ? "bad" : "" }
+  ]);
+  const locked = j.count.status !== "مفتوح";
+  $("#ct-close").disabled = locked;
+  $("#ct-tbl").innerHTML =
+    "<tr><th>الصنف</th><th>المتوقّع</th><th>المعدود</th><th>الفرق</th><th>قيمة الفرق</th><th>ملاحظة</th><th></th></tr>" +
+    j.rows.map(r => `<tr data-i="${r.item_id}">
+      <td><b>${esc(r.name)}</b> <span style="color:var(--mut)">${esc(r.unit)}</span></td>
+      <td>${n3(r.expected)}</td>
+      <td><input type="number" step="0.001" class="c-q" value="${r.counted == null ? "" : r.counted}" ${locked ? "disabled" : ""}></td>
+      <td style="color:${r.variance < 0 ? "var(--red)" : r.variance > 0 ? "var(--green2)" : "inherit"}">
+        <b>${r.variance == null ? "—" : n3(r.variance)}</b></td>
+      <td>${r.value == null ? "—" : d2(r.value)}</td>
+      <td><input class="c-n" value="${esc(r.note)}" ${locked ? "disabled" : ""}></td>
+      <td>${locked ? "" : `<button class="btn sm" onclick="saveLine(${r.item_id})">حفظ</button>`}</td></tr>`).join("");
+}
+
+window.saveLine = async (itemId) => {
+  const tr = document.querySelector(`#ct-tbl tr[data-i="${itemId}"]`);
+  try {
+    await api(`/counts/${CT.count.id}/line`, jpost({
+      item_id: itemId, counted: tr.querySelector(".c-q").value, note: tr.querySelector(".c-n").value
+    }));
+    openCount(CT.count.id);
+  } catch (e) { alert(e.message); }
+};
+
+$("#ct-close").onclick = async () => {
+  if (!CT) return;
+  const pending = CT.summary.pending;
+  if (pending && !confirm(`في ${pending} صنف ما انعدّ. تقفل بالقوة؟ (الأصناف غير المعدودة رح تنترك على حالها)`)) return;
+  try {
+    const j = await api(`/counts/${CT.count.id}/close`, jpost({ force: !!pending }));
+    say($("#ct-msg"), `انقفلت الجلسة. رحّلنا ${j.adjusted} تسوية بقيمة ${d2(j.variance_value)} د.`, "ok");
+    openCount(CT.count.id); loadCounts(); loadItems();
+  } catch (e) { say($("#ct-msg"), e.message, "err"); }
+};
+
+$("#ct-csv").onclick = () => { if (CT) location.href = `${API}/counts/${CT.count.id}/export.csv`; };
+
+// رفع ملف الجرد
+$("#ct-drop").onclick = () => $("#ct-file").click();
+["dragover","dragleave","drop"].forEach(ev => $("#ct-drop").addEventListener(ev, (e) => {
+  e.preventDefault();
+  $("#ct-drop").classList.toggle("on", ev === "dragover");
+  if (ev === "drop" && e.dataTransfer.files[0]) importFile(e.dataTransfer.files[0]);
+}));
+$("#ct-file").onchange = (e) => e.target.files[0] && importFile(e.target.files[0]);
+
+function importFile(f) {
+  if (!CT) return;
+  clear($("#ct-msg"));
+  $("#ct-drop").textContent = "⏳ عم نقرأ " + f.name + " …";
+  const rd = new FileReader();
+  rd.onload = async () => {
+    try {
+      const j = await api(`/counts/${CT.count.id}/import`,
+        jpost({ filename: f.name, base64: String(rd.result).split(",")[1] }));
+      let m = `قرينا الملف (${j.kind}) — ${j.rows_in_file} صف، وطبّقنا ${j.applied} منهم.`;
+      if (j.unknown.length)
+        m += `<br>⚠️ ${j.unknown.length} صنف مش بدليلك فتركناهم: ${esc(j.unknown.slice(0,10).join("، "))}` +
+             (j.unknown.length > 10 ? " …" : "") + " — أضفهم كأصناف أول إذا بدك تعدّهم.";
+      say($("#ct-msg"), m, j.applied ? "ok" : "err");
+      openCount(CT.count.id);
+    } catch (e) { say($("#ct-msg"), e.message, "err"); }
+    $("#ct-drop").textContent = "📄 اضغط لاختيار الملف — أو اسحبه ورميه";
+    $("#ct-drop").classList.remove("on");
+    $("#ct-file").value = "";
+  };
+  rd.readAsDataURL(f);
+}
+
+// ══════════ الدفعات ══════════
+async function loadBatches() {
+  const j = await api("/batches").catch(() => null);
+  if (!j) return;
+  $("#bt-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في دفعات مسجّلة — سجّل الدفعة والصلاحية وقت الاستلام</td></tr>'
+    : "<tr><th>الصنف</th><th>الدفعة</th><th>الصلاحية</th><th>باقي</th><th>الكمية</th></tr>" +
+      j.rows.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.batch || "—")}</td>
+        <td>${esc(r.expiry || "—")}</td>
+        <td>${r.days_left == null ? "—" : `<span class="pill ${r.days_left < 0 ? "no" : r.days_left < 30 ? "unk" : "ok"}">${r.days_left < 0 ? "منتهية" : r.days_left + " يوم"}</span>`}</td>
+        <td>${n3(r.qty)}</td></tr>`).join("");
+}
+
+// ══════════ التقييم ══════════
+async function loadValuation() {
+  const j = await api("/valuation").catch(() => null);
+  if (!j) return;
+  const t = j.totals;
+  cards($("#vl-sum"), [
+    { n: d2(t.cost), l: "القيمة بالتكلفة (د)" },
+    { n: d2(t.sale), l: "القيمة بالبيع (د)" },
+    { n: d2(t.margin), l: "الربح الكامن (د)" },
+    { n: t.missing_cost, l: "صنف بلا تكلفة", k: t.missing_cost ? "warn" : "" }
+  ]);
+  $("#vl-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في مخزون لتقييمه</td></tr>'
+    : "<tr><th>الصنف</th><th>الرصيد</th><th>التكلفة</th><th>السعر</th><th>قيمة بالتكلفة</th><th>قيمة بالبيع</th><th>الربح الكامن</th></tr>" +
+      j.rows.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${n3(r.stock)}</td>
+        <td>${d2(r.cost)}</td><td>${d2(r.price)}</td><td>${d2(r.value_cost)}</td>
+        <td>${d2(r.value_sale)}</td><td><b>${d2(r.margin)}</b></td></tr>`).join("");
+  if (t.missing_cost)
+    $("#vl-sum").insertAdjacentHTML("afterend",
+      `<div class="msg err" style="display:block">في ${t.missing_cost} صنف بلا تكلفة مسجّلة — قيمتهم بالتكلفة محسوبة صفر، يعني الرقم فوق أقل من الحقيقة. سجّل تكلفتهم حتى يطلع التقييم صادق.</div>`);
+}
+
+// ══════════ الربط ══════════
+$("#sy-go1").onclick = async () => {
+  clear($("#sy-msg1"));
+  try {
+    const j = await api("/sync/shipments", jpost({
+      item_id: $("#sy-item1").value, from: $("#sy-from").value, to: $("#sy-to").value }));
+    say($("#sy-msg1"), `فحصنا ${j.scanned} حمولة: خصمنا ${j.applied} (${n3(j.units)} حبة)` +
+      (j.skipped ? `، و${j.skipped} كانوا مخصومين من قبل فما كرّرناهم.` : "."), "ok");
+    loadItems();
+  } catch (e) { say($("#sy-msg1"), e.message, "err"); }
+};
+
+$("#sy-go2").onclick = async () => {
+  clear($("#sy-msg2"));
+  try {
+    const j = await api("/sync/returns", jpost({
+      item_id: $("#sy-item2").value, pieces_per_parcel: Number($("#sy-per").value) }));
+    say($("#sy-msg2"), `فحصنا ${j.scanned} طرد مرتجع: رجّعنا ${j.applied} (${n3(j.units)} حبة)` +
+      (j.skipped ? `، و${j.skipped} كانوا مرجّعين من قبل.` : "."), "ok");
+    loadItems();
+  } catch (e) { say($("#sy-msg2"), e.message, "err"); }
+};
+
+// ── إقلاع ──
+$("#mv-day").value = new Date().toISOString().slice(0, 10);
+loadItems();
+loadCounts();
+</script>
+</body>
+</html>
