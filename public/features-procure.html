@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🛒 المشتريات والموردين — منصة الأجبان</title>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"violet")}catch(e){}</script>
+  <link rel="stylesheet" href="/premium.css">
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; --amber:#ef6c00; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:linear-gradient(120deg,var(--green2),var(--green)); color:#fff; padding:16px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:20px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1280px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 12px; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .tab .dot { display:inline-block; min-width:18px; padding:0 5px; margin-inline-start:6px; background:var(--red); color:#fff; border-radius:9px; font-size:11px; }
+    .panel { display:none; } .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.8; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:12.5px; color:var(--mut); font-weight:600; }
+    input, select, textarea { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; min-width:120px; }
+    input:focus, select:focus { outline:none; border-color:var(--green); }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .btn.gray { background:#eceff1; color:#37474f; } .btn.red { background:var(--red); }
+    .btn.sm { padding:5px 11px; font-size:12px; border-radius:8px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:9px 11px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    tr:hover { background:#fafcfa; }
+    td input { padding:5px 7px; font-size:13px; min-width:70px; border-radius:7px; }
+    .empty { text-align:center; padding:34px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .n.bad { color:var(--red); } .sc .n.warn { color:var(--amber); }
+    .sc .l { font-size:12px; color:var(--mut); margin-top:4px; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11.5px; font-weight:700; }
+    .pill.ok { background:#e8f5e9; color:#1b5e20; }
+    .pill.no { background:#ffebee; color:#c62828; }
+    .pill.unk { background:#fff8e1; color:#ef6c00; }
+    .msg { padding:10px 13px; border-radius:10px; font-size:13.5px; margin-bottom:10px; display:none; line-height:1.7; }
+    .msg.err { background:#ffebee; color:#c62828; display:block; }
+    .msg.ok { background:#e8f5e9; color:#1b5e20; display:block; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🛒 المشتريات والموردين</h1>
+  <a href="/admin/features">← كل الميزات</a>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-p="sup">🏭 الموردين</button>
+    <button class="tab" data-p="price">🏷️ الأسعار والمقارنة</button>
+    <button class="tab" data-p="po">📄 أوامر الشراء</button>
+    <button class="tab" data-p="bill">💳 الفواتير والمستحقات</button>
+    <button class="tab" data-p="score">⭐ تقييم الموردين</button>
+    <button class="tab" data-p="sug">💡 اقتراح شراء <span class="dot" id="sug-dot" style="display:none">0</span></button>
+    <button class="tab" data-p="cost">📈 تاريخ التكلفة</button>
+  </div>
+
+  <!-- ══════════ الموردين ══════════ -->
+  <div class="panel active" id="p-sup">
+    <div class="grid" id="sp-sum"></div>
+    <div class="card">
+      <h2>أضف / عدّل مورد</h2>
+      <p class="hint">نفس الاسم بيعدّل المورد الموجود بدل ما يعمل نسخة ثانية. «مدة التوريد» = كم يوم بياخد لتوصلك البضاعة عادةً.</p>
+      <div class="msg" id="sp-msg"></div>
+      <div class="row">
+        <div class="field"><label>اسم المورد</label><input id="sp-name" placeholder="مثال: مصنع الوادي"></div>
+        <div class="field"><label>الهاتف</label><input id="sp-phone" placeholder="07…"></div>
+        <div class="field"><label>الأصناف اللي بيجيبها</label><input id="sp-items" placeholder="جبنة، لبنة، زعتر"></div>
+        <div class="field"><label>شروط الدفع</label><select id="sp-terms"></select></div>
+        <div class="field"><label>مدة التوريد (يوم)</label><input type="number" min="0" id="sp-lead" value="0"></div>
+        <div class="field"><label>ملاحظات</label><input id="sp-note" placeholder="اختياري"></div>
+        <button class="btn" id="sp-add">💾 حفظ</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>سجل الموردين</h2>
+      <div class="tbl-scroll"><table id="sp-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الأسعار ══════════ -->
+  <div class="panel" id="p-price">
+    <div class="card">
+      <h2>سجّل سعر صنف عند مورد</h2>
+      <p class="hint">كل ما تحدّث السعر منسجّل نقطة بتاريخ التكلفة — بس إذا السعر فعلاً تغيّر. هيك بتشوف مين عم يرفّع عليك بهدوء.</p>
+      <div class="msg" id="pr-msg"></div>
+      <div class="row">
+        <div class="field"><label>المورد</label><select id="pr-sup"></select></div>
+        <div class="field"><label>الصنف</label><input id="pr-item" placeholder="مثال: جبنة نابلسية"></div>
+        <div class="field"><label>الوحدة</label><input id="pr-unit" value="حبة" style="min-width:90px"></div>
+        <div class="field"><label>السعر</label><input type="number" step="0.01" id="pr-price"></div>
+        <button class="btn" id="pr-add">💾 حفظ السعر</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>⚖️ مين الأرخص اليوم؟</h2>
+      <p class="hint">اكتب اسم الصنف بالضبط زي ما سجّلته بقائمة الأسعار. إذا ما في سعر مسجّل بنقولك بصراحة بدل ما نخمّن.</p>
+      <div class="row" style="margin-bottom:10px">
+        <div class="field"><label>الصنف</label><input id="cm-item" placeholder="جبنة نابلسية"></div>
+        <button class="btn" id="cm-go">قارن</button>
+      </div>
+      <div class="msg" id="cm-msg"></div>
+      <div class="tbl-scroll"><table id="cm-tbl"></table></div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">كل الأسعار المسجّلة</h2>
+        <button class="btn gray sm" onclick="location.href=API+'/prices.csv'">⬇️ تصدير الأسعار</button>
+      </div>
+      <div class="tbl-scroll"><table id="pr-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ أوامر الشراء ══════════ -->
+  <div class="panel" id="p-po">
+    <div class="grid" id="po-sum"></div>
+    <div class="card">
+      <h2>أمر شراء جديد</h2>
+      <p class="hint">ضيف سطور الأمر وبعدين احفظه. بيبلّش «مسودة» — لمّا تبعته للمورد حوّله «مرسل»، والاستلام بيغيّر الحالة لحاله حسب الكميات اللي بتوصل.</p>
+      <div class="msg" id="po-msg"></div>
+      <div class="row" style="margin-bottom:10px">
+        <div class="field"><label>المورد</label><select id="po-sup"></select></div>
+        <div class="field"><label>الموعد المتوقّع</label><input type="date" id="po-exp"></div>
+        <div class="field"><label>ملاحظة</label><input id="po-note" placeholder="اختياري"></div>
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <div class="field"><label>الصنف</label><input id="pl-item" placeholder="اسم الصنف"></div>
+        <div class="field"><label>الوحدة</label><input id="pl-unit" value="حبة" style="min-width:90px"></div>
+        <div class="field"><label>الكمية</label><input type="number" step="0.001" id="pl-qty"></div>
+        <div class="field"><label>سعر الوحدة</label><input type="number" step="0.01" id="pl-price"></div>
+        <button class="btn gray" id="pl-add">➕ ضيف سطر</button>
+        <button class="btn" id="po-save">💾 احفظ الأمر</button>
+      </div>
+      <div class="tbl-scroll"><table id="pl-tbl"></table></div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">الأوامر</h2>
+        <div class="row">
+          <div class="field"><label>تصفية بالحالة</label><select id="po-filter"><option value="">الكل</option></select></div>
+          <button class="btn gray sm" onclick="location.href=API+'/orders.csv'">⬇️ تصدير الأوامر</button>
+        </div>
+      </div>
+      <div class="tbl-scroll"><table id="po-tbl"></table></div>
+    </div>
+    <div class="card" id="po-open" style="display:none">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">📥 الاستلام — <span id="po-title"></span></h2>
+        <div class="row">
+          <div class="field"><label>تاريخ الاستلام</label><input type="date" id="rc-day"></div>
+          <label style="font-size:12.5px;color:var(--mut)"><input type="checkbox" id="rc-over" style="min-width:auto"> اسمح بالزيادة</label>
+          <button class="btn" id="rc-go">✔️ سجّل الاستلام</button>
+        </div>
+      </div>
+      <p class="hint">اكتب الكمية اللي وصلتك بالفعل بهاي الدفعة (مش الإجمالي). إذا السعر اختلف عن الأمر اكتبه — منسجّله بتاريخ التكلفة.</p>
+      <div class="msg" id="rc-msg"></div>
+      <div class="tbl-scroll"><table id="rc-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الفواتير ══════════ -->
+  <div class="panel" id="p-bill">
+    <div class="grid" id="bl-sum"></div>
+    <div class="card">
+      <h2>سجّل فاتورة مورد</h2>
+      <div class="msg" id="bl-msg"></div>
+      <div class="row">
+        <div class="field"><label>المورد</label><select id="bl-sup"></select></div>
+        <div class="field"><label>رقم الفاتورة</label><input id="bl-ref" placeholder="اختياري"></div>
+        <div class="field"><label>أمر الشراء</label><select id="bl-order"><option value="">بلا ربط</option></select></div>
+        <div class="field"><label>القيمة</label><input type="number" step="0.01" id="bl-amt"></div>
+        <div class="field"><label>التاريخ</label><input type="date" id="bl-date"></div>
+        <button class="btn" id="bl-add">💾 احفظ الفاتورة</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>سجّل دفعة</h2>
+      <div class="msg" id="pay-msg"></div>
+      <div class="row">
+        <div class="field"><label>المورد</label><select id="pay-sup"></select></div>
+        <div class="field"><label>المبلغ</label><input type="number" step="0.01" id="pay-amt"></div>
+        <div class="field"><label>الطريقة</label><select id="pay-method"></select></div>
+        <div class="field"><label>التاريخ</label><input type="date" id="pay-date"></div>
+        <button class="btn" id="pay-add">💵 سجّل الدفعة</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">المستحق عليك لكل مورد</h2>
+        <button class="btn gray sm" onclick="location.href=API+'/dues.csv'">⬇️ تصدير المستحقات</button>
+      </div>
+      <p class="hint">المستحق = مجموع الفواتير − مجموع الدفعات. رقم محسوب من سطور مسجّلة، مش تقدير.</p>
+      <div class="tbl-scroll"><table id="du-tbl"></table></div>
+    </div>
+    <div class="card">
+      <h2>آخر الفواتير والدفعات</h2>
+      <div class="tbl-scroll"><table id="bl-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ التقييم ══════════ -->
+  <div class="panel" id="p-score">
+    <div class="card">
+      <h2>⭐ أداء الموردين</h2>
+      <p class="hint">«التزام بالموعد» بينحسب بس من الأوامر اللي إلها موعد متوقّع وخلص استلامها. «نقص الاستلام» من الأوامر اللي وصلت. المورد اللي ما إلو تاريخ بتطلع خاناته «—» يعني ما في بيانات كافية — مش صفر.</p>
+      <div class="tbl-scroll"><table id="sc-tbl"></table></div>
+    </div>
+    <div class="card">
+      <h2>💸 تغيّر أسعار مورد</h2>
+      <div class="row" style="margin-bottom:10px">
+        <div class="field"><label>المورد</label><select id="sc-sup"></select></div>
+        <button class="btn" id="sc-go">اعرض</button>
+      </div>
+      <div class="tbl-scroll"><table id="sc-items"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الاقتراح ══════════ -->
+  <div class="panel" id="p-sug">
+    <div class="grid" id="sg-sum"></div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">💡 أصناف ناقصة بتستاهل أمر شراء</h2>
+        <div class="row">
+          <div class="field"><label>حوّلها لأمر عند</label><select id="sg-sup"></select></div>
+          <button class="btn" id="sg-apply">📄 اعمل أمر شراء</button>
+        </div>
+      </div>
+      <p class="hint">مبني على نواقص مسجّلة بوحدة الجرد: الكمية المقترحة = حد الطلب − الرصيد الحالي، وكل سطر بيقول من وين إجت كميته. الصنف اللي ما إلو سعر مسجّل عند أي مورد بيطلع بلا سعر — ما منخترعله واحد.</p>
+      <div class="msg" id="sg-msg"></div>
+      <div class="tbl-scroll"><table id="sg-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ تاريخ التكلفة ══════════ -->
+  <div class="panel" id="p-cost">
+    <div class="card">
+      <h2>📈 كيف تغيّر سعر شراء الصنف</h2>
+      <div class="row" style="margin-bottom:10px">
+        <div class="field"><label>الصنف</label><select id="ch-item"></select></div>
+        <button class="btn" id="ch-go">اعرض التاريخ</button>
+      </div>
+      <div class="msg" id="ch-msg"></div>
+      <div class="grid" id="ch-sum"></div>
+      <div class="tbl-scroll"><table id="ch-tbl"></table></div>
+    </div>
+  </div>
+</div>
+
+<script src="/theme.js"></script>
+<script>
+const API = "/admin/f-api/procure";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const d2 = (n) => (Math.round((Number(n)||0)*100)/100).toFixed(2);
+const n3 = (n) => String(Math.round((Number(n)||0)*1000)/1000);
+const dash = (v, f) => v == null ? "—" : f(v);
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  const j = await r.json().catch(() => ({ ok:false, error:"رد غير مفهوم من الخادم" }));
+  if (!j.ok) throw new Error(j.error || "خطأ");
+  return j;
+}
+const jpost = (body) => ({ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+function say(el, text, kind) { el.className = "msg " + kind; el.innerHTML = text; }
+function clear(el) { el.className = "msg"; el.textContent = ""; }
+function cards(el, items) {
+  el.innerHTML = items.map(i =>
+    `<div class="sc"><div class="n${i.k?" "+i.k:""}">${esc(i.n)}</div><div class="l">${esc(i.l)}</div></div>`).join("");
+}
+const statusPill = (s) => {
+  const k = s === "مستلم" ? "ok" : s === "ملغي" ? "no" : "unk";
+  return `<span class="pill ${k}">${esc(s)}</span>`;
+};
+
+let SUPS = [], META = null, DRAFT = [], PO = null;
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  $("#p-" + t.dataset.p).classList.add("active");
+  ({ sup: loadSuppliers, price: loadPrices, po: loadOrders, bill: loadBills,
+     score: loadScore, sug: loadSuggest, cost: loadCostItems })[t.dataset.p]?.();
+});
+
+// ══════════ (1) الموردين ══════════
+async function loadMeta() {
+  if (META) return META;
+  META = await api("/meta").catch(() => ({ statuses: [], pay_terms: [], methods: [] }));
+  $("#sp-terms").innerHTML = META.pay_terms.map(t => `<option>${esc(t)}</option>`).join("");
+  $("#pay-method").innerHTML = META.methods.map(t => `<option>${esc(t)}</option>`).join("");
+  $("#po-filter").innerHTML = '<option value="">الكل</option>' +
+    META.statuses.map(t => `<option>${esc(t)}</option>`).join("");
+  return META;
+}
+
+async function loadSuppliers() {
+  await loadMeta();
+  const j = await api("/suppliers").catch(() => null);
+  if (!j) return;
+  SUPS = j.rows;
+  cards($("#sp-sum"), [
+    { n: j.totals.suppliers, l: "مورد" },
+    { n: j.totals.active, l: "نشط" },
+    { n: d2(j.totals.due), l: "مستحق عليك (د)", k: j.totals.due > 0 ? "warn" : "" }
+  ]);
+  $("#sp-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في موردين بعد — ضيف أول مورد من فوق</td></tr>'
+    : "<tr><th>المورد</th><th>الهاتف</th><th>أصنافه</th><th>شروط الدفع</th><th>مدة التوريد</th>" +
+      "<th>أسعار مسجّلة</th><th>أوامر</th><th>مستحق</th><th>ملاحظات</th><th></th></tr>" +
+      j.rows.map(r => `<tr${r.active ? "" : ' style="opacity:.5"'}>
+        <td><b>${esc(r.name)}</b></td><td>${esc(r.phone || "—")}</td>
+        <td>${esc(r.items_text || "—")}</td><td>${esc(r.pay_terms)}</td>
+        <td>${r.lead_days ? r.lead_days + " يوم" : "—"}</td>
+        <td>${r.prices}</td><td>${r.orders}</td>
+        <td${r.due > 0 ? ' style="color:var(--red)"' : ""}><b>${d2(r.due)}</b></td>
+        <td>${esc(r.note || "—")}</td>
+        <td><button class="btn gray sm" onclick="toggleSup(${r.id})">${r.active ? "إيقاف" : "تفعيل"}</button>
+            <button class="btn red sm" onclick="delSup(${r.id})">حذف</button></td></tr>`).join("");
+
+  const opts = '<option value="">اختر…</option>' +
+    SUPS.filter(s => s.active).map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  ["#pr-sup", "#po-sup", "#bl-sup", "#pay-sup", "#sg-sup", "#sc-sup"].forEach(sel => {
+    const el = $(sel); const keep = el.value; el.innerHTML = opts; el.value = keep;
+  });
+}
+
+$("#sp-add").onclick = async () => {
+  clear($("#sp-msg"));
+  try {
+    await api("/suppliers", jpost({
+      name: $("#sp-name").value, phone: $("#sp-phone").value, items_text: $("#sp-items").value,
+      pay_terms: $("#sp-terms").value, lead_days: $("#sp-lead").value, note: $("#sp-note").value }));
+    say($("#sp-msg"), "انحفظ المورد.", "ok");
+    $("#sp-name").value = $("#sp-phone").value = $("#sp-items").value = $("#sp-note").value = "";
+    loadSuppliers();
+  } catch (e) { say($("#sp-msg"), e.message, "err"); }
+};
+window.toggleSup = async (id) => { await api(`/suppliers/${id}/toggle`, { method:"POST" }); loadSuppliers(); };
+window.delSup = async (id) => {
+  if (!confirm("تحذف المورد؟")) return;
+  try {
+    const j = await api("/suppliers/" + id, { method:"DELETE" });
+    if (j.archived) alert(`المورد إلو ${j.records} سجل (أوامر/فواتير) فما بينمسح — وقّفناه بدل ما نمحي تاريخه.`);
+    loadSuppliers();
+  } catch (e) { alert(e.message); }
+};
+
+// ══════════ (2)(3) الأسعار والمقارنة ══════════
+async function loadPrices() {
+  if (!SUPS.length) await loadSuppliers();
+  const j = await api("/prices").catch(() => null);
+  if (!j) return;
+  $("#pr-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في أسعار مسجّلة بعد</td></tr>'
+    : "<tr><th>الصنف</th><th>المورد</th><th>الوحدة</th><th>السعر</th><th>آخر تحديث</th><th>عمر السعر</th><th></th></tr>" +
+      j.rows.map(r => `<tr><td><b>${esc(r.item_name)}</b></td><td>${esc(r.supplier_name)}</td>
+        <td>${esc(r.unit)}</td><td><b>${d2(r.price)}</b></td><td>${esc(r.updated_day)}</td>
+        <td><span class="pill ${r.age_days > 60 ? "unk" : "ok"}">${r.age_days} يوم</span></td>
+        <td><button class="btn red sm" onclick="delPrice(${r.id})">حذف</button></td></tr>`).join("");
+}
+window.delPrice = async (id) => { await api("/prices/" + id, { method:"DELETE" }); loadPrices(); };
+
+$("#pr-add").onclick = async () => {
+  clear($("#pr-msg"));
+  try {
+    const j = await api("/prices", jpost({
+      supplier_id: $("#pr-sup").value, item_name: $("#pr-item").value,
+      unit: $("#pr-unit").value, price: $("#pr-price").value }));
+    say($("#pr-msg"), j.changed ? "انحفظ السعر وانسجّلت نقطة بتاريخ التكلفة."
+                                : "السعر نفسه ما تغيّر — ما سجّلنا نقطة مكرّرة.", "ok");
+    $("#pr-price").value = "";
+    loadPrices();
+  } catch (e) { say($("#pr-msg"), e.message, "err"); }
+};
+
+$("#cm-go").onclick = async () => {
+  clear($("#cm-msg"));
+  const item = $("#cm-item").value.trim();
+  try {
+    const j = await api("/compare?item=" + encodeURIComponent(item));
+    if (!j.rows.length) {
+      say($("#cm-msg"), esc(j.msg), "err");
+      $("#cm-tbl").innerHTML = "";
+      return;
+    }
+    say($("#cm-msg"), `الأرخص: <b>${esc(j.best.supplier_name)}</b> بسعر <b>${d2(j.best.price)}</b>` +
+      (j.spread == null ? " — مورد واحد بس عندك سعره لهالصنف." : ` — فرق السعر بين الأرخص والأغلى ${d2(j.spread)} د.`), "ok");
+    $("#cm-tbl").innerHTML =
+      "<tr><th>المورد</th><th>السعر</th><th>الفرق عن الأرخص</th><th>نسبة الفرق</th><th>شروط الدفع</th><th>مدة التوريد</th><th>آخر تحديث</th></tr>" +
+      j.rows.map(r => `<tr${r.best ? ' style="background:#f1f8f2"' : ""}>
+        <td><b>${esc(r.supplier_name)}</b> ${r.best ? '<span class="pill ok">الأرخص</span>' : ""}</td>
+        <td><b>${d2(r.price)}</b></td><td>${d2(r.extra)}</td>
+        <td>${dash(r.extra_pct, v => d2(v) + "%")}</td>
+        <td>${esc(r.pay_terms)}</td><td>${r.lead_days ? r.lead_days + " يوم" : "—"}</td>
+        <td>${esc(r.updated_day)} <span style="color:var(--mut)">(${r.age_days} يوم)</span></td></tr>`).join("");
+  } catch (e) { say($("#cm-msg"), e.message, "err"); }
+};
+
+// ══════════ (4)(5) الأوامر والاستلام ══════════
+function drawDraft() {
+  $("#pl-tbl").innerHTML = !DRAFT.length
+    ? '<tr><td class="empty">ما في سطور بالأمر — ضيف سطر أول</td></tr>'
+    : "<tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th><th></th></tr>" +
+      DRAFT.map((l, i) => `<tr><td><b>${esc(l.item_name)}</b></td><td>${esc(l.unit)}</td>
+        <td>${n3(l.qty)}</td><td>${d2(l.unit_price)}</td>
+        <td><b>${d2(l.qty * l.unit_price)}</b></td>
+        <td><button class="btn red sm" onclick="dropLine(${i})">شيل</button></td></tr>`).join("") +
+      `<tr><th colspan="4">إجمالي الأمر</th><th colspan="2">${d2(DRAFT.reduce((a,l)=>a+l.qty*l.unit_price,0))}</th></tr>`;
+}
+window.dropLine = (i) => { DRAFT.splice(i, 1); drawDraft(); };
+
+$("#pl-add").onclick = () => {
+  clear($("#po-msg"));
+  const item = $("#pl-item").value.trim(), qty = Number($("#pl-qty").value), price = Number($("#pl-price").value);
+  if (!item) return say($("#po-msg"), "اكتب اسم الصنف", "err");
+  if (!(qty > 0)) return say($("#po-msg"), "الكمية لازم أكبر من صفر", "err");
+  if (!(price >= 0)) return say($("#po-msg"), "السعر غير صالح", "err");
+  DRAFT.push({ item_name: item, unit: $("#pl-unit").value || "حبة", qty, unit_price: price });
+  $("#pl-item").value = $("#pl-qty").value = $("#pl-price").value = "";
+  drawDraft();
+};
+
+$("#po-save").onclick = async () => {
+  clear($("#po-msg"));
+  try {
+    const j = await api("/orders", jpost({
+      supplier_id: $("#po-sup").value, expected_at: $("#po-exp").value || undefined,
+      note: $("#po-note").value, lines: DRAFT }));
+    say($("#po-msg"), `انحفظ أمر الشراء #${j.id} بقيمة ${d2(j.totals.value)} د.`, "ok");
+    DRAFT = []; drawDraft(); $("#po-note").value = "";
+    loadOrders();
+  } catch (e) { say($("#po-msg"), e.message, "err"); }
+};
+
+async function loadOrders() {
+  if (!SUPS.length) await loadSuppliers();
+  const j = await api("/orders?status=" + encodeURIComponent($("#po-filter").value)).catch(() => null);
+  if (!j) return;
+  cards($("#po-sum"), [
+    { n: j.totals.orders, l: "أمر" },
+    { n: j.totals.open, l: "لسا مفتوح", k: j.totals.open ? "warn" : "" },
+    { n: d2(j.totals.value), l: "قيمة الأوامر (د)" },
+    { n: d2(j.totals.open_value), l: "قيمة ما وصل بعد (د)", k: j.totals.open_value ? "warn" : "" }
+  ]);
+  $("#po-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في أوامر شراء بعد</td></tr>'
+    : "<tr><th>#</th><th>المورد</th><th>الحالة</th><th>أُنشئ</th><th>الموعد المتوقّع</th><th>سطور</th>" +
+      "<th>مطلوب</th><th>مستلم</th><th>الفرق</th><th>القيمة</th><th></th></tr>" +
+      j.rows.map(r => `<tr>
+        <td>#${r.id}</td><td><b>${esc(r.supplier_name || "—")}</b></td>
+        <td>${statusPill(r.status)}</td><td>${esc(r.created_day)}</td>
+        <td>${esc(r.expected_at || "—")}</td><td>${r.totals.lines}</td>
+        <td>${n3(r.totals.qty)}</td><td>${n3(r.totals.received)}</td>
+        <td${r.totals.variance ? ' style="color:var(--red)"' : ""}><b>${n3(r.totals.variance)}</b></td>
+        <td>${d2(r.totals.value)}</td>
+        <td><button class="btn sm" onclick="openOrder(${r.id})">افتح</button>
+            ${r.status === "مسودة" ? `<button class="btn gray sm" onclick="setStatus(${r.id},'مرسل')">أرسل</button>` : ""}
+            ${["مستلم","ملغي"].includes(r.status) ? "" : `<button class="btn gray sm" onclick="setStatus(${r.id},'ملغي')">ألغِ</button>`}
+            <button class="btn red sm" onclick="delOrder(${r.id})">حذف</button></td></tr>`).join("");
+
+  $("#bl-order").innerHTML = '<option value="">بلا ربط</option>' +
+    j.rows.map(r => `<option value="${r.id}">#${r.id} — ${esc(r.supplier_name || "")} (${d2(r.totals.value)})</option>`).join("");
+}
+$("#po-filter").onchange = loadOrders;
+
+window.setStatus = async (id, status) => {
+  try { await api(`/orders/${id}/status`, jpost({ status })); loadOrders(); }
+  catch (e) { alert(e.message); }
+};
+window.delOrder = async (id) => {
+  if (!confirm("تحذف أمر الشراء؟")) return;
+  try { await api("/orders/" + id, { method:"DELETE" }); $("#po-open").style.display = "none"; loadOrders(); }
+  catch (e) { alert(e.message); }
+};
+
+window.openOrder = async (id) => {
+  const j = await api("/orders/" + id).catch(e => { alert(e.message); });
+  if (!j) return;
+  PO = j;
+  $("#po-open").style.display = "";
+  $("#po-title").textContent = `#${j.order.id} ${j.order.supplier_name || ""} (${j.order.status})`;
+  const locked = j.order.status === "ملغي";
+  $("#rc-go").disabled = locked;
+  $("#rc-tbl").innerHTML =
+    "<tr><th>الصنف</th><th>مطلوب</th><th>مستلم لحد الآن</th><th>الباقي</th><th>سعر الأمر</th>" +
+    "<th>وصلني الآن</th><th>سعر الاستلام</th></tr>" +
+    j.lines.map(l => `<tr data-l="${l.id}">
+      <td><b>${esc(l.item_name)}</b> <span style="color:var(--mut)">${esc(l.unit)}</span></td>
+      <td>${n3(l.qty)}</td><td>${n3(l.received_qty)}</td>
+      <td${l.variance ? ' style="color:var(--red)"' : ""}><b>${n3(l.variance)}</b></td>
+      <td>${d2(l.unit_price)}</td>
+      <td><input type="number" step="0.001" class="rc-q" ${locked ? "disabled" : ""}></td>
+      <td><input type="number" step="0.01" class="rc-p" placeholder="${d2(l.unit_price)}" ${locked ? "disabled" : ""}></td></tr>`).join("") +
+    `<tr><th colspan="5">الإجمالي</th><th colspan="2">قيمة الأمر ${d2(j.totals.value)} د · مستلم ${d2(j.totals.received_value)} د · مفتوح ${d2(j.totals.open_value)} د</th></tr>`;
+  $("#po-open").scrollIntoView({ behavior: "smooth" });
+};
+
+$("#rc-go").onclick = async () => {
+  if (!PO) return;
+  clear($("#rc-msg"));
+  const lines = [];
+  document.querySelectorAll("#rc-tbl tr[data-l]").forEach(tr => {
+    const q = tr.querySelector(".rc-q").value;
+    if (q === "" || Number(q) === 0) return;
+    const p = tr.querySelector(".rc-p").value;
+    lines.push({ line_id: Number(tr.dataset.l), qty: Number(q), unit_price: p === "" ? null : Number(p) });
+  });
+  if (!lines.length) return say($("#rc-msg"), "اكتب الكميات اللي وصلتك بهاي الدفعة", "err");
+  try {
+    const j = await api(`/orders/${PO.order.id}/receive`, jpost({
+      lines, day: $("#rc-day").value || undefined, allow_over: $("#rc-over").checked }));
+    let m = `انسجّل الاستلام. الحالة صارت <b>${esc(j.status)}</b> — مستلم ${n3(j.totals.received)} من ${n3(j.totals.qty)}.`;
+    if (j.variances.length)
+      m += "<br>⚠️ فروقات: " + j.variances.map(v =>
+        `${esc(v.item_name)} ناقص ${n3(v.variance)} (${d2(v.value)} د)`).join("، ");
+    say($("#rc-msg"), m, "ok");
+    openOrder(PO.order.id); loadOrders();
+  } catch (e) { say($("#rc-msg"), e.message, "err"); }
+};
+
+// ══════════ (6) الفواتير والمستحقات ══════════
+async function loadBills() {
+  if (!SUPS.length) await loadSuppliers();
+  await loadOrders();
+  const [du, bl] = await Promise.all([api("/dues").catch(() => null), api("/bills").catch(() => null)]);
+  if (!du || !bl) return;
+  cards($("#bl-sum"), [
+    { n: d2(du.totals.billed), l: "إجمالي الفواتير (د)" },
+    { n: d2(du.totals.paid), l: "المدفوع (د)" },
+    { n: d2(du.totals.due), l: "المستحق عليك (د)", k: du.totals.due > 0 ? "bad" : "" },
+    { n: du.totals.owed_to, l: "مورد إلك عليه دفعات", k: du.totals.owed_to ? "warn" : "" }
+  ]);
+  $("#du-tbl").innerHTML = !du.rows.length
+    ? '<tr><td class="empty">ما في موردين بعد</td></tr>'
+    : "<tr><th>المورد</th><th>الهاتف</th><th>شروط الدفع</th><th>فواتير</th><th>إجمالي الفواتير</th><th>المدفوع</th><th>المستحق</th></tr>" +
+      du.rows.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.phone || "—")}</td>
+        <td>${esc(r.pay_terms)}</td><td>${r.bills}</td><td>${d2(r.billed)}</td><td>${d2(r.paid)}</td>
+        <td${r.due > 0 ? ' style="color:var(--red)"' : ""}><b>${d2(r.due)}</b></td></tr>`).join("");
+
+  const rows = [
+    ...bl.rows.map(b => ({ t: "فاتورة", id: b.id, name: b.supplier_name, ref: b.ref || (b.order_id ? "أمر #" + b.order_id : ""), amount: b.amount, day: b.bill_date, note: b.note })),
+    ...bl.payments.map(p => ({ t: "دفعة", id: p.id, name: p.supplier_name, ref: p.method, amount: -p.amount, day: p.paid_at, note: p.note }))
+  ].sort((a, b) => String(b.day).localeCompare(String(a.day)));
+  $("#bl-tbl").innerHTML = !rows.length
+    ? '<tr><td class="empty">ما في فواتير ولا دفعات بعد</td></tr>'
+    : "<tr><th>النوع</th><th>المورد</th><th>المرجع</th><th>المبلغ</th><th>التاريخ</th><th>ملاحظة</th><th></th></tr>" +
+      rows.map(r => `<tr><td>${esc(r.t)}</td><td><b>${esc(r.name || "—")}</b></td><td>${esc(r.ref || "—")}</td>
+        <td style="color:${r.amount < 0 ? "var(--green2)" : "var(--red)"}"><b>${d2(Math.abs(r.amount))}</b></td>
+        <td>${esc(r.day || "—")}</td><td>${esc(r.note || "—")}</td>
+        <td><button class="btn red sm" onclick="delEntry('${r.t === "فاتورة" ? "bills" : "payments"}',${r.id})">حذف</button></td></tr>`).join("");
+}
+window.delEntry = async (kind, id) => {
+  if (!confirm("تحذف السطر؟")) return;
+  await api(`/${kind}/${id}`, { method:"DELETE" }); loadBills();
+};
+
+$("#bl-add").onclick = async () => {
+  clear($("#bl-msg"));
+  try {
+    await api("/bills", jpost({
+      supplier_id: $("#bl-sup").value, order_id: $("#bl-order").value || undefined,
+      ref: $("#bl-ref").value, amount: $("#bl-amt").value, bill_date: $("#bl-date").value || undefined }));
+    say($("#bl-msg"), "انحفظت الفاتورة.", "ok");
+    $("#bl-amt").value = $("#bl-ref").value = "";
+    loadBills();
+  } catch (e) { say($("#bl-msg"), e.message, "err"); }
+};
+
+$("#pay-add").onclick = async () => {
+  clear($("#pay-msg"));
+  try {
+    await api("/payments", jpost({
+      supplier_id: $("#pay-sup").value, amount: $("#pay-amt").value,
+      method: $("#pay-method").value, paid_at: $("#pay-date").value || undefined }));
+    say($("#pay-msg"), "انسجّلت الدفعة.", "ok");
+    $("#pay-amt").value = "";
+    loadBills();
+  } catch (e) { say($("#pay-msg"), e.message, "err"); }
+};
+
+// ══════════ (7) التقييم ══════════
+async function loadScore() {
+  if (!SUPS.length) await loadSuppliers();
+  const j = await api("/scorecard").catch(() => null);
+  if (!j) return;
+  $("#sc-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في موردين بعد</td></tr>'
+    : "<tr><th>المورد</th><th>أوامر</th><th>أوامر وصلت</th><th>التزام بالموعد</th><th>محسوب من</th>" +
+      "<th>نقص الاستلام</th><th>مطلوب</th><th>مستلم</th><th>تغيّر السعر</th><th>مستحق</th></tr>" +
+      j.rows.map(r => `<tr${r.active ? "" : ' style="opacity:.5"'}>
+        <td><b>${esc(r.name)}</b></td><td>${r.orders}</td><td>${r.received_orders}</td>
+        <td>${r.on_time_rate == null ? '<span class="pill unk">—</span>'
+             : `<span class="pill ${r.on_time_rate >= 80 ? "ok" : "no"}">${d2(r.on_time_rate)}%</span>`}</td>
+        <td style="color:var(--mut)">${r.on_time_basis ? r.on_time_basis + " أمر" : "ما في بيانات"}</td>
+        <td>${r.short_rate == null ? '<span class="pill unk">—</span>'
+             : `<span class="pill ${r.short_rate > 0 ? "no" : "ok"}">${d2(r.short_rate)}%</span>`}</td>
+        <td>${n3(r.ordered_qty)}</td><td>${n3(r.received_qty)}</td>
+        <td>${dash(r.price_change_pct, v => (v > 0 ? "▲ " : v < 0 ? "▼ " : "") + d2(v) + "%")}</td>
+        <td${r.due > 0 ? ' style="color:var(--red)"' : ""}>${d2(r.due)}</td></tr>`).join("");
+}
+
+$("#sc-go").onclick = async () => {
+  const id = $("#sc-sup").value;
+  if (!id) return;
+  const j = await api("/scorecard/" + id).catch(e => { alert(e.message); });
+  if (!j) return;
+  $("#sc-items").innerHTML = !j.price_change_items.length
+    ? '<tr><td class="empty">ما في صنف إلو نقطتين سعر عند هالمورد — بلا نقطتين ما في «تغيّر سعر» نحكي عنه</td></tr>'
+    : "<tr><th>الصنف</th><th>أول سعر</th><th>آخر سعر</th><th>التغيّر</th></tr>" +
+      j.price_change_items.map(c => `<tr><td><b>${esc(c.item)}</b></td><td>${d2(c.first)}</td>
+        <td>${d2(c.last)}</td>
+        <td style="color:${c.pct > 0 ? "var(--red)" : c.pct < 0 ? "var(--green2)" : "inherit"}">
+          <b>${c.pct > 0 ? "▲ " : c.pct < 0 ? "▼ " : ""}${d2(c.pct)}%</b></td></tr>`).join("");
+};
+
+// ══════════ (8) الاقتراح ══════════
+async function loadSuggest() {
+  if (!SUPS.length) await loadSuppliers();
+  clear($("#sg-msg"));
+  let j;
+  try { j = await api("/suggest"); }
+  catch (e) {
+    say($("#sg-msg"), e.message, "err");
+    $("#sg-tbl").innerHTML = ""; $("#sg-sum").innerHTML = "";
+    return;
+  }
+  cards($("#sg-sum"), [
+    { n: j.totals.items, l: "صنف ناقص", k: j.totals.items ? "warn" : "" },
+    { n: j.totals.priced, l: "إلو سعر مسجّل" },
+    { n: j.totals.unpriced, l: "بلا سعر", k: j.totals.unpriced ? "warn" : "" },
+    { n: d2(j.totals.value), l: "قيمة المسعّر منها (د)" }
+  ]);
+  $("#sg-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في صنف تحت حد الطلب — مخزونك مغطّي 👌</td></tr>'
+    : "<tr><th>الصنف</th><th>الرصيد</th><th>حد الطلب</th><th>الكمية المقترحة</th><th>من وين إجت</th>" +
+      "<th>أرخص مورد</th><th>السعر</th><th>القيمة</th></tr>" +
+      j.rows.map(r => `<tr><td><b>${esc(r.name)}</b> <span style="color:var(--mut)">${esc(r.unit)}</span></td>
+        <td>${n3(r.stock)}</td><td>${n3(r.reorder_point)}</td>
+        <td><b>${n3(r.suggest_qty)}</b></td>
+        <td style="color:var(--mut);font-size:12px">${esc(r.basis)}</td>
+        <td>${esc(r.supplier_name || "—")}</td>
+        <td>${dash(r.unit_price, d2)} <span style="color:var(--mut);font-size:11.5px">${esc(r.price_note)}</span></td>
+        <td>${dash(r.line_total, d2)}</td></tr>`).join("");
+  const dot = $("#sug-dot");
+  dot.style.display = j.totals.items ? "" : "none";
+  dot.textContent = j.totals.items;
+}
+
+$("#sg-apply").onclick = async () => {
+  clear($("#sg-msg"));
+  try {
+    const j = await api("/suggest/apply", jpost({ supplier_id: $("#sg-sup").value }));
+    say($("#sg-msg"), `انعمل أمر شراء #${j.id} فيه ${j.lines} سطر` +
+      (j.skipped ? `، وتركنا ${j.skipped} صنف ما إلو سعر عند هالمورد.` : "."), "ok");
+    loadOrders();
+  } catch (e) { say($("#sg-msg"), e.message, "err"); }
+};
+
+// ══════════ (9) تاريخ التكلفة ══════════
+async function loadCostItems() {
+  const j = await api("/cost-items").catch(() => null);
+  if (!j) return;
+  $("#ch-item").innerHTML = '<option value="">اختر صنف…</option>' +
+    j.rows.map(r => `<option value="${esc(r.item_name)}">${esc(r.item_name)} (${r.points} نقطة)</option>`).join("");
+}
+
+$("#ch-go").onclick = async () => {
+  clear($("#ch-msg"));
+  const item = $("#ch-item").value;
+  if (!item) return say($("#ch-msg"), "اختر صنف أول", "err");
+  try {
+    const j = await api("/cost-history?item=" + encodeURIComponent(item));
+    cards($("#ch-sum"), [
+      { n: j.points, l: "نقطة سعر" },
+      { n: dash(j.first, d2), l: "أول سعر" },
+      { n: dash(j.last, d2), l: "آخر سعر" },
+      { n: dash(j.min, d2), l: "الأقل" },
+      { n: dash(j.max, d2), l: "الأعلى" },
+      { n: dash(j.change_pct, v => d2(v) + "%"), l: "التغيّر من أول سعر",
+        k: j.change_pct > 0 ? "bad" : j.change_pct < 0 ? "" : "" }
+    ]);
+    if (j.change_pct == null)
+      say($("#ch-msg"), "ما في نقطتين سعر لهالصنف — «التغيّر» بيضل «—» لحد ما يصير عندنا سعرين مسجّلين.", "err");
+    $("#ch-tbl").innerHTML = !j.rows.length
+      ? '<tr><td class="empty">ما في تاريخ تكلفة لهالصنف</td></tr>'
+      : "<tr><th>التاريخ</th><th>المورد</th><th>السعر</th><th>المصدر</th></tr>" +
+        j.rows.slice().reverse().map(r => `<tr><td>${esc(r.day)}</td><td>${esc(r.supplier_name || "—")}</td>
+          <td><b>${d2(r.price)}</b></td><td style="color:var(--mut)">${esc(r.source)}</td></tr>`).join("");
+  } catch (e) { say($("#ch-msg"), e.message, "err"); }
+};
+
+// ── إقلاع ──
+const TODAY = new Date().toISOString().slice(0, 10);
+$("#bl-date").value = $("#pay-date").value = $("#rc-day").value = TODAY;
+drawDraft();
+loadSuppliers();
+</script>
+</body>
+</html>
