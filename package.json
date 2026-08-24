@@ -30,7 +30,7 @@
     "test:window": "node scripts/smoke-window.js",
     "tokens": "node scripts/migrate-tokens.js",
     "tokens:check": "node scripts/migrate-tokens.js --check",
-    "test": "node scripts/smoke-window.js && node scripts/smoke-send.js && node scripts/smoke-flow.js && node scripts/smoke-address.js && node scripts/smoke-isolation.js && node scripts/smoke-whatsapp-crm.js && node scripts/smoke-accounting.js && node scripts/smoke-stock.js && node scripts/smoke-delivery.js && node scripts/smoke-procure.js && node scripts/smoke-docs.js && node scripts/smoke-links.js && node scripts/smoke-brain-ui.js && node scripts/smoke-brain.js && node scripts/smoke-venture.js && node scripts/smoke-radar.js"
+    "test": "node scripts/smoke-window.js && node scripts/smoke-send.js && node scripts/smoke-flow.js && node scripts/smoke-address.js && node scripts/smoke-isolation.js && node scripts/smoke-whatsapp-crm.js && node scripts/smoke-accounting.js && node scripts/smoke-stock.js && node scripts/smoke-delivery.js && node scripts/smoke-procure.js && node scripts/smoke-docs.js && node scripts/smoke-cash.js && node scripts/smoke-service.js && node scripts/smoke-alerts.js && node scripts/smoke-links.js && node scripts/smoke-brain-ui.js && node scripts/smoke-brain.js && node scripts/smoke-venture.js && node scripts/smoke-radar.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

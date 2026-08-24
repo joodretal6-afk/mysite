@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🎧 خدمة العملاء والشكاوى — منصة الأجبان</title>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"violet")}catch(e){}</script>
+  <link rel="stylesheet" href="/premium.css">
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; --amber:#ef6c00; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:linear-gradient(120deg,var(--green2),var(--green)); color:#fff; padding:16px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:20px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1280px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 12px; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .tab .dot { display:inline-block; min-width:18px; padding:0 5px; margin-inline-start:6px; background:var(--red); color:#fff; border-radius:9px; font-size:11px; }
+    .panel { display:none; } .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.8; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:12.5px; color:var(--mut); font-weight:600; }
+    input, select, textarea { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; min-width:120px; }
+    input:focus, select:focus, textarea:focus { outline:none; border-color:var(--green); }
+    textarea { min-width:280px; min-height:90px; line-height:1.8; }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .btn.gray { background:#eceff1; color:#37474f; } .btn.red { background:var(--red); }
+    .btn.sm { padding:5px 11px; font-size:12px; border-radius:8px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:9px 11px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    tr:hover { background:#fafcfa; }
+    .empty { text-align:center; padding:34px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .n.bad { color:var(--red); } .sc .n.warn { color:var(--amber); }
+    .sc .l { font-size:12px; color:var(--mut); margin-top:4px; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11.5px; font-weight:700; }
+    .pill.ok { background:#e8f5e9; color:#1b5e20; }
+    .pill.no { background:#ffebee; color:#c62828; }
+    .pill.unk { background:#fff8e1; color:#ef6c00; }
+    .msg { padding:10px 13px; border-radius:10px; font-size:13.5px; margin-bottom:10px; display:none; line-height:1.7; }
+    .msg.err { background:#ffebee; color:#c62828; display:block; }
+    .msg.ok { background:#e8f5e9; color:#1b5e20; display:block; }
+    .bar { height:6px; background:var(--line); border-radius:6px; overflow:hidden; min-width:70px; }
+    .bar i { display:block; height:100%; background:var(--green); }
+    .bar i.low { background:var(--amber); } .bar i.out { background:var(--red); }
+    .note { background:#fff8e1; border:1.5px solid #ffe0a3; color:#8a5300; padding:11px 14px; border-radius:12px; font-size:13px; line-height:1.9; margin-bottom:14px; }
+    .tl { list-style:none; border-inline-start:2px solid var(--line); padding-inline-start:14px; }
+    .tl li { position:relative; padding:8px 0; font-size:13px; line-height:1.8; }
+    .tl li::before { content:""; position:absolute; inset-inline-start:-19px; top:14px; width:8px; height:8px; border-radius:50%; background:var(--green); }
+    .tl b { color:var(--green2); }
+    .tl .who { color:var(--mut); font-size:12px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🎧 خدمة العملاء والشكاوى</h1>
+  <a href="/admin/features">← كل الميزات</a>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-p="tickets">🎫 التذاكر</button>
+    <button class="tab" data-p="sla">⏱️ مهل الخدمة <span class="dot" id="sla-dot" style="display:none">0</span></button>
+    <button class="tab" data-p="board">📈 لوحة الأداء</button>
+    <button class="tab" data-p="hot">🔥 الأصناف والمناطق</button>
+    <button class="tab" data-p="comp">💸 التعويضات</button>
+    <button class="tab" data-p="ret">↩️ استرجاع واستبدال</button>
+    <button class="tab" data-p="tpl">📋 الردود الجاهزة</button>
+    <button class="tab" data-p="rep">🗓️ التقرير الشهري</button>
+  </div>
+
+  <div class="note">🔒 هالوحدة <b>ما بتبعت ولا رسالة للزبون</b> — لا ماسنجر ولا واتساب. الردود الجاهزة بتنعرض حتى تنسخها وتبعتها بإيدك. وأي مؤشر ما إله بيانات بيطلع «—» مش صفر.</div>
+
+  <!-- ══════════ التذاكر ══════════ -->
+  <div class="panel active" id="p-tickets">
+    <div class="grid" id="tk-sum"></div>
+    <div class="card">
+      <h2>افتح تذكرة شكوى</h2>
+      <p class="hint">اربطها برقم الطلب إذا موجود — بنسحب منه المنطقة والهاتف بدل ما تعيد كتابتهم. اسمك إلزامي عشان يبقى بالسجل مين فتحها.</p>
+      <div class="msg" id="tk-msg"></div>
+      <div class="row">
+        <div class="field"><label>باسم مين؟ *</label><input id="tk-actor" placeholder="مثال: أحمد"></div>
+        <div class="field"><label>الموضوع *</label><input id="tk-subject" placeholder="مثال: الطلب تأخّر 5 أيام"></div>
+        <div class="field"><label>رقم الطلب</label><input type="number" id="tk-order" placeholder="اختياري"></div>
+        <div class="field"><label>الزبون</label><input id="tk-cust" placeholder="اختياري"></div>
+        <div class="field"><label>المنطقة</label><input id="tk-area" placeholder="من الطلب إذا فاضية"></div>
+        <div class="field"><label>الصنف</label><input id="tk-item" placeholder="اختياري"></div>
+        <div class="field"><label>السبب</label><select id="tk-reason"></select></div>
+        <div class="field"><label>القناة</label><select id="tk-channel"></select></div>
+        <div class="field"><label>الأولوية</label><select id="tk-prio"></select></div>
+        <div class="field"><label>المسؤول</label><input id="tk-assignee" placeholder="اختياري"></div>
+        <button class="btn" id="tk-add">🎫 افتح التذكرة</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">التذاكر</h2>
+        <div class="row">
+          <div class="field"><label>الحالة</label><select id="tk-fstatus"><option value="">الكل</option></select></div>
+          <div class="field"><label>السبب</label><select id="tk-freason"><option value="">الكل</option></select></div>
+          <div class="field"><label>من</label><input type="date" id="tk-from"></div>
+          <div class="field"><label>إلى</label><input type="date" id="tk-to"></div>
+          <button class="btn gray sm" id="tk-filter">تصفية</button>
+          <button class="btn gray sm" id="tk-csv">⬇️ تصدير CSV</button>
+        </div>
+      </div>
+      <div class="tbl-scroll"><table id="tk-tbl"></table></div>
+    </div>
+
+    <div class="card" id="tk-detail" style="display:none">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0" id="tk-dtitle"></h2>
+        <button class="btn gray sm" id="tk-close-detail">إغلاق العرض</button>
+      </div>
+      <div class="msg" id="tk-dmsg"></div>
+      <div class="grid" id="tk-dsum"></div>
+      <div class="row" style="margin-bottom:12px">
+        <div class="field"><label>باسم مين؟ *</label><input id="tk-dactor" placeholder="اسمك"></div>
+        <div class="field"><label>الحالة</label><select id="tk-dstatus"></select></div>
+        <div class="field"><label>الأولوية</label><select id="tk-dprio"></select></div>
+        <div class="field"><label>السبب</label><select id="tk-dreason"></select></div>
+        <div class="field"><label>المسؤول</label><input id="tk-dassignee"></div>
+        <div class="field"><label>ملاحظة للسجل</label><input id="tk-dnote" placeholder="اختياري"></div>
+        <button class="btn" id="tk-save">💾 احفظ</button>
+        <button class="btn gray" id="tk-reply">✍️ سجّل أول رد</button>
+        <button class="btn red" id="tk-reopen">🔁 أعِد الفتح</button>
+      </div>
+      <div class="row" style="margin-bottom:12px">
+        <div class="field"><label>تعويض — النوع</label><select id="tk-ckind"></select></div>
+        <div class="field"><label>الكلفة (د)</label><input type="number" step="0.01" id="tk-camount" value="0"></div>
+        <div class="field"><label>ملاحظة</label><input id="tk-cnote" placeholder="اختياري"></div>
+        <button class="btn" id="tk-cadd">💸 سجّل تعويض</button>
+        <div class="field"><label>استرجاع/استبدال</label><select id="tk-rkind"></select></div>
+        <div class="field"><label>الكمية</label><input type="number" step="0.01" id="tk-rqty" value="1"></div>
+        <div class="field"><label>المبلغ المسترجع</label><input type="number" step="0.01" id="tk-rrefund" value="0"></div>
+        <button class="btn" id="tk-radd">↩️ سجّل</button>
+      </div>
+      <h2>🕓 السجل الزمني</h2>
+      <p class="hint">كل تغيير على التذكرة بينكتب هون باسم صاحبه ووقته. ما في تعديل صامت.</p>
+      <ul class="tl" id="tk-events"></ul>
+    </div>
+  </div>
+
+  <!-- ══════════ مهل الخدمة ══════════ -->
+  <div class="panel" id="p-sla">
+    <div class="card">
+      <h2>سياسة مهل الخدمة (SLA)</h2>
+      <p class="hint">هاي سياستك إنت مش رقم مقيس. بتنثبّت على التذكرة لحظة فتحها، فتغييرها اليوم ما بيحاسب تذاكر قديمة بأثر رجعي. صفر = بتعطّل الحساب لهاي المهلة.</p>
+      <div class="msg" id="sla-msg"></div>
+      <div class="row">
+        <div class="field"><label>مهلة أول رد (ساعة)</label><input type="number" step="0.5" id="sla-reply"></div>
+        <div class="field"><label>مهلة الحل (ساعة)</label><input type="number" step="0.5" id="sla-resolve"></div>
+        <button class="btn" id="sla-save">💾 احفظ السياسة</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>🔴 تجاوزوا مهلة أول رد</h2>
+      <div class="tbl-scroll"><table id="sla-reply-tbl"></table></div>
+    </div>
+    <div class="card">
+      <h2>🔴 تجاوزوا مهلة الحل</h2>
+      <div class="tbl-scroll"><table id="sla-resolve-tbl"></table></div>
+    </div>
+    <div class="card">
+      <h2>⚠️ على وشك التجاوز (باقي أقل من ساعة)</h2>
+      <div class="tbl-scroll"><table id="sla-risk-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ لوحة الأداء ══════════ -->
+  <div class="panel" id="p-board">
+    <div class="grid" id="bd-sum"></div>
+    <div class="card">
+      <h2>على شو انبنت الأرقام</h2>
+      <p class="hint">المؤشر اللي ما إلو بيانات بيطلع «—». نسبة إعادة الفتح محسوبة على اللي وصلوا لمرحلة الحل بس — التذاكر اللي لسا مفتوحة ما إلها علاقة فيها.</p>
+      <div class="tbl-scroll"><table id="bd-basis"></table></div>
+    </div>
+    <div class="card">
+      <h2>توزيع الحالات والأولويات</h2>
+      <div class="tbl-scroll"><table id="bd-dist"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الأصناف والمناطق ══════════ -->
+  <div class="panel" id="p-hot">
+    <div class="card">
+      <h2>🔥 أكثر ما بينشتكى عليه</h2>
+      <p class="hint">من التذاكر المسجّلة فقط. ما منستنتج صنف ولا منطقة من نص المحادثة — اللي ما انسجّل ما بينحسب، وبنقلّك كم تذكرة كانت خانتها فاضية.</p>
+      <div class="row" style="margin-bottom:12px">
+        <div class="field"><label>من</label><input type="date" id="hs-from"></div>
+        <div class="field"><label>إلى</label><input type="date" id="hs-to"></div>
+        <button class="btn gray sm" id="hs-go">تصفية</button>
+      </div>
+      <div id="hs-boxes"></div>
+    </div>
+  </div>
+
+  <!-- ══════════ التعويضات ══════════ -->
+  <div class="panel" id="p-comp">
+    <div class="grid" id="cp-sum"></div>
+    <div class="card">
+      <h2>💸 شو أعطينا وكم كلّفنا</h2>
+      <p class="hint">كل تعويض مربوط بتذكرته وباسم اللي اعتمده. التعويض بينسجّل من داخل التذكرة نفسها.</p>
+      <div class="tbl-scroll"><table id="cp-tbl"></table></div>
+    </div>
+    <div class="card">
+      <h2>حسب النوع وحسب السبب</h2>
+      <div class="tbl-scroll"><table id="cp-kind"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الاسترجاع ══════════ -->
+  <div class="panel" id="p-ret">
+    <div class="grid" id="rt-sum"></div>
+    <div class="card">
+      <h2>↩️ طلبات الاسترجاع والاستبدال</h2>
+      <p class="hint">المبلغ المسترجع ما بينتحسب إلا لمّا الحالة تصير «تم التعويض» — الطلب اللي لسا بالطريق مش خسارة مؤكّدة.</p>
+      <div class="tbl-scroll"><table id="rt-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ القوالب ══════════ -->
+  <div class="panel" id="p-tpl">
+    <div class="card">
+      <h2>📋 رد جاهز جديد</h2>
+      <p class="hint">استخدم متغيّرات بين قوسين: <b>{الاسم}</b> · <b>{رقم الطلب}</b> · <b>{رقم التذكرة}</b> · <b>{الصنف}</b> · <b>{المنطقة}</b> · <b>{المبلغ}</b> · <b>{السبب}</b>. المتغيّر اللي ما إلو قيمة بيضل ظاهر بقوسينه عشان تكمّله بإيدك — ما منعبّيه من راسنا.</p>
+      <div class="msg" id="tp-msg"></div>
+      <div class="row">
+        <div class="field"><label>عنوان القالب *</label><input id="tp-title" placeholder="مثال: اعتذار عن التأخير"></div>
+        <div class="field"><label>السبب المرتبط</label><select id="tp-reason"></select></div>
+        <div class="field" style="flex:1"><label>نص الرد *</label><textarea id="tp-body" placeholder="أهلاً {الاسم}، بعتذر عن تأخير طلبك رقم {رقم الطلب}…"></textarea></div>
+        <button class="btn" id="tp-add">💾 احفظ القالب</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>القوالب المحفوظة</h2>
+      <div class="row" style="margin-bottom:10px">
+        <div class="field"><label>عبّي على تذكرة رقم</label><input type="number" id="tp-ticket" placeholder="اختياري"></div>
+      </div>
+      <div class="tbl-scroll"><table id="tp-tbl"></table></div>
+      <div class="msg" id="tp-out"></div>
+      <textarea id="tp-render" style="width:100%;min-height:110px;display:none"></textarea>
+    </div>
+  </div>
+
+  <!-- ══════════ التقرير الشهري ══════════ -->
+  <div class="panel" id="p-rep">
+    <div class="card">
+      <h2>🗓️ تقرير الشهر</h2>
+      <div class="row">
+        <div class="field"><label>الشهر</label><input type="month" id="rp-month"></div>
+        <button class="btn" id="rp-go">اعرض التقرير</button>
+      </div>
+      <div class="msg" id="rp-msg"></div>
+    </div>
+    <div id="rp-out"></div>
+  </div>
+</div>
+
+<script src="/theme.js"></script>
+<script>
+const API = "/admin/f-api/service";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const d2 = (n) => (Math.round((Number(n)||0)*100)/100).toFixed(2);
+const dash = (v) => (v === null || v === undefined || v === "") ? "—" : v;
+const dt = (ts) => ts ? new Date(Number(ts)).toLocaleString("ar-JO") : "—";
+
+/** بنعرض الدقائق بلغة بني آدم — بس بلا ما نغيّر المعنى */
+function mins(v) {
+  if (v === null || v === undefined) return "—";
+  const n = Number(v);
+  if (Math.abs(n) < 60) return n + " دقيقة";
+  if (Math.abs(n) < 1440) return (Math.round(n / 6) / 10) + " ساعة";
+  return (Math.round(n / 144) / 10) + " يوم";
+}
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  const j = await r.json().catch(() => ({ ok:false, error:"رد غير مفهوم من الخادم" }));
+  if (!j.ok) throw new Error(j.error || "خطأ");
+  return j;
+}
+const jpost = (body) => ({ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+function say(el, text, kind) { el.className = "msg " + kind; el.innerHTML = text; }
+function clear(el) { el.className = "msg"; el.textContent = ""; }
+function cards(el, items) {
+  el.innerHTML = items.map(i =>
+    `<div class="sc"><div class="n${i.k?" "+i.k:""}">${esc(i.n)}</div><div class="l">${esc(i.l)}</div></div>`).join("");
+}
+const statusPill = (s) => {
+  const k = (s === "تم الحل") ? "ok" : (s === "مغلق") ? "ok" : (s === "جديد") ? "no" : "unk";
+  return `<span class="pill ${k}">${esc(s)}</span>`;
+};
+const slaPill = (v) => v === null || v === undefined
+  ? '<span class="pill unk">—</span>'
+  : v ? '<span class="pill no">متجاوز</span>' : '<span class="pill ok">ضمن المهلة</span>';
+
+let META = null, CURRENT = null;
+
+const opts = (arr, sel) => arr.map(x => `<option${x===sel?" selected":""}>${esc(x)}</option>`).join("");
+
+async function loadMeta() {
+  META = await api("/meta");
+  const rs = META.reasons.filter(r => r.active).map(r => r.label);
+  $("#tk-reason").innerHTML = '<option value="">— بلا تصنيف —</option>' + opts(rs);
+  $("#tp-reason").innerHTML = '<option value="">— بلا تصنيف —</option>' + opts(rs);
+  $("#tk-freason").innerHTML = '<option value="">الكل</option>' + opts(rs);
+  $("#tk-dreason").innerHTML = '<option value="">— بلا تصنيف —</option>' + opts(rs);
+  $("#tk-channel").innerHTML = opts(META.channels);
+  $("#tk-prio").innerHTML = opts(META.priorities);
+  $("#tk-dprio").innerHTML = opts(META.priorities);
+  $("#tk-dstatus").innerHTML = opts(META.statuses);
+  $("#tk-fstatus").innerHTML = '<option value="">الكل</option>' + opts(META.statuses);
+  $("#tk-ckind").innerHTML = opts(META.comp_kinds);
+  $("#tk-rkind").innerHTML = opts(META.return_kinds);
+  $("#sla-reply").value = META.sla_reply_h;
+  $("#sla-resolve").value = META.sla_resolve_h;
+}
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  $("#p-" + t.dataset.p).classList.add("active");
+  ({ tickets: loadTickets, sla: loadBreaches, board: loadBoard, hot: loadHot,
+     comp: loadComps, ret: loadReturns, tpl: loadTemplates })[t.dataset.p]?.();
+});
+
+// ══════════ التذاكر ══════════
+function ticketQuery() {
+  const p = new URLSearchParams();
+  if ($("#tk-fstatus").value) p.set("status", $("#tk-fstatus").value);
+  if ($("#tk-freason").value) p.set("reason", $("#tk-freason").value);
+  if ($("#tk-from").value) p.set("from", $("#tk-from").value);
+  if ($("#tk-to").value) p.set("to", $("#tk-to").value);
+  return p.toString();
+}
+
+async function loadTickets() {
+  if (!META) await loadMeta();
+  const j = await api("/tickets?" + ticketQuery()).catch(() => null);
+  if (!j) return;
+  const s = j.summary;
+  cards($("#tk-sum"), [
+    { n: s.tickets, l: "تذكرة" },
+    { n: s.open, l: "مفتوحة", k: s.open ? "warn" : "" },
+    { n: j.breached, l: "تجاوزت المهلة", k: j.breached ? "bad" : "" },
+    { n: s.no_reply, l: "بلا رد بعد", k: s.no_reply ? "bad" : "" },
+    { n: mins(s.first_reply_avg), l: "متوسط أول رد" },
+    { n: mins(s.resolve_avg), l: "متوسط الحل" },
+    { n: s.reopen_rate === null ? "—" : s.reopen_rate + "%", l: "نسبة إعادة الفتح" }
+  ]);
+
+  $("#tk-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في تذاكر — افتح أول وحدة من فوق</td></tr>'
+    : "<tr><th>#</th><th>الموضوع</th><th>الزبون</th><th>المنطقة</th><th>الصنف</th><th>السبب</th>" +
+      "<th>الأولوية</th><th>الحالة</th><th>المسؤول</th><th>أول رد</th><th>مهلة الرد</th>" +
+      "<th>وقت الحل</th><th>مهلة الحل</th><th>إعادة فتح</th><th>الفتح</th><th></th></tr>" +
+      j.rows.map(t => `<tr>
+        <td><b>${t.id}</b></td><td>${esc(t.subject)}</td><td>${esc(dash(t.customer))}</td>
+        <td>${esc(dash(t.area))}</td><td>${esc(dash(t.item))}</td><td>${esc(dash(t.reason))}</td>
+        <td>${esc(t.priority)}</td><td>${statusPill(t.status)}</td><td>${esc(dash(t.assignee))}</td>
+        <td>${mins(t.sla.reply_mins)}</td><td>${slaPill(t.sla.reply_breached)}</td>
+        <td>${mins(t.sla.resolve_mins)}</td><td>${slaPill(t.sla.resolve_breached)}</td>
+        <td>${t.reopen_count || 0}</td>
+        <td style="color:var(--mut);font-size:12px">${dt(t.opened_at)}</td>
+        <td><button class="btn gray sm" onclick="openTicket(${t.id})">افتح</button></td></tr>`).join("");
+  refreshDot();
+}
+$("#tk-filter").onclick = loadTickets;
+$("#tk-csv").onclick = () => { location.href = API + "/export.csv?" + ticketQuery(); };
+
+$("#tk-add").onclick = async () => {
+  clear($("#tk-msg"));
+  try {
+    const j = await api("/tickets", jpost({
+      actor: $("#tk-actor").value, subject: $("#tk-subject").value,
+      order_id: $("#tk-order").value || undefined, customer: $("#tk-cust").value,
+      area: $("#tk-area").value, item: $("#tk-item").value, reason: $("#tk-reason").value,
+      channel: $("#tk-channel").value, priority: $("#tk-prio").value, assignee: $("#tk-assignee").value
+    }));
+    say($("#tk-msg"), "انفتحت التذكرة رقم " + j.id + ".", "ok");
+    $("#tk-subject").value = $("#tk-order").value = $("#tk-cust").value = "";
+    $("#tk-area").value = $("#tk-item").value = "";
+    await loadTickets();
+    openTicket(j.id);
+  } catch (e) { say($("#tk-msg"), e.message, "err"); }
+};
+
+window.openTicket = async (id) => {
+  const j = await api("/tickets/" + id).catch(e => { alert(e.message); });
+  if (!j) return;
+  CURRENT = j;
+  const t = j.ticket;
+  $("#tk-detail").style.display = "";
+  clear($("#tk-dmsg"));
+  $("#tk-dtitle").textContent = `تذكرة #${t.id} — ${t.subject}`;
+  cards($("#tk-dsum"), [
+    { n: mins(t.sla.reply_mins), l: "أول رد" },
+    { n: mins(t.sla.resolve_mins), l: "وقت الحل" },
+    { n: t.sla.reply_breached === null ? "—" : (t.sla.reply_breached ? "متجاوز" : "ملتزم"),
+      l: "مهلة الرد", k: t.sla.reply_breached ? "bad" : "" },
+    { n: t.sla.resolve_breached === null ? "—" : (t.sla.resolve_breached ? "متجاوز" : "ملتزم"),
+      l: "مهلة الحل", k: t.sla.resolve_breached ? "bad" : "" },
+    { n: t.reopen_count || 0, l: "إعادة فتح", k: t.reopen_count ? "warn" : "" },
+    { n: d2(j.comp_total), l: "كلفة التعويض (د)", k: j.comp_total ? "warn" : "" },
+    { n: t.order_id == null ? "—" : "#" + t.order_id, l: "الطلب المربوط" }
+  ]);
+  $("#tk-dstatus").value = t.status;
+  $("#tk-dprio").value = t.priority;
+  $("#tk-dreason").value = t.reason || "";
+  $("#tk-dassignee").value = t.assignee || "";
+  $("#tk-dnote").value = "";
+  if (!$("#tk-dactor").value) $("#tk-dactor").value = $("#tk-actor").value;
+
+  const compRows = j.comps.map(c =>
+    `<li><b>تعويض ${esc(c.kind)}</b> بكلفة ${d2(c.amount)} د <span class="who">— ${esc(c.actor)} · ${dt(c.at)}</span></li>`);
+  $("#tk-events").innerHTML = j.events.map(e =>
+    `<li><b>${esc(e.action)}</b>${e.field ? ` — ${esc(e.field)}: ${esc(dash(e.old_value))} ← ${esc(dash(e.new_value))}` : ""}
+     ${e.note ? `<br>${esc(e.note)}` : ""}
+     <span class="who">— ${esc(e.actor)} · ${dt(e.at)}</span></li>`).join("") + compRows.join("");
+  $("#tk-detail").scrollIntoView({ behavior: "smooth" });
+};
+$("#tk-close-detail").onclick = () => { $("#tk-detail").style.display = "none"; CURRENT = null; };
+
+const dactor = () => $("#tk-dactor").value;
+
+$("#tk-save").onclick = async () => {
+  if (!CURRENT) return;
+  clear($("#tk-dmsg"));
+  try {
+    await api("/tickets/" + CURRENT.ticket.id, jpost({
+      actor: dactor(), status: $("#tk-dstatus").value, priority: $("#tk-dprio").value,
+      reason: $("#tk-dreason").value, assignee: $("#tk-dassignee").value, note: $("#tk-dnote").value
+    }));
+    say($("#tk-dmsg"), "انحفظ التعديل وانكتب بالسجل.", "ok");
+    await loadTickets(); openTicket(CURRENT.ticket.id);
+  } catch (e) { say($("#tk-dmsg"), e.message, "err"); }
+};
+
+$("#tk-reply").onclick = async () => {
+  if (!CURRENT) return;
+  clear($("#tk-dmsg"));
+  try {
+    await api(`/tickets/${CURRENT.ticket.id}/reply`, jpost({ actor: dactor() }));
+    say($("#tk-dmsg"), "انسجّل وقت أول رد.", "ok");
+    await loadTickets(); openTicket(CURRENT.ticket.id);
+  } catch (e) { say($("#tk-dmsg"), e.message, "err"); }
+};
+
+$("#tk-reopen").onclick = async () => {
+  if (!CURRENT) return;
+  const why = prompt("ليش رجعت انفتحت التذكرة؟");
+  if (!why) return;
+  clear($("#tk-dmsg"));
+  try {
+    await api(`/tickets/${CURRENT.ticket.id}/reopen`, jpost({ actor: dactor(), note: why }));
+    say($("#tk-dmsg"), "انعاد فتح التذكرة وانعدّت بالمؤشر.", "ok");
+    await loadTickets(); openTicket(CURRENT.ticket.id);
+  } catch (e) { say($("#tk-dmsg"), e.message, "err"); }
+};
+
+$("#tk-cadd").onclick = async () => {
+  if (!CURRENT) return;
+  clear($("#tk-dmsg"));
+  try {
+    await api(`/tickets/${CURRENT.ticket.id}/comps`, jpost({
+      actor: dactor(), kind: $("#tk-ckind").value,
+      amount: $("#tk-camount").value, note: $("#tk-cnote").value }));
+    $("#tk-camount").value = 0; $("#tk-cnote").value = "";
+    say($("#tk-dmsg"), "انسجّل التعويض.", "ok");
+    openTicket(CURRENT.ticket.id);
+  } catch (e) { say($("#tk-dmsg"), e.message, "err"); }
+};
+
+$("#tk-radd").onclick = async () => {
+  if (!CURRENT) return;
+  clear($("#tk-dmsg"));
+  try {
+    await api(`/tickets/${CURRENT.ticket.id}/returns`, jpost({
+      actor: dactor(), kind: $("#tk-rkind").value,
+      qty: $("#tk-rqty").value, refund: $("#tk-rrefund").value }));
+    say($("#tk-dmsg"), "انسجّل الطلب — تابع حالته من تبويب الاسترجاع.", "ok");
+    openTicket(CURRENT.ticket.id);
+  } catch (e) { say($("#tk-dmsg"), e.message, "err"); }
+};
+
+// ══════════ مهل الخدمة ══════════
+async function refreshDot() {
+  const j = await api("/breaches").catch(() => null);
+  if (!j) return;
+  const n = j.counts.reply + j.counts.resolve;
+  const d = $("#sla-dot");
+  d.style.display = n ? "" : "none";
+  d.textContent = n;
+}
+
+function breachTable(el, rows, kind) {
+  el.innerHTML = !rows.length
+    ? '<tr><td class="empty">ما في تجاوزات — تمام 👌</td></tr>'
+    : "<tr><th>#</th><th>الموضوع</th><th>الزبون</th><th>المسؤول</th><th>الحالة</th><th>الفتح</th><th>المهلة كانت</th><th>الوضع</th></tr>" +
+      rows.map(t => `<tr><td><b>${t.id}</b></td><td>${esc(t.subject)}</td><td>${esc(dash(t.customer))}</td>
+        <td>${esc(dash(t.assignee))}</td><td>${statusPill(t.status)}</td><td>${dt(t.opened_at)}</td>
+        <td>${dt(kind === "reply" ? t.sla.reply_due_at : t.sla.resolve_due_at)}</td>
+        <td>${kind === "reply"
+          ? (t.sla.reply_mins == null ? "لسا بلا رد" : "رد بعد " + mins(t.sla.reply_mins))
+          : (t.sla.resolve_mins == null ? "لسا بلا حل" : "انحلّت بعد " + mins(t.sla.resolve_mins))}</td>
+        </tr>`).join("");
+}
+
+async function loadBreaches() {
+  if (!META) await loadMeta();
+  const j = await api("/breaches").catch(() => null);
+  if (!j) return;
+  $("#sla-reply").value = j.sla_reply_h;
+  $("#sla-resolve").value = j.sla_resolve_h;
+  breachTable($("#sla-reply-tbl"), j.reply, "reply");
+  breachTable($("#sla-resolve-tbl"), j.resolve, "resolve");
+  $("#sla-risk-tbl").innerHTML = !j.at_risk.length
+    ? '<tr><td class="empty">ما في تذكرة على وشك التجاوز</td></tr>'
+    : "<tr><th>#</th><th>الموضوع</th><th>المسؤول</th><th>باقي</th></tr>" +
+      j.at_risk.map(t => `<tr><td><b>${t.id}</b></td><td>${esc(t.subject)}</td>
+        <td>${esc(dash(t.assignee))}</td><td><span class="pill unk">${mins(t.sla.reply_left_mins)}</span></td></tr>`).join("");
+  refreshDot();
+}
+
+$("#sla-save").onclick = async () => {
+  clear($("#sla-msg"));
+  try {
+    await api("/config", jpost({ sla_reply_h: $("#sla-reply").value, sla_resolve_h: $("#sla-resolve").value }));
+    say($("#sla-msg"), "انحفظت السياسة — بتنطبّق على التذاكر الجديدة، والقديمة بتضل على سياستها وقت فتحها.", "ok");
+    META = null; loadBreaches();
+  } catch (e) { say($("#sla-msg"), e.message, "err"); }
+};
+
+// ══════════ لوحة الأداء ══════════
+async function loadBoard() {
+  const j = await api("/kpis").catch(() => null);
+  if (!j) return;
+  cards($("#bd-sum"), [
+    { n: j.tickets, l: "تذكرة" },
+    { n: j.open, l: "مفتوحة", k: j.open ? "warn" : "" },
+    { n: mins(j.first_reply_avg), l: "متوسط أول رد" },
+    { n: mins(j.first_reply_median), l: "وسيط أول رد" },
+    { n: mins(j.resolve_avg), l: "متوسط وقت الحل" },
+    { n: mins(j.resolve_median), l: "وسيط وقت الحل" },
+    { n: j.reopen_rate === null ? "—" : j.reopen_rate + "%", l: "نسبة إعادة الفتح", k: j.reopen_rate ? "warn" : "" },
+    { n: j.breached_reply, l: "تجاوز مهلة الرد", k: j.breached_reply ? "bad" : "" },
+    { n: j.breached_resolve, l: "تجاوز مهلة الحل", k: j.breached_resolve ? "bad" : "" },
+    { n: d2(j.comp_total), l: "كلفة التعويضات (د)" },
+    { n: j.comp_per_ticket === null ? "—" : d2(j.comp_per_ticket), l: "كلفة/تذكرة (د)" }
+  ]);
+  $("#bd-basis").innerHTML =
+    "<tr><th>البند</th><th>القيمة</th></tr>" +
+    [["تذاكر انبنى عليها متوسط أول رد", j.first_reply_n],
+     ["تذاكر انبنى عليها متوسط الحل", j.resolve_n],
+     ["تذاكر بلا رد نهائياً", j.no_reply],
+     ["تذاكر انعاد فتحها", j.reopened],
+     ["مقام نسبة إعادة الفتح (وصلوا للحل)", j.reopen_base]]
+    .map(r => `<tr><td>${esc(r[0])}</td><td><b>${esc(r[1])}</b></td></tr>`).join("") +
+    Object.entries(j.basis).map(([k2, v]) =>
+      `<tr><td>${esc(k2.replace(/_/g, " "))}</td><td>${esc(v)}</td></tr>`).join("");
+
+  const hs = await api("/hotspots").catch(() => null);
+  if (!hs) return;
+  $("#bd-dist").innerHTML = "<tr><th>الحالة/الأولوية</th><th>عدد</th><th>نسبة</th></tr>" +
+    hs.priorities.rows.map(r => `<tr><td>أولوية ${esc(r.label)}</td><td>${r.n}</td><td>${dash(r.share)}%</td></tr>`).join("") +
+    hs.channels.rows.map(r => `<tr><td>قناة ${esc(r.label)}</td><td>${r.n}</td><td>${dash(r.share)}%</td></tr>`).join("");
+}
+
+// ══════════ الأصناف والمناطق ══════════
+function box(title, t, unit) {
+  return `<div style="margin-bottom:16px"><h2 style="font-size:15px;color:var(--green2);margin-bottom:6px">${esc(title)}</h2>` +
+    (!t.rows.length
+      ? '<p class="hint">ما في بيانات مسجّلة لهاي الخانة بعد.</p>'
+      : '<div class="tbl-scroll"><table><tr><th>' + esc(unit) + "</th><th>تذاكر</th><th>نسبة</th><th></th></tr>" +
+        t.rows.map(r => `<tr><td><b>${esc(r.label)}</b></td><td>${r.n}</td><td>${dash(r.share)}%</td>
+          <td><div class="bar"><i style="width:${Math.min(100, r.share || 0)}%"></i></div></td></tr>`).join("") +
+        "</table></div>") +
+    (t.blank ? `<p class="hint">⚠️ في ${t.blank} تذكرة هالخانة عندها فاضية — ما دخلت بالترتيب.</p>` : "") +
+    "</div>";
+}
+
+async function loadHot() {
+  const p = new URLSearchParams();
+  if ($("#hs-from").value) p.set("from", $("#hs-from").value);
+  if ($("#hs-to").value) p.set("to", $("#hs-to").value);
+  const j = await api("/hotspots?" + p.toString()).catch(() => null);
+  if (!j) return;
+  $("#hs-boxes").innerHTML = !j.tickets
+    ? '<div class="empty">ما في تذاكر بالمدى المختار</div>'
+    : box("أكثر الأصناف شكاوى", j.items, "الصنف") +
+      box("أكثر المناطق شكاوى", j.areas, "المنطقة") +
+      box("أكثر الأسباب تكراراً", j.reasons, "السبب") +
+      box("توزيع المسؤولين", j.assignees, "المسؤول");
+}
+$("#hs-go").onclick = loadHot;
+
+// ══════════ التعويضات ══════════
+async function loadComps() {
+  const j = await api("/comps").catch(() => null);
+  if (!j) return;
+  cards($("#cp-sum"), [
+    { n: j.rows.length, l: "تعويض مسجّل" },
+    { n: d2(j.total), l: "الكلفة الكلّية (د)", k: j.total ? "warn" : "" }
+  ]);
+  $("#cp-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في تعويضات مسجّلة</td></tr>'
+    : "<tr><th>التاريخ</th><th>التذكرة</th><th>الموضوع</th><th>الزبون</th><th>النوع</th><th>الكلفة</th><th>مين اعتمده</th><th>ملاحظة</th><th></th></tr>" +
+      j.rows.map(c => `<tr><td>${dt(c.at)}</td><td>#${c.ticket_id}</td><td>${esc(c.subject)}</td>
+        <td>${esc(dash(c.customer))}</td><td>${esc(c.kind)}</td><td><b>${d2(c.amount)}</b></td>
+        <td>${esc(c.actor)}</td><td>${esc(dash(c.note))}</td>
+        <td><button class="btn red sm" onclick="delComp(${c.id})">حذف</button></td></tr>`).join("");
+  $("#cp-kind").innerHTML = !j.by_kind.length
+    ? '<tr><td class="empty">—</td></tr>'
+    : "<tr><th>النوع</th><th>عدد</th><th>الكلفة</th></tr>" +
+      j.by_kind.map(r => `<tr><td>${esc(r.label)}</td><td>${r.n}</td><td><b>${d2(r.amount)}</b></td></tr>`).join("") +
+      "<tr><th>حسب سبب الشكوى</th><th></th><th></th></tr>" +
+      j.by_reason.rows.map(r => `<tr><td>${esc(r.label)}</td><td>${r.n}</td><td>${dash(r.share)}%</td></tr>`).join("");
+}
+window.delComp = async (id) => {
+  const who = prompt("مين عم يحذف التعويض؟ (بينكتب بالسجل)");
+  if (!who) return;
+  await api(`/comps/${id}?actor=${encodeURIComponent(who)}`, { method:"DELETE" }).catch(e => alert(e.message));
+  loadComps();
+};
+
+// ══════════ الاسترجاع ══════════
+async function loadReturns() {
+  if (!META) await loadMeta();
+  const j = await api("/returns").catch(() => null);
+  if (!j) return;
+  cards($("#rt-sum"), [
+    { n: j.rows.length, l: "طلب مسجّل" },
+    { n: d2(j.refund_total), l: "مبالغ استُرجعت فعلاً (د)", k: j.refund_total ? "warn" : "" }
+  ]);
+  $("#rt-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في طلبات استرجاع أو استبدال</td></tr>'
+    : "<tr><th>#</th><th>التذكرة</th><th>النوع</th><th>الصنف</th><th>الكمية</th><th>المبلغ</th><th>الزبون</th><th>الحالة</th><th>تغيير الحالة</th></tr>" +
+      j.rows.map(r => `<tr><td><b>${r.id}</b></td><td>#${r.ticket_id}</td><td>${esc(r.kind)}</td>
+        <td>${esc(dash(r.item))}</td><td>${r.qty}</td><td>${d2(r.refund)}</td>
+        <td>${esc(dash(r.customer))}</td>
+        <td>${r.state === "تم التعويض" ? '<span class="pill ok">'+esc(r.state)+'</span>'
+             : r.state === "مرفوض" ? '<span class="pill no">'+esc(r.state)+'</span>'
+             : '<span class="pill unk">'+esc(r.state)+'</span>'}</td>
+        <td><select onchange="setRetState(${r.id}, this.value)">
+          <option value="">— اختر —</option>${opts(META.return_states)}</select></td></tr>`).join("");
+}
+window.setRetState = async (id, state) => {
+  if (!state) return;
+  const who = prompt("مين عم يغيّر الحالة؟ (بينكتب بسجل التذكرة)");
+  if (!who) { loadReturns(); return; }
+  try { await api(`/returns/${id}/state`, jpost({ actor: who, state })); }
+  catch (e) { alert(e.message); }
+  loadReturns();
+};
+
+// ══════════ القوالب ══════════
+async function loadTemplates() {
+  if (!META) await loadMeta();
+  const j = await api("/templates").catch(() => null);
+  if (!j) return;
+  $("#tp-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في قوالب — أضف أول واحد من فوق</td></tr>'
+    : "<tr><th>العنوان</th><th>السبب</th><th>النص</th><th>مرات الاستخدام</th><th></th></tr>" +
+      j.rows.map(t => `<tr><td><b>${esc(t.title)}</b></td><td>${esc(dash(t.reason))}</td>
+        <td style="white-space:normal;max-width:420px">${esc(t.body)}</td><td>${t.uses}</td>
+        <td><button class="btn sm" onclick="renderTpl(${t.id})">عبّي وانسخ</button>
+            <button class="btn red sm" onclick="delTpl(${t.id})">حذف</button></td></tr>`).join("");
+}
+
+$("#tp-add").onclick = async () => {
+  clear($("#tp-msg"));
+  try {
+    await api("/templates", jpost({ title: $("#tp-title").value, reason: $("#tp-reason").value, body: $("#tp-body").value }));
+    $("#tp-title").value = $("#tp-body").value = "";
+    say($("#tp-msg"), "انحفظ القالب.", "ok");
+    loadTemplates();
+  } catch (e) { say($("#tp-msg"), e.message, "err"); }
+};
+
+window.delTpl = async (id) => {
+  if (!confirm("تحذف القالب؟")) return;
+  await api("/templates/" + id, { method:"DELETE" }); loadTemplates();
+};
+
+window.renderTpl = async (id) => {
+  clear($("#tp-out"));
+  try {
+    const j = await api(`/templates/${id}/render`, jpost({ ticket_id: $("#tp-ticket").value || undefined }));
+    const box2 = $("#tp-render");
+    box2.style.display = "";
+    box2.value = j.text;
+    box2.focus(); box2.select();
+    say($("#tp-out"), (j.warning ? "⚠️ " + esc(j.warning) + "<br>" : "") + "🔒 " + esc(j.note),
+        j.warning ? "err" : "ok");
+  } catch (e) { say($("#tp-out"), e.message, "err"); }
+};
+
+// ══════════ التقرير الشهري ══════════
+$("#rp-go").onclick = async () => {
+  clear($("#rp-msg"));
+  $("#rp-out").innerHTML = "";
+  try {
+    const j = await api("/report/monthly?month=" + encodeURIComponent($("#rp-month").value));
+    const k = j.kpis;
+    const t = (title, tal) => `<div class="card"><h2>${esc(title)}</h2>` +
+      (!tal.rows.length ? '<p class="hint">ما في بيانات مسجّلة</p>'
+       : '<div class="tbl-scroll"><table><tr><th>البند</th><th>عدد</th><th>نسبة</th></tr>' +
+         tal.rows.map(r => `<tr><td>${esc(r.label)}</td><td>${r.n}</td><td>${dash(r.share)}%</td></tr>`).join("") +
+         "</table></div>") +
+      (tal.blank ? `<p class="hint">⚠️ ${tal.blank} تذكرة بلا هالخانة</p>` : "") + "</div>";
+
+    $("#rp-out").innerHTML =
+      `<div class="grid">` + [
+        { n: j.tickets, l: "تذكرة بالشهر" },
+        { n: mins(k.first_reply_avg), l: "متوسط أول رد" },
+        { n: mins(k.resolve_avg), l: "متوسط الحل" },
+        { n: k.reopen_rate === null ? "—" : k.reopen_rate + "%", l: "إعادة الفتح" },
+        { n: j.breached_reply, l: "تجاوز مهلة الرد", k: j.breached_reply ? "bad" : "" },
+        { n: j.breached_resolve, l: "تجاوز مهلة الحل", k: j.breached_resolve ? "bad" : "" },
+        { n: d2(j.compensation.total), l: "كلفة التعويضات (د)" },
+        { n: j.change_pct === null ? "—" : j.change_pct + "%", l: "تغيّر عن الشهر السابق" }
+      ].map(i => `<div class="sc"><div class="n${i.k?" "+i.k:""}">${esc(i.n)}</div><div class="l">${esc(i.l)}</div></div>`).join("") +
+      `</div>` +
+      (j.basis ? `<div class="note">${esc(j.basis)}</div>` : "") +
+      t("حسب الحالة", j.by_status) + t("حسب السبب", j.by_reason) +
+      t("حسب المنطقة", j.by_area) + t("حسب الصنف", j.by_item) +
+      t("حسب المسؤول", j.by_assignee);
+    say($("#rp-msg"), `التقرير من ${esc(j.from)} لـ ${esc(j.to)}.`, "ok");
+  } catch (e) { say($("#rp-msg"), e.message, "err"); }
+};
+
+// ── إقلاع ──
+$("#rp-month").value = new Date().toISOString().slice(0, 7);
+loadMeta().then(loadTickets);
+</script>
+</body>
+</html>

@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🔔 مركز الإنذارات والمراقبة — منصة الأجبان</title>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"violet")}catch(e){}</script>
+  <link rel="stylesheet" href="/premium.css">
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; --amber:#ef6c00; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:linear-gradient(120deg,var(--green2),var(--green)); color:#fff; padding:16px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:20px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1280px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 12px; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .tab .dot { display:inline-block; min-width:18px; padding:0 5px; margin-inline-start:6px; background:var(--red); color:#fff; border-radius:9px; font-size:11px; }
+    .panel { display:none; } .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.8; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:12.5px; color:var(--mut); font-weight:600; }
+    input, select, textarea { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; min-width:120px; }
+    input:focus, select:focus { outline:none; border-color:var(--green); }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .btn.gray { background:#eceff1; color:#37474f; } .btn.red { background:var(--red); }
+    .btn.sm { padding:5px 11px; font-size:12px; border-radius:8px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:9px 11px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    tr:hover { background:#fafcfa; }
+    .empty { text-align:center; padding:34px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .n.bad { color:var(--red); } .sc .n.warn { color:var(--amber); }
+    .sc .l { font-size:12px; color:var(--mut); margin-top:4px; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11.5px; font-weight:700; }
+    .pill.ok { background:#e8f5e9; color:#1b5e20; }
+    .pill.no { background:#ffebee; color:#c62828; }
+    .pill.unk { background:#fff8e1; color:#ef6c00; }
+    .msg { padding:10px 13px; border-radius:10px; font-size:13.5px; margin-bottom:10px; display:none; line-height:1.7; }
+    .msg.err { background:#ffebee; color:#c62828; display:block; }
+    .msg.ok { background:#e8f5e9; color:#1b5e20; display:block; }
+    .item { border:1.5px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:9px; }
+    .item h3 { font-size:14.5px; color:#263238; margin-bottom:5px; }
+    .item .meta { font-size:12px; color:var(--mut); line-height:1.9; }
+    .rank { display:inline-block; min-width:24px; height:24px; line-height:24px; text-align:center; border-radius:50%; background:var(--green); color:#fff; font-size:12px; font-weight:800; margin-inline-end:7px; }
+    pre { background:#f7f9fa; border:1px solid var(--line); border-radius:10px; padding:12px; overflow:auto; font-size:12.5px; direction:ltr; text-align:left; max-height:420px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🔔 مركز الإنذارات والمراقبة</h1>
+  <a href="/admin/features">← كل الميزات</a>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-p="today">✅ شو لازم أعمل اليوم</button>
+    <button class="tab" data-p="box">📥 صندوق الإنذارات <span class="dot" id="box-dot" style="display:none">0</span></button>
+    <button class="tab" data-p="rules">⚙️ قواعد الإنذار</button>
+    <button class="tab" data-p="health">🩺 صحة المنصة</button>
+    <button class="tab" data-p="anom">📉 كشف الشذوذ</button>
+    <button class="tab" data-p="rep">🗓️ التقارير المجدولة</button>
+    <button class="tab" data-p="audit">📜 سجل الأحداث</button>
+  </div>
+
+  <!-- ══════════ شو لازم أعمل اليوم ══════════ -->
+  <div class="panel active" id="p-today">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">أهم الأشياء اللي بتستاهل انتباهك</h2>
+        <button class="btn sm" id="td-go">🔄 حدّث</button>
+      </div>
+      <p class="hint">مرتّبة بالأثر المالي المحسوب من بيانات فعلية — مش برأي. البند اللي ما إلو أثر مالي قابل للحساب بينزل تحت بلا رقم مخترع، وكل بند بيقول مصدر رقمه وفترته.</p>
+      <div class="grid" id="td-sum"></div>
+      <div id="td-list"></div>
+    </div>
+  </div>
+
+  <!-- ══════════ صندوق الإنذارات ══════════ -->
+  <div class="panel" id="p-box">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>العرض</label>
+          <select id="bx-status">
+            <option value="نشط">النشط</option>
+            <option value="">الكل</option>
+            <option value="مهدّأ">المهدّأ</option>
+            <option value="مقروء">المقروء</option>
+          </select></div>
+        <button class="btn" id="bx-eval">▶️ قيّم القواعد الآن</button>
+        <button class="btn gray" id="bx-readall">✔️ علّم الكل مقروء</button>
+        <button class="btn gray" onclick="location.href=API+'/export/events.csv'">⬇️ تصدير CSV</button>
+      </div>
+      <div class="msg" id="bx-msg"></div>
+    </div>
+    <div class="grid" id="bx-sum"></div>
+    <div class="card">
+      <p class="hint">نفس الإنذار بنفس الفترة ما بينتكرّر — بيزيد عدّاد ظهوره بس. «تهدئة» بتسكّته وبتكتم قاعدته لنفس المدة.</p>
+      <div class="tbl-scroll"><table id="bx-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ القواعد ══════════ -->
+  <div class="panel" id="p-rules">
+    <div class="card">
+      <h2>عرّف قاعدة إنذار</h2>
+      <p class="hint">القاعدة = مقياس + شرط + حد + فترة. مثال: «عدد الطلبات» «أقل من» «5» خلال «1 يوم». اضغط معاينة لتشوف القراءة الحقيقية قبل ما تحفظ.</p>
+      <div class="msg" id="rl-msg"></div>
+      <div class="row">
+        <div class="field"><label>اسم القاعدة</label><input id="rl-name" placeholder="طلبات اليوم قليلة"></div>
+        <div class="field"><label>المقياس</label><select id="rl-metric"></select></div>
+        <div class="field"><label>الشرط</label><select id="rl-op"></select></div>
+        <div class="field"><label>الحد</label><input type="number" step="0.01" id="rl-th" value="5"></div>
+        <div class="field"><label>الفترة (يوم)</label><input type="number" id="rl-win" value="1"></div>
+        <div class="field"><label>الصفحة</label><select id="rl-page"></select></div>
+        <div class="field"><label>الخطورة</label><select id="rl-sev"></select></div>
+        <button class="btn gray" id="rl-prev">👁️ معاينة</button>
+        <button class="btn" id="rl-add">💾 حفظ القاعدة</button>
+      </div>
+      <p class="hint" id="rl-src"></p>
+    </div>
+    <div class="card">
+      <h2>القواعد المعرّفة</h2>
+      <div class="tbl-scroll"><table id="rl-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الصحة ══════════ -->
+  <div class="panel" id="p-health">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>اعتبر الصفحة صامتة بعد (يوم)</label><input type="number" id="hl-days" value="7"></div>
+        <button class="btn" id="hl-go">🔄 افحص</button>
+      </div>
+    </div>
+    <div class="grid" id="hl-sum"></div>
+    <div class="card">
+      <h2>🤐 صفحات صامتة</h2>
+      <p class="hint">صفحة كان إلها طلبات بآخر 30 يوم وبطّلت — غالباً خلل بالربط أو بالنشر.</p>
+      <div class="tbl-scroll"><table id="hl-silent"></table></div>
+    </div>
+    <div class="card">
+      <h2>📄 كل الصفحات (آخر 30 يوم)</h2>
+      <div class="tbl-scroll"><table id="hl-pages"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الشذوذ ══════════ -->
+  <div class="panel" id="p-anom">
+    <div class="card">
+      <h2>مقارنة اليوم بنفس اليوم من أسابيع سابقة</h2>
+      <p class="hint">🔴 إذا التاريخ ما بيكفي، بنقول «ما في بيانات كافية للمقارنة» وما بنطلّع ولا رقم. اليوم اللي ما كان في فيه ولا طلب ولا رسالة بينعتبر بلا بيانات — مش صفر.</p>
+      <div class="row">
+        <div class="field"><label>المقياس</label><select id="an-metric"></select></div>
+        <div class="field"><label>كم أسبوع للخلف</label><input type="number" id="an-weeks" value="4"></div>
+        <div class="field"><label>الحد الأدنى من الأسابيع</label><input type="number" id="an-min" value="3"></div>
+        <button class="btn" id="an-go">📉 قارن</button>
+      </div>
+      <div class="msg" id="an-msg"></div>
+    </div>
+    <div class="grid" id="an-sum"></div>
+    <div class="card"><div class="tbl-scroll"><table id="an-tbl"></table></div></div>
+  </div>
+
+  <!-- ══════════ التقارير ══════════ -->
+  <div class="panel" id="p-rep">
+    <div class="card">
+      <h2>جدولة تقرير</h2>
+      <p class="hint">التقرير بيتولّد وبينحفظ للعرض جوّا الموقع بس — ولا إرسال لبرّا نهائياً.</p>
+      <div class="msg" id="rp-msg"></div>
+      <div class="row">
+        <div class="field"><label>الاسم</label><input id="rp-name" placeholder="ملخّصي اليومي"></div>
+        <div class="field"><label>التقرير</label><select id="rp-type"></select></div>
+        <div class="field"><label>كل قديش</label><select id="rp-freq"></select></div>
+        <button class="btn" id="rp-add">💾 جدول</button>
+        <button class="btn gray" id="rp-run">▶️ ولّد المستحقّ</button>
+        <button class="btn gray" id="rp-now">⚡ ولّد الآن بلا جدولة</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>الجداول</h2>
+      <div class="tbl-scroll"><table id="rp-sch"></table></div>
+    </div>
+    <div class="card">
+      <h2>التقارير المتولّدة</h2>
+      <div class="tbl-scroll"><table id="rp-list"></table></div>
+      <pre id="rp-view" style="display:none"></pre>
+    </div>
+  </div>
+
+  <!-- ══════════ السجل ══════════ -->
+  <div class="panel" id="p-audit">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>النوع</label><select id="ad-kind"><option value="">الكل</option></select></div>
+        <div class="field"><label>بحث بالتفاصيل</label><input id="ad-q" placeholder="كلمة"></div>
+        <div class="field"><label>من</label><input type="date" id="ad-from"></div>
+        <div class="field"><label>إلى</label><input type="date" id="ad-to"></div>
+        <button class="btn" id="ad-go">🔎 فلتر</button>
+        <button class="btn gray" onclick="location.href=API+'/export/audit.csv'">⬇️ تصدير CSV</button>
+      </div>
+    </div>
+    <div class="card"><div class="tbl-scroll"><table id="ad-tbl"></table></div></div>
+  </div>
+</div>
+
+<script src="/theme.js"></script>
+<script>
+const API = "/admin/f-api/alerts";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const d2 = (n) => (Math.round((Number(n)||0)*100)/100).toFixed(2);
+const dt = (ms) => ms ? new Date(Number(ms)).toLocaleString("ar-JO") : "—";
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  const j = await r.json().catch(() => ({ ok:false, error:"رد غير مفهوم من الخادم" }));
+  if (!j.ok) throw new Error(j.error || "خطأ");
+  return j;
+}
+const jpost = (body) => ({ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+function say(el, text, kind) { el.className = "msg " + kind; el.innerHTML = text; }
+function clear(el) { el.className = "msg"; el.textContent = ""; }
+function cards(el, items) {
+  el.innerHTML = items.map(i =>
+    `<div class="sc"><div class="n${i.k?" "+i.k:""}">${esc(i.n)}</div><div class="l">${esc(i.l)}</div></div>`).join("");
+}
+
+let META = null;
+async function meta() {
+  if (META) return META;
+  META = await api("/meta");
+  const opt = (a, k, l) => a.map(x => `<option value="${esc(x[k])}">${esc(x[l])}</option>`).join("");
+  $("#rl-metric").innerHTML = opt(META.metrics, "key", "label");
+  $("#an-metric").innerHTML = opt(META.metrics, "key", "label");
+  $("#rl-op").innerHTML = opt(META.ops, "key", "label");
+  $("#rl-sev").innerHTML = META.severities.map(s => `<option${s==="متوسط"?" selected":""}>${esc(s)}</option>`).join("");
+  $("#rl-page").innerHTML = '<option value="">كل الصفحات</option>' +
+    META.pages.map(p => `<option value="${esc(p.page_id)}">${esc(p.page_name || p.page_id)}</option>`).join("");
+  $("#rp-type").innerHTML = opt(META.reports, "key", "label");
+  $("#rp-freq").innerHTML = opt(META.freqs, "key", "label");
+  showMetricSource();
+  return META;
+}
+function showMetricSource() {
+  const m = META && META.metrics.find(x => x.key === $("#rl-metric").value);
+  $("#rl-src").textContent = m ? `مصدر هذا الرقم: ${m.source} — الوحدة: ${m.unit}` : "";
+}
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  $("#p-" + t.dataset.p).classList.add("active");
+  ({ today: loadToday, box: loadBox, rules: loadRules, health: loadHealth,
+     anom: meta, rep: loadReports, audit: loadAudit })[t.dataset.p]?.();
+});
+
+// ══════════ شو لازم أعمل اليوم ══════════
+async function loadToday() {
+  const j = await api("/today").catch(() => null);
+  if (!j) return;
+  cards($("#td-sum"), [
+    { n: j.items.length, l: "بند يستاهل انتباهك" },
+    { n: d2(j.total_impact_jod), l: "الأثر المالي المحسوب (د)", k: j.total_impact_jod > 0 ? "warn" : "" }
+  ]);
+  $("#td-list").innerHTML = !j.items.length
+    ? '<div class="empty">ما في شي عاجل — كل المؤشرات ضمن حدودها</div>'
+    : j.items.map((it, i) => `<div class="item">
+        <h3><span class="rank">${i+1}</span>${esc(it.title)}</h3>
+        <div class="meta">
+          ليش: ${esc(it.why)}<br>
+          الرقم: <b>${esc(it.number)}</b> ${esc(it.unit)} —
+          الأثر: ${it.impact_jod == null ? "<span class='pill unk'>ما إلو أثر مالي محسوب</span>"
+            : `<b>${d2(it.impact_jod)} د</b>`}<br>
+          أساس الأثر: ${esc(it.impact_basis)}<br>
+          المصدر: ${esc(it.source)} — الفترة: ${esc(it.period)}
+        </div></div>`).join("");
+}
+$("#td-go").onclick = loadToday;
+
+// ══════════ صندوق الإنذارات ══════════
+async function loadBox() {
+  const j = await api("/events?status=" + encodeURIComponent($("#bx-status").value)).catch(() => null);
+  if (!j) return;
+  const c = j.counts;
+  cards($("#bx-sum"), [
+    { n: c.active, l: "نشط", k: c.active ? "bad" : "" },
+    { n: c.repeated, l: "متكرّر", k: c.repeated ? "warn" : "" },
+    { n: c.snoozed, l: "مهدّأ" },
+    { n: c.read, l: "مقروء" }
+  ]);
+  const dot = $("#box-dot");
+  dot.style.display = c.active ? "" : "none";
+  dot.textContent = c.active;
+  $("#bx-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في إنذارات — اضغط «قيّم القواعد الآن»</td></tr>'
+    : "<tr><th>الحالة</th><th>القاعدة</th><th>القراءة</th><th>الحد</th><th>المصدر</th>" +
+      "<th>الفترة</th><th>الخطورة</th><th>تكرار</th><th>آخر ظهور</th><th></th></tr>" +
+      j.rows.map(e => `<tr>
+        <td><span class="pill ${e.snoozed ? "unk" : e.status === "نشط" ? "no" : "ok"}">${e.snoozed ? "مهدّأ" : esc(e.status)}</span></td>
+        <td><b>${esc(e.rule_name)}</b><div style="font-size:11.5px;color:var(--mut);white-space:normal">${esc(e.message)}</div></td>
+        <td><b>${esc(e.observed)}</b> ${esc(e.unit)}</td>
+        <td>${esc(e.threshold)}</td>
+        <td style="font-size:12px;color:var(--mut)">${esc(e.source)}</td>
+        <td style="font-size:12px">${esc(e.period_from)} ← ${esc(e.period_to)}</td>
+        <td>${esc(e.severity)}</td><td>${esc(e.hits)}</td>
+        <td style="font-size:12px">${dt(e.last_at)}</td>
+        <td>
+          <button class="btn gray sm" onclick="markRead(${e.id})">مقروء</button>
+          <button class="btn gray sm" onclick="snooze(${e.id})">تهدئة</button>
+          <button class="btn red sm" onclick="delEvent(${e.id})">حذف</button>
+        </td></tr>`).join("");
+}
+$("#bx-status").onchange = loadBox;
+$("#bx-eval").onclick = async () => {
+  clear($("#bx-msg"));
+  try {
+    const j = await api("/evaluate", jpost({}));
+    say($("#bx-msg"), `قُيّمت ${j.evaluated} قاعدة: أُطلق ${j.fired}، منها ${j.created} جديد و${j.repeated} مكرّر.` +
+      (j.no_data ? ` و${j.no_data} قاعدة ما إلها بيانات كافية فما طلّعنا إنذار وهمي.` : "") +
+      (j.muted ? ` و${j.muted} قاعدة مكتومة.` : ""), "ok");
+    loadBox();
+  } catch (e) { say($("#bx-msg"), e.message, "err"); }
+};
+$("#bx-readall").onclick = async () => { await api("/events/read-all", jpost({})); loadBox(); };
+window.markRead = async (id) => { await api(`/events/${id}/read`, jpost({})); loadBox(); };
+window.delEvent = async (id) => { if (confirm("تحذف الإنذار؟")) { await api("/events/" + id, { method:"DELETE" }); loadBox(); } };
+window.snooze = async (id) => {
+  const h = prompt("تهدئة كم ساعة؟ (بتكتم قاعدة الإنذار كمان لنفس المدة)", "4");
+  if (h == null) return;
+  try { await api(`/events/${id}/snooze`, jpost({ hours: Number(h) })); loadBox(); }
+  catch (e) { alert(e.message); }
+};
+
+// ══════════ القواعد ══════════
+function ruleBody() {
+  return { name: $("#rl-name").value, metric: $("#rl-metric").value, op: $("#rl-op").value,
+           threshold: Number($("#rl-th").value), window_days: Number($("#rl-win").value),
+           page_id: $("#rl-page").value, severity: $("#rl-sev").value };
+}
+async function loadRules() {
+  await meta();
+  const j = await api("/rules").catch(() => null);
+  if (!j) return;
+  $("#rl-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في قواعد بعد — عرّف أول قاعدة من فوق</td></tr>'
+    : "<tr><th>القاعدة</th><th>المقياس</th><th>الشرط</th><th>الحد</th><th>الفترة</th><th>الصفحة</th>" +
+      "<th>الخطورة</th><th>الحالة</th><th></th></tr>" +
+      j.rows.map(r => `<tr${r.active ? "" : ' style="opacity:.55"'}>
+        <td><b>${esc(r.name)}</b></td><td>${esc(r.label)}</td><td>${esc(r.op_label)}</td>
+        <td>${esc(r.threshold)} ${esc(r.unit)}</td><td>${esc(r.window_days)} يوم</td>
+        <td>${esc(r.page_id || "الكل")}</td><td>${esc(r.severity)}</td>
+        <td><span class="pill ${r.muted ? "unk" : r.active ? "ok" : "no"}">${r.muted ? "مكتومة" : r.active ? "شغّالة" : "موقوفة"}</span></td>
+        <td>
+          <button class="btn gray sm" onclick="toggleRule(${r.id},${r.active ? 0 : 1})">${r.active ? "أوقف" : "شغّل"}</button>
+          <button class="btn gray sm" onclick="muteRule(${r.id},${r.muted ? 0 : 24})">${r.muted ? "فك الكتم" : "اكتم 24س"}</button>
+          <button class="btn red sm" onclick="delRule(${r.id})">حذف</button>
+        </td></tr>`).join("");
+}
+$("#rl-metric").onchange = showMetricSource;
+$("#rl-add").onclick = async () => {
+  clear($("#rl-msg"));
+  try {
+    await api("/rules", jpost(ruleBody()));
+    $("#rl-name").value = "";
+    say($("#rl-msg"), "انحفظت القاعدة.", "ok");
+    loadRules();
+  } catch (e) { say($("#rl-msg"), e.message, "err"); }
+};
+$("#rl-prev").onclick = async () => {
+  clear($("#rl-msg"));
+  try {
+    const j = await api("/preview", jpost({ ...ruleBody(), name: $("#rl-name").value || "معاينة" }));
+    const r = j.result;
+    say($("#rl-msg"), r.no_data
+      ? `🔴 ${esc(r.reason)} — القاعدة ما رح تطلّع إنذار بهالحالة.`
+      : `القراءة الحقيقية الآن: <b>${esc(r.observed)} ${esc(r.unit)}</b> (${esc(r.source)}، ${esc(r.period_from)} ← ${esc(r.period_to)}) — ` +
+        (r.fired ? "بهالحد القاعدة <b>بتطلق إنذار</b> هلأ." : "بهالحد القاعدة <b>ما بتطلق</b> هلأ."),
+      r.no_data ? "err" : "ok");
+  } catch (e) { say($("#rl-msg"), e.message, "err"); }
+};
+window.toggleRule = async (id, active) => { await api("/rules/" + id, jpost({ active })); loadRules(); };
+window.muteRule = async (id, hours) => { await api(`/rules/${id}/mute`, jpost({ hours })); loadRules(); };
+window.delRule = async (id) => {
+  if (!confirm("تحذف القاعدة؟ إنذاراتها رح تنشال معها.")) return;
+  await api("/rules/" + id, { method:"DELETE" }); loadRules(); loadBox();
+};
+
+// ══════════ الصحة ══════════
+async function loadHealth() {
+  const j = await api("/health?silent_days=" + (Number($("#hl-days").value) || 7)).catch(() => null);
+  if (!j) return;
+  const h = j.health;
+  cards($("#hl-sum"), [
+    { n: h.hours_since_last_order == null ? "—" : d2(h.hours_since_last_order), l: "ساعة من آخر طلب",
+      k: (h.hours_since_last_order || 0) > 24 ? "bad" : "" },
+    { n: h.hours_since_last_message == null ? "—" : d2(h.hours_since_last_message), l: "ساعة من آخر رسالة" },
+    { n: h.orders_today ?? "—", l: "طلبات اليوم" },
+    { n: d2(h.sales_today), l: "مبيعات اليوم (د)" },
+    { n: h.inbound_today ?? "—", l: "رسائل واردة اليوم" },
+    { n: h.active_alerts, l: "إنذارات نشطة", k: h.active_alerts ? "bad" : "" },
+    { n: h.silent_pages.length, l: "صفحات صامتة", k: h.silent_pages.length ? "warn" : "" }
+  ]);
+  $("#hl-silent").innerHTML = !h.silent_pages.length
+    ? '<tr><td class="empty">ما في صفحات صامتة — كلهن بيبيعوا</td></tr>'
+    : "<tr><th>الصفحة</th><th>طلبات آخر 30 يوم</th><th>آخر طلب</th><th>صامتة من</th><th>المصدر</th></tr>" +
+      h.silent_pages.map(p => `<tr><td><b>${esc(p.page_name || p.page_id)}</b></td>
+        <td>${esc(p.orders_30d)}</td><td>${dt(p.last_order_at)}</td>
+        <td><span class="pill no">${esc(p.days_silent)} يوم</span></td>
+        <td style="font-size:12px;color:var(--mut)">${esc(p.source)}</td></tr>`).join("");
+  $("#hl-pages").innerHTML = !h.pages.length
+    ? '<tr><td class="empty">ما في طلبات بآخر 30 يوم</td></tr>'
+    : "<tr><th>الصفحة</th><th>طلبات آخر 30 يوم</th><th>آخر طلب</th></tr>" +
+      h.pages.map(p => `<tr><td><b>${esc(p.page_name || p.page_id)}</b></td>
+        <td>${esc(p.orders_30d)}</td><td>${dt(p.last_order_at)}</td></tr>`).join("");
+}
+$("#hl-go").onclick = loadHealth;
+
+// ══════════ الشذوذ ══════════
+$("#an-go").onclick = async () => {
+  await meta();
+  clear($("#an-msg"));
+  $("#an-sum").innerHTML = ""; $("#an-tbl").innerHTML = "";
+  try {
+    const j = await api(`/anomaly?metric=${encodeURIComponent($("#an-metric").value)}` +
+      `&weeks=${Number($("#an-weeks").value) || 4}&min_weeks=${Number($("#an-min").value) || 3}`);
+    const r = j.result;
+    if (!r.enough_data) {
+      say($("#an-msg"), `🔴 ${esc(r.reason)} — ما رح نطلّع رقم مقارنة ولا إنذار.`, "err");
+    } else {
+      say($("#an-msg"), `${esc(r.explain)} — الحكم: <b>${esc(r.verdict)}</b> (على أساس ${esc(r.basis)}).`,
+        /شاذ/.test(r.verdict) ? "err" : "ok");
+      cards($("#an-sum"), [
+        { n: r.current, l: "قراءة اليوم" },
+        { n: r.average, l: "متوسط نفس اليوم" },
+        { n: r.diff_pct == null ? "—" : r.diff_pct + "%", l: "الفرق",
+          k: (r.diff_pct || 0) < 0 ? "bad" : "" },
+        { n: r.z == null ? "—" : r.z, l: "z-score" },
+        { n: r.weeks_used, l: "أسابيع دخلت المقارنة" }
+      ]);
+    }
+    $("#an-tbl").innerHTML = "<tr><th>اليوم المقابل</th><th>القراءة</th><th>حالة البيانات</th></tr>" +
+      r.history.map(x => `<tr><td>${esc(x.day)}</td>
+        <td>${x.value == null ? "—" : esc(x.value)}</td>
+        <td><span class="pill ${x.value == null ? "unk" : "ok"}">${x.value == null ? "ما في بيانات" : "فيه بيانات"}</span></td></tr>`).join("");
+  } catch (e) { say($("#an-msg"), e.message, "err"); }
+};
+
+// ══════════ التقارير ══════════
+async function loadReports() {
+  await meta();
+  const j = await api("/schedules").catch(() => null);
+  if (!j) return;
+  $("#rp-sch").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في جداول — جدول أول تقرير من فوق</td></tr>'
+    : "<tr><th>الاسم</th><th>التقرير</th><th>كل قديش</th><th>آخر توليد</th><th></th></tr>" +
+      j.rows.map(s => `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.report_label)}</td>
+        <td>${esc(s.freq_label)}</td><td style="font-size:12px">${dt(s.last_run_at)}</td>
+        <td><button class="btn red sm" onclick="delSch(${s.id})">حذف</button></td></tr>`).join("");
+  $("#rp-list").innerHTML = !j.reports.length
+    ? '<tr><td class="empty">ما في تقارير متولّدة بعد</td></tr>'
+    : "<tr><th>الاسم</th><th>الفترة</th><th>وقت التوليد</th><th></th></tr>" +
+      j.reports.map(r => `<tr><td><b>${esc(r.name || r.report)}</b></td>
+        <td style="font-size:12px">${esc(r.period_from)} ← ${esc(r.period_to)}</td>
+        <td style="font-size:12px">${dt(r.created_at)}</td>
+        <td><button class="btn gray sm" onclick="viewRep(${r.id})">اعرض</button>
+            <button class="btn red sm" onclick="delRep(${r.id})">حذف</button></td></tr>`).join("");
+}
+$("#rp-add").onclick = async () => {
+  clear($("#rp-msg"));
+  try {
+    await api("/schedules", jpost({ name: $("#rp-name").value, report: $("#rp-type").value, freq: $("#rp-freq").value }));
+    $("#rp-name").value = "";
+    say($("#rp-msg"), "انجدول التقرير — بيتولّد وبينحفظ هون بس، ولا إرسال لبرّا.", "ok");
+    loadReports();
+  } catch (e) { say($("#rp-msg"), e.message, "err"); }
+};
+$("#rp-run").onclick = async () => {
+  clear($("#rp-msg"));
+  const j = await api("/schedules/run", jpost({}));
+  say($("#rp-msg"), `فحصنا ${j.checked} جدول وولّدنا ${j.generated} تقرير.`, "ok");
+  loadReports();
+};
+$("#rp-now").onclick = async () => {
+  clear($("#rp-msg"));
+  try {
+    const j = await api("/reports/generate", jpost({ report: $("#rp-type").value }));
+    say($("#rp-msg"), "انتولّد التقرير.", "ok");
+    await loadReports();
+    viewRep(j.id);
+  } catch (e) { say($("#rp-msg"), e.message, "err"); }
+};
+window.viewRep = async (id) => {
+  const j = await api("/reports/" + id).catch(() => null);
+  if (!j) return;
+  const el = $("#rp-view");
+  el.style.display = "";
+  el.textContent = JSON.stringify(j.report.payload, null, 2);
+};
+window.delSch = async (id) => { await api("/schedules/" + id, { method:"DELETE" }); loadReports(); };
+window.delRep = async (id) => { await api("/reports/" + id, { method:"DELETE" }); $("#rp-view").style.display = "none"; loadReports(); };
+
+// ══════════ السجل ══════════
+async function loadAudit() {
+  const q = new URLSearchParams();
+  if ($("#ad-kind").value) q.set("kind", $("#ad-kind").value);
+  if ($("#ad-q").value) q.set("q", $("#ad-q").value);
+  if ($("#ad-from").value) q.set("from", $("#ad-from").value);
+  if ($("#ad-to").value) q.set("to", $("#ad-to").value);
+  const j = await api("/audit?" + q.toString()).catch(() => null);
+  if (!j) return;
+  const cur = $("#ad-kind").value;
+  $("#ad-kind").innerHTML = '<option value="">الكل</option>' +
+    j.kinds.map(k => `<option value="${esc(k.kind)}"${k.kind === cur ? " selected" : ""}>${esc(k.kind)} (${k.count})</option>`).join("");
+  $("#ad-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في أحداث مسجّلة بهالفلتر</td></tr>'
+    : "<tr><th>الوقت</th><th>النوع</th><th>الكيان</th><th>التفاصيل</th></tr>" +
+      j.rows.map(a => `<tr><td style="font-size:12px">${dt(a.at)}</td><td>${esc(a.kind)}</td>
+        <td style="font-size:12px;color:var(--mut)">${esc(a.entity)}${a.entity_id ? " #" + a.entity_id : ""}</td>
+        <td style="white-space:normal">${esc(a.detail)}</td></tr>`).join("");
+}
+$("#ad-go").onclick = loadAudit;
+
+// ── إقلاع ──
+meta().then(loadToday).then(loadBox);
+</script>
+</body>
+</html>
