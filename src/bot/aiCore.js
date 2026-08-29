@@ -24,14 +24,33 @@ async function setting(key) {
   } catch { return ""; }
 }
 
-// الافتراضي جاهز لبوابة AIsa (تم التحقق منها فعلياً):
-//   العنوان: https://api.aisa.one/v1
-//   النموذج: qwen-flash — أسرع نموذج متاح بلا رصيد، وفهم عربي أردني ممتاز،
-//            ويدعم وضع JSON المطلوب لاستخراج الطلبات.
+// الافتراضي جاهز لبوابة Groq (تم فحصها فعلياً على الجهاز):
+//   العنوان: https://api.groq.com/openai/v1
+//   النموذج: qwen/qwen3.8-27b — انفحص مقابل باقي نماذج Groq على
+//   نفس مهمة البوت (استخراج طلب أردني كـJSON) وطلع الأفضل:
+//     • أسرع رد (~450ms مقابل 1000-1400 للباقي)
+//     • الوحيد اللي رجّع الكمية **رقم** (حبتين ⇒ 2) — الباقي رجّعها
+//       نص فبتكسر حساب السعر عنا
+//     • احترم قاعدة عدم الاختراع: العنوان والهاتف الناقصين رجعوا null
+//     • بيدعم وضع JSON المطلوب للاستخراج
 // 🔴 المفتاح **ما بينكتب هون أبداً** — المستودع عام، ولو انكتب بالكود
-//    بترصده GitHub وبيتلغى فوراً. مصدره: صفحة /admin/ai أو متغيّر بيئة.
-const DEFAULT_BASE  = "https://api.aisa.one/v1";
-const DEFAULT_MODEL = "qwen-flash";
+//    بترصده المنصات وبيتلغى خلال دقائق. مصدره: صفحة /admin/ai أو
+//    متغيّر بيئة. (صار معنا فعلياً: مفتاح Gemini كان مكتوب بالكود،
+//    انلغى، ووقف البوت.)
+const DEFAULT_BASE  = "https://api.groq.com/openai/v1";
+const DEFAULT_MODEL = "qwen/qwen3.8-27b";
+
+// بوابات جاهزة للاختيار من صفحة الإعدادات — بلا حفظ مفاتيح
+export const PRESETS = [
+  { id: "groq", name: "Groq (موصى به — الأسرع)", base: "https://api.groq.com/openai/v1",
+    model: "qwen/qwen3.8-27b",
+    models: ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "groq/compound"],
+    hint: "المفتاح بيبدأ بـgsk_ — من console.groq.com" },
+  { id: "aisa", name: "AIsa", base: "https://api.aisa.one/v1", model: "qwen-flash",
+    models: ["qwen-flash"], hint: "المفتاح بيبدأ بـsk-aisa-" },
+  { id: "openai", name: "OpenAI", base: "https://api.openai.com/v1", model: "gpt-4o-mini",
+    models: ["gpt-4o-mini", "gpt-4o"], hint: "المفتاح بيبدأ بـsk-" }
+];
 
 // ── الإعداد الفعّال: متغيّر البيئة أولاً، وإلا إعدادات الموقع ──
 export async function aiConfig() {

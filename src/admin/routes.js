@@ -441,6 +441,12 @@ adminRouter.get("/api/ai/status", requireAuth, async (req, res) => {
   catch (e) { res.status(500).json({ error: e && e.message }); }
 });
 
+// البوابات الجاهزة — مصدرها الكود مش الواجهة، فما بينختلفوا
+adminRouter.get("/api/ai/presets", requireAuth, async (req, res) => {
+  try { const { PRESETS } = await import("../bot/aiCore.js"); res.json({ presets: PRESETS }); }
+  catch (e) { res.status(500).json({ error: e && e.message }); }
+});
+
 adminRouter.post("/api/ai/save", requireAuth, requireAdmin, (req, res) => {
   try {
     const { provider, base, model, key } = req.body || {};
