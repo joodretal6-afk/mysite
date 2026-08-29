@@ -88,6 +88,32 @@
     </div>
 
     <div class="card">
+      <h2>🎣 التقاط الطلبات من ذكاء فيسبوك والردود اليدوية</h2>
+      <p style="font-size:13px;line-height:1.9;color:#666;margin-bottom:12px">
+        لمّا يرد <b>ذكاء ميتا</b> على زبونك، أو ترد إنت من الموبايل، الطلب ما بيوصل الموقع —
+        لأنّ ميتا ما بتعطي أي API بيسلّمك الطلب اللي أخذه ذكاؤها.<br>
+        وضع الالتقاط بيحل هاي: بيسمع المحادثة عبر قنوات فيسبوك الرسمية،
+        وبيستخرج الطلب <b>من كلام الزبون الحرفي</b> بذكائك إنت، وبيحفظه بحالة
+        «بحاجة مراجعة» حتى تأكده.<br>
+        🔴 <b>استماع بحت</b> — ما بيرد ولا رسالة، فما في خطر تتضاعف الردود على الزبون.
+      </p>
+      <div class="grid2">
+        <div>
+          <label>الحالة</label>
+          <select id="cap-on"><option value="">مطفأ</option><option value="on">شغّال</option></select>
+        </div>
+        <div>
+          <label>يستنى كم دقيقة بعد آخر رسالة</label>
+          <input id="cap-delay" type="number" min="1" max="120" value="3">
+        </div>
+      </div>
+      <div class="btns"><button class="btn p" onclick="saveCap()">💾 حفظ</button></div>
+      <div class="res" id="cap-res"></div>
+      <div class="note warn">⚠️ لازم تشترك بحقول <b>message_echoes</b> و<b>standby</b> و<b>messaging_handovers</b>
+        بإعدادات الويبهوك عند ميتا، وإلا ما رح توصلنا المحادثات الخارجية أصلاً.</div>
+    </div>
+
+    <div class="card">
       <h2>✅ شو بيتفعّل لما تربط</h2>
       <div class="feat"><span>🤖</span><div>ردود البوت على الزبائن واستخراج الطلبات</div></div>
       <div class="feat"><span>🧠</span><div>المستشار — تحليل شغلك واقتراح خطوات</div></div>
@@ -134,6 +160,25 @@
       document.getElementById('res').textContent =
         p.hint + ' — حط المفتاح تحت واضغط حفظ، وبعدها فحص الاتصال.';
       document.getElementById('key').focus();
+    };
+
+    (async function loadCap(){
+      try {
+        const j = await (await fetch('/admin/api/capture')).json();
+        document.getElementById('cap-on').value = j.enabled ? 'on' : '';
+        document.getElementById('cap-delay').value = j.delay_min || 3;
+      } catch {}
+    })();
+
+    window.saveCap = async function(){
+      const body = { enabled: document.getElementById('cap-on').value === 'on',
+                     delay_min: Number(document.getElementById('cap-delay').value) };
+      const r = await fetch('/admin/api/capture', { method:'POST',
+        headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const j = await r.json();
+      document.getElementById('cap-res').textContent =
+        j.ok ? (body.enabled ? 'وضع الالتقاط شغّال. الطلبات الملتقطة بتظهر بحالة «بحاجة مراجعة».'
+                             : 'وضع الالتقاط مطفأ.') : (j.error || 'صار خطأ');
     };
 
     async function save(){

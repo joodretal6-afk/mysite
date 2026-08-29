@@ -441,6 +441,31 @@ adminRouter.get("/api/ai/status", requireAuth, async (req, res) => {
   catch (e) { res.status(500).json({ error: e && e.message }); }
 });
 
+// ═══════════════════════════════════════════════════════════
+// 🎣 وضع الالتقاط — إعداداته
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/api/capture", requireAuth, (req, res) => {
+  try {
+    res.json({
+      enabled: String(getSetting("capture_external") || "") === "on",
+      delay_min: Number(getSetting("capture_delay_min")) || 3
+    });
+  } catch (e) { res.status(500).json({ error: e && e.message }); }
+});
+
+adminRouter.post("/api/capture", requireAuth, requireAdmin, (req, res) => {
+  try {
+    const on = req.body?.enabled === true || req.body?.enabled === "on";
+    const d = Number(req.body?.delay_min);
+    if (req.body?.delay_min !== undefined && (!Number.isFinite(d) || d < 1 || d > 120))
+      return res.status(400).json({ error: "مدة الانتظار لازم بين 1 و120 دقيقة" });
+    setSetting("capture_external", on ? "on" : "");
+    if (Number.isFinite(d)) setSetting("capture_delay_min", String(Math.round(d)));
+    logActivity(req.user, "وضع الالتقاط", on ? "تشغيل" : "إيقاف");
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e && e.message }); }
+});
+
 // البوابات الجاهزة — مصدرها الكود مش الواجهة، فما بينختلفوا
 adminRouter.get("/api/ai/presets", requireAuth, async (req, res) => {
   try { const { PRESETS } = await import("../bot/aiCore.js"); res.json({ presets: PRESETS }); }
