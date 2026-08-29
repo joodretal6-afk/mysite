@@ -224,6 +224,14 @@ async function _handleEvent(event, env, ctx) {
   // 🛑 إيقاف عام للبوت (بطلب المالك): نؤرشف الرسالة فقط ولا نرد إطلاقاً
   if (CONFIG.GLOBAL_PAUSE) return;
 
+  // 🤝 التسليم الكامل لذكاء ميتا: بوتنا يخرس تماماً — ولا رسالة
+  //    ولا فاتورة ولا تنبيه. الرسالة انأرشفت فوق، ووضع الالتقاط
+  //    بيتكفّل باستخراج الطلب. أي رد منّا هون بيتضاعف على الزبون.
+  try {
+    const { handedOverToMeta } = await import("./capture.js");
+    if (handedOverToMeta()) return;
+  } catch (e) { console.error("handover check:", e && e.message); }
+
   // 🙋 لو البوت معلّق لهذا الزبون (تدخّل بشري نشط): نؤرشف الرسالة فقط ولا نرد — الموظف يتولّى
   try {
     if (isBotPaused(recipientId, senderId)) {
@@ -638,6 +646,22 @@ async function _handleEvent(event, env, ctx) {
     }
     reply = await askAI(memory.history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
     memory.invalidPhoneProvided = false;   // بعد ما ننبّه الزبون منصفّر الفلاغ
+
+    // 🔴 الذكاء رجع فاضي (فشل نداء أو مزوّد واقف) = **سكوت تام**.
+    //    زمان كنا نبعت "أبشر كمّل طلبك" — وهاي أسوأ من السكوت:
+    //    بتوهم الزبون إنّ في حدا فاهمه فبيكمّل كلام ما حدا بيقراه،
+    //    وبيروح الطلب وهو مبسوط. بلا رد، بيعيد أو بيتصل، والمحادثة
+    //    بتضل بالوارد عندك تشوفها.
+    if (reply == null || !String(reply).trim()) {
+      console.warn(`🔇 الذكاء ما رجّع رد — سكتنا بدل ما نبعت تعبئة (${senderId})`);
+      try {
+        flagHandoff({
+          page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
+          reason: "الذكاء ما رد — الزبون مستني", snippet: userMsg, pause: 0
+        });
+      } catch (e) { console.error("flagHandoff:", e && e.message); }
+      return;
+    }
   }
 
   // 🕐 تنبيه خارج ساعات العمل (مرة واحدة لكل جلسة) قبل الرد العادي
@@ -652,7 +676,7 @@ async function _handleEvent(event, env, ctx) {
   if (memory._wholesaleNote) { reply = reply + "[[SPLIT]]" + memory._wholesaleNote; memory._wholesaleNote = null; }
 
   // 🔴 رسالة واحدة فقط لكل رد: أي [[SPLIT]] يُدمج في رسالة وحدة (سؤال = جواب واحد)
-  const chunks = reply.split("[[SPLIT]]").map(s => s.trim()).filter(Boolean);
+  const chunks = String(reply || "").split("[[SPLIT]]").map(s => s.trim()).filter(Boolean);
   let single = chunks.join("\n\n");
 
   // 🛒 بيع إضافي: يُدمج بنفس رسالة الفاتورة (مش رسالة ثانية) — للجبنة فقط

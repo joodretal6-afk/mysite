@@ -47,6 +47,36 @@ ok(cap.captureDelayMs() === 7 * 60000, "مدة الانتظار بتتغيّر �
 setSetting("capture_delay_min", "999");
 ok(cap.captureDelayMs() === 3 * 60000, "قيمة خارج المدى بترجع للافتراضي بدل ما تكسر");
 
+// ═══════════ 🤝 التسليم الكامل لذكاء ميتا ═══════════
+setSetting("capture_external", "");
+ok(cap.handedOverToMeta() === false, "التسليم لميتا مطفأ افتراضياً");
+ok(cap.captureEnabled() === false, "وبلا تسليم وبلا التقاط، الوحدة ساكتة");
+
+setSetting("handover_meta", "on");
+ok(cap.handedOverToMeta() === true, "التسليم بينشتغل من الإعدادات");
+ok(cap.captureEnabled() === true,
+   "🔴 التسليم بيشغّل الالتقاط ضمناً — وإلا بتضيع كل الطلبات وإنت مش داري");
+setSetting("handover_meta", "");
+setSetting("capture_external", "on");
+
+// 🔴 البوت لازم يخرس عند التسليم — مفحوص على الكود نفسه
+const handler = fs.readFileSync("src/bot/handler.js", "utf8");
+ok(/handedOverToMeta\(\)\)\s*return/.test(handler.replace(/\s+/g, " ")) ||
+   /handedOverToMeta[\s\S]{0,80}return;/.test(handler),
+   "🔴 المعالج بيرجع فوراً لمّا يكون التسليم شغّال — ولا رسالة بتطلع");
+
+// ═══════════ 🔇 فشل الذكاء = سكوت مش رسالة تعبئة ═══════════
+for (const f of ["src/bot/ai.js", "src/bot/gemini.js"]) {
+  const src = fs.readFileSync(f, "utf8");
+  ok(!/return\s*"أبشر/.test(src), `🔴 ${f}: ما عاد يبعت "أبشر كمّل طلبك" لمّا الذكاء يفشل`);
+  ok(!/return\s*text\s*\|\|\s*"/.test(src), `🔴 ${f}: الرد الفاضي ما بينستبدل برسالة تعبئة`);
+  ok(/return null/.test(src), `${f}: الفشل بيرجع null (سكوت)`);
+}
+ok(/reply == null/.test(handler) || /reply === null/.test(handler),
+   "المعالج بيفحص الرد الفاضي قبل الإرسال");
+ok(/String\(reply \|\| ""\)\.split/.test(handler),
+   "مسار الإرسال محمي من القيمة الفاضية فما بينهار");
+
 // ═══════════ الأرشفة ═══════════
 const PAGE = "111", USER = "222";
 ok(cap.archiveExternal({ pageId: PAGE, pageName: "غزة", senderId: USER,

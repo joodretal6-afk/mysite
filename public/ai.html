@@ -97,9 +97,20 @@
         «بحاجة مراجعة» حتى تأكده.<br>
         🔴 <b>استماع بحت</b> — ما بيرد ولا رسالة، فما في خطر تتضاعف الردود على الزبون.
       </p>
+      <div style="background:#fff4f4;border:1.5px solid #ffcdd2;border-radius:10px;padding:12px;margin-bottom:14px">
+        <label style="font-weight:700;color:#c62828">🤝 مين بيرد على الزبائن؟</label>
+        <select id="cap-handover" style="margin-top:6px">
+          <option value="">بوتنا هو اللي يرد (الوضع العادي)</option>
+          <option value="on">🤝 بوت ميتا هو اللي يرد — بوتنا صامت تماماً</option>
+        </select>
+        <p style="font-size:12.5px;color:#8d4a4a;line-height:1.8;margin-top:8px">
+          لمّا تختار بوت ميتا: بوتنا <b>ما بيبعث ولا كلمة</b> — لا رد، لا فاتورة، لا تنبيه،
+          ولا حتى رسالة لمّا يفشل الذكاء. بس بيضل يسمع ويلتقط الطلبات لعندك تلقائياً.
+        </p>
+      </div>
       <div class="grid2">
         <div>
-          <label>الحالة</label>
+          <label>الالتقاط (بينشتغل لحاله مع التسليم)</label>
           <select id="cap-on"><option value="">مطفأ</option><option value="on">شغّال</option></select>
         </div>
         <div>
@@ -166,19 +177,25 @@
       try {
         const j = await (await fetch('/admin/api/capture')).json();
         document.getElementById('cap-on').value = j.enabled ? 'on' : '';
+        document.getElementById('cap-handover').value = j.handover ? 'on' : '';
         document.getElementById('cap-delay').value = j.delay_min || 3;
       } catch {}
     })();
 
     window.saveCap = async function(){
-      const body = { enabled: document.getElementById('cap-on').value === 'on',
+      const handover = document.getElementById('cap-handover').value === 'on';
+      const body = { enabled: document.getElementById('cap-on').value === 'on' || handover,
+                     handover,
                      delay_min: Number(document.getElementById('cap-delay').value) };
       const r = await fetch('/admin/api/capture', { method:'POST',
         headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
       const j = await r.json();
       document.getElementById('cap-res').textContent =
-        j.ok ? (body.enabled ? 'وضع الالتقاط شغّال. الطلبات الملتقطة بتظهر بحالة «بحاجة مراجعة».'
-                             : 'وضع الالتقاط مطفأ.') : (j.error || 'صار خطأ');
+        j.ok ? (handover
+                 ? '🤝 انحفظ: بوتنا صامت تماماً هلأ — ولا رسالة بتطلع منه. والطلبات بتوصلك بحالة «بحاجة مراجعة».'
+                 : body.enabled ? 'وضع الالتقاط شغّال. الطلبات الملتقطة بتظهر بحالة «بحاجة مراجعة».'
+                                : 'وضع الالتقاط مطفأ.')
+             : (j.error || 'صار خطأ');
     };
 
     async function save(){

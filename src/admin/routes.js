@@ -448,6 +448,7 @@ adminRouter.get("/api/capture", requireAuth, (req, res) => {
   try {
     res.json({
       enabled: String(getSetting("capture_external") || "") === "on",
+      handover: String(getSetting("handover_meta") || "") === "on",
       delay_min: Number(getSetting("capture_delay_min")) || 3
     });
   } catch (e) { res.status(500).json({ error: e && e.message }); }
@@ -461,6 +462,11 @@ adminRouter.post("/api/capture", requireAuth, requireAdmin, (req, res) => {
       return res.status(400).json({ error: "مدة الانتظار لازم بين 1 و120 دقيقة" });
     setSetting("capture_external", on ? "on" : "");
     if (Number.isFinite(d)) setSetting("capture_delay_min", String(Math.round(d)));
+    if (req.body?.handover !== undefined) {
+      const h = req.body.handover === true || req.body.handover === "on";
+      setSetting("handover_meta", h ? "on" : "");
+      logActivity(req.user, "تسليم المحادثات", h ? "لذكاء ميتا — بوتنا صامت" : "رجّعناها لبوتنا");
+    }
     logActivity(req.user, "وضع الالتقاط", on ? "تشغيل" : "إيقاف");
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e && e.message }); }

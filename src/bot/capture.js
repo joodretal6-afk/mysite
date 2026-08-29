@@ -32,7 +32,23 @@ const MIN_MS = 60000;
 
 /** هل وضع الالتقاط مفعّل؟ (افتراضياً لأ — التاجر بيشغّله بوعي) */
 export function captureEnabled() {
-  try { return String(getSetting("capture_external") || "") === "on"; }
+  try {
+    // التسليم الكامل بيشغّل الالتقاط ضمناً — وإلا بتضيع كل الطلبات
+    if (handedOverToMeta()) return true;
+    return String(getSetting("capture_external") || "") === "on";
+  } catch { return false; }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🤝 التسليم الكامل لذكاء ميتا
+//
+// لمّا يشغّل التاجر بوت ميتا، لازم بوتنا **يخرس تماماً**:
+// ولا رسالة، ولا فاتورة، ولا تنبيه تدخل بشري. لأنّ في طرف
+// تاني بيرد، وأي كلمة منّا بتوصل الزبون مكرّرة ومربكة.
+// وبنضل نسمع ونلتقط الطلبات حتى ما يضيع شي.
+// ═══════════════════════════════════════════════════════════
+export function handedOverToMeta() {
+  try { return String(getSetting("handover_meta") || "") === "on"; }
   catch { return false; }
 }
 
