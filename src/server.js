@@ -169,20 +169,104 @@ async function dailyReport() {
   } catch (e) { console.error("dailyReport error:", e && e.message); }
 }
 
+// ═══════════════════════════════════════════════════════════
+// 💾 النسخ الاحتياطي — بحماية من امتلاء القرص
+//
+// 🔴 العقدة اللي وقعنا فيها: الكود كان ينسخ **أول** وبعدين
+//    يحذف القديم. فلمّا يمتلئ القرص، النسخ بيفشل والحذف ما
+//    بيوصلوش — فبيضل ممتلئ للأبد وكل يوم بيحاول وبيفشل.
+//    وقرص ممتلئ مش بس بيوقف النسخ: قاعدة البيانات ما بتقدر
+//    تكتب، يعني **طلبات الزبائن بتضيع**.
+//
+//    الحل: منظّف الأول، ومنفحص المساحة قبل ما نبلّش، ولو
+//    فشلنا بـENOSPC منحذف الأقدم ومنعيد مرة وحدة.
+// ═══════════════════════════════════════════════════════════
+const KEEP_BACKUPS = 7;   // كان 14 — نصّيناهم لأنّ قرص الاستضافة صغير
+
+/** يحذف الزايد عن الحد ويرجّع كم ملف ضل */
+function pruneBackups(dir, keep = KEEP_BACKUPS) {
+  let files = [];
+  try {
+    files = fs.readdirSync(dir).filter(f => /^backup-.*\.db$/.test(f)).sort();
+  } catch { return 0; }
+  while (files.length > keep) {
+    const victim = files.shift();
+    try { fs.unlinkSync(path.join(dir, victim)); console.log(`🧹 حذفنا نسخة قديمة: ${victim}`); }
+    catch (e) { console.error("حذف نسخة:", e && e.message); }
+  }
+  return files.length;
+}
+
+/** المساحة الفاضية بالبايت، أو null إذا ما قدرنا نقرأها */
+export function freeBytes(dir) {
+  try {
+    const st = fs.statfsSync(dir);
+    return Number(st.bavail) * Number(st.bsize);
+  } catch { return null; }
+}
+
 function dailyBackup() {
   try {
     const src = WEB.DB_PATH;
     if (!src || !fs.existsSync(src)) return;   // متاح فقط في وضع القرص المحلي
     const dir = path.join(path.dirname(src), "backups");
     fs.mkdirSync(dir, { recursive: true });
+
+    // 1) ننظّف **قبل** ما ننسخ — هيك المساحة بتتحرر قبل الحاجة
+    pruneBackups(dir);
+
+    const dbSize = fs.statSync(src).size;
+    const free = freeBytes(dir);
+
+    // 2) لازم يبقى ضعف حجم القاعدة فاضي بعد النسخ، وإلا منحذف أكثر
+    if (free != null && free < dbSize * 2) {
+      console.warn(`⚠️ المساحة ضيّقة (${Math.round(free / 1048576)}م فاضي، القاعدة ${Math.round(dbSize / 1048576)}م) — منقلّل النسخ`);
+      pruneBackups(dir, 2);
+    }
+    // 3) لسا ضيّقة؟ منتخطّى النسخة بدل ما نملّي القرص ونوقف
+    //    كتابة الطلبات — الطلب أهم من النسخة الاحتياطية.
+    const free2 = freeBytes(dir);
+    if (free2 != null && free2 < dbSize * 1.2) {
+      console.error(`🔴 ما في مساحة كافية للنسخة (${Math.round(free2 / 1048576)}م) — تخطّيناها حتى ما نوقف كتابة الطلبات`);
+      return;
+    }
+
     const stamp = new Date().toISOString().slice(0, 10);
-    fs.copyFileSync(src, path.join(dir, `backup-${stamp}.db`));
-    // نحتفظ بآخر 14 نسخة فقط
-    const files = fs.readdirSync(dir).filter(f => f.startsWith("backup-")).sort();
-    while (files.length > 14) { try { fs.unlinkSync(path.join(dir, files.shift())); } catch {} }
-    console.log(`💾 نسخة احتياطية: backup-${stamp}.db`);
+    const dest = path.join(dir, `backup-${stamp}.db`);
+    try {
+      fs.copyFileSync(src, dest);
+    } catch (e) {
+      if (e && e.code === "ENOSPC") {
+        // 4) امتلأ أثناء النسخ: منشيل النصف المكتوب ومنحذف كل
+        //    النسخ ومنعيد مرة وحدة بس
+        try { fs.unlinkSync(dest); } catch {}
+        pruneBackups(dir, 0);
+        try { fs.copyFileSync(src, dest); }
+        catch (e2) { console.error("🔴 النسخ فشل حتى بعد التنظيف:", e2 && e2.message); return; }
+      } else throw e;
+    }
+    console.log(`💾 نسخة احتياطية: backup-${stamp}.db (${pruneBackups(dir)} نسخة محفوظة)`);
   } catch (e) { console.error("dailyBackup error:", e && e.message); }
 }
+
+// 🧹 تنظيف فوري عند الإقلاع — لو القرص ممتلئ أصلاً، ما منستنى
+//    لبكرة. هاد بيفك العقدة اللي بتخلي القرص ممتلئ للأبد.
+(function cleanupOnBoot() {
+  try {
+    const src = WEB.DB_PATH;
+    if (!src || !fs.existsSync(src)) return;
+    const dir = path.join(path.dirname(src), "backups");
+    if (!fs.existsSync(dir)) return;
+    const dbSize = fs.statSync(src).size;
+    const free = freeBytes(dir);
+    if (free != null && free < dbSize * 3) {
+      console.warn(`🧹 المساحة ضيّقة عند الإقلاع (${Math.round(free / 1048576)}م) — بنظّف النسخ القديمة`);
+      pruneBackups(dir, 2);
+      const after = freeBytes(dir);
+      if (after != null) console.log(`🧹 صار فاضي: ${Math.round(after / 1048576)}م`);
+    }
+  } catch (e) { console.error("cleanupOnBoot:", e && e.message); }
+})();
 
 // ═══════════════════════════════════════════════════════════
 // 📡 فحص رادار السوق اليومي

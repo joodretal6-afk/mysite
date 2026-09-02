@@ -248,7 +248,32 @@ export async function botDiagnose() {
                    : "ما في صفحات معرّفة",
       "ضيف PAGE_TOKEN_<معرّف الصفحة> بمتغيّرات البيئة");
 
-  // 6) توقيع الويبهوك — بلا سر أي حدا بيقدر يزوّر أحداث
+  // 6) مساحة القرص — القرص الممتلئ بيوقف كتابة الطلبات نفسها،
+  //    وهاي أخطر من توقف الرد: الزبون بيطلب والطلب ما بينحفظ.
+  try {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const dbPath = process.env.DB_PATH || "./data/platform.db";
+    if (fs.existsSync(dbPath)) {
+      const dir = path.dirname(dbPath);
+      const st = fs.statfsSync(dir);
+      const freeMb = Math.round((Number(st.bavail) * Number(st.bsize)) / 1048576);
+      const dbMb = Math.round(fs.statSync(dbPath).size / 1048576);
+      add("في مساحة على القرص", freeMb > Math.max(20, dbMb * 2),
+          `${freeMb} ميجا فاضي · القاعدة ${dbMb} ميجا`,
+          "احذف النسخ القديمة من /data/backups أو كبّر القرص من لوحة الاستضافة");
+    }
+  } catch { /* مش وضع قرص محلي */ }
+
+  // 7) هل الذكاء شغّال على المزوّد اللي اخترته فعلاً؟
+  //    لو في GEMINI_API_KEY بالبيئة وما في مفتاح بوابة، النظام
+  //    بيقع على Gemini بصمت — والتاجر فاكر إنه على GPT.
+  if (!c.useOpenAI && (process.env.GEMINI_API_KEY || c.gKey))
+    add("المزوّد هو اللي اخترته", false,
+        `شغّال على Gemini (${c.gModel}) — مش على GPT`,
+        "احفظ مفتاح GPT من /admin/ai، أو شيل GEMINI_API_KEY من متغيّرات البيئة");
+
+  // 8) توقيع الويبهوك — بلا سر أي حدا بيقدر يزوّر أحداث
   const sig = !!process.env.FB_APP_SECRET;
   add("سر التطبيق مضبوط", sig,
       sig ? "الأحداث بتتحقق" : "⚠️ الويبهوك بيقبل أي حدث بلا تحقق",

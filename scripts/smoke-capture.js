@@ -154,6 +154,20 @@ ok(/botDiagnose/.test(srvSrc),
    "🔴 التشخيص بينطبع بسجل الاستضافة عند الإقلاع — فالتاجر بيشوف السبب بلا ما يدخل الموقع");
 ok(/فحص جاهزية البوت/.test(srvSrc), "وبعنوان واضح بالسجل");
 
+// 🔴 عقدة القرص الممتلئ: لازم ينظّف **قبل** ما ينسخ
+const pruneAt = srvSrc.indexOf("pruneBackups(dir);");
+const copyAt  = srvSrc.indexOf("fs.copyFileSync(src, dest)");
+ok(pruneAt > 0 && copyAt > 0 && pruneAt < copyAt,
+   "🔴 التنظيف بيصير قبل النسخ — وإلا القرص الممتلئ بيضل ممتلئ للأبد");
+ok(/ENOSPC/.test(srvSrc), "وفي معالجة صريحة لامتلاء القرص أثناء النسخ");
+ok(/cleanupOnBoot/.test(srvSrc), "وتنظيف فوري عند الإقلاع مش بس بكرة");
+ok(/تخطّيناها حتى ما نوقف كتابة الطلبات/.test(srvSrc),
+   "🔴 النسخة بتنتخطّى لو المساحة ضيّقة — الطلب أهم من النسخة");
+ok(/KEEP_BACKUPS = 7/.test(srvSrc), "عدد النسخ المحفوظة انقلّل لقرص الاستضافة الصغير");
+
+// التشخيص بيفحص المساحة والمزوّد الفعلي
+ok(d.checks.some(c => /مساحة على القرص/.test(c.name)), "التشخيص بيفحص مساحة القرص");
+
 // 🔴 مسار البوت ما عاد مثبّت على بوابة وحدة
 const aiSrc = fs.readFileSync("src/bot/ai.js", "utf8");
 ok(!/const OAI_BASE\s*=/.test(aiSrc),
