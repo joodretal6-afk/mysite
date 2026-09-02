@@ -37,11 +37,10 @@ async function oaiBody(args) {
   return buildBody(args);
 }
 
+// 🔴 Gemini انشال بالكامل — البوت دايماً على GPT، مهما كان
+//    بالبيئة أو الإعدادات. فما في طريقة يرجع يقع على Gemini.
 function chosenProvider() {
-  if (CONFIG.AI_PROVIDER === "openai") return "openai";
-  if (CONFIG.AI_PROVIDER === "gemini") return "gemini";
-  // تلقائي: لو في مفتاح بوابة استخدمها، وإلا Gemini
-  return oaiKey() ? "openai" : "gemini";
+  return "openai";
 }
 
 // نقطة الدخول الموحّدة (نفس توقيع askGemini)

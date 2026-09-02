@@ -129,6 +129,32 @@ ok(!KEYLIKE.test(JSON.stringify(PRESETS)),
    "🔴 ولا مفتاح محفوظ بالبوابات الجاهزة");
 ok(KEYLIKE.test("gsk_" + "a".repeat(25)), "نمط كشف المفاتيح شغّال فعلاً (فحص ذاتي)");
 
+// ═══════════ 🔴 Gemini انشال بالكامل — ما يرجع أبداً ═══════════
+const { aiConfig, aiComplete, aiStatus } = await import("../src/bot/aiCore.js");
+// حتى لو التاجر حاطط provider=gemini بالإعدادات، النظام لازم يتجاهله
+setSetting("ai_provider", "gemini");
+setSetting("ai_base", "https://api.openai.com/v1");
+setSetting("ai_model", "gpt-4o-mini");
+setSetting("ai_key", "sk-test-fake-key-for-structure-check-only");
+const cfg = await aiConfig();
+ok(cfg.useOpenAI === true,
+   "🔴 حتى مع provider=gemini بالإعدادات، النظام بيضل على GPT");
+ok(cfg.gKey === undefined && cfg.gModel === undefined,
+   "🔴 aiConfig ما عاد يرجّع أي مفتاح أو نموذج Gemini");
+const stt = await aiStatus();
+ok(/GPT/.test(stt.provider) && !/Gemini/i.test(stt.provider),
+   "حالة الاتصال بتقول GPT مش Gemini");
+// مسار الكود: ما ضل أي نداء لـgenerativelanguage
+const coreSrc = fs.readFileSync("src/bot/aiCore.js", "utf8");
+ok(!/generativelanguage\.googleapis/.test(coreSrc),
+   "🔴 مسار Gemini (generativelanguage) انشال من الطبقة الموحّدة");
+const aiSrc2 = fs.readFileSync("src/bot/ai.js", "utf8");
+ok(/return "openai"/.test(aiSrc2.replace(/\s+/g," ")) || /chosenProvider\(\)\s*\{\s*return "openai"/.test(aiSrc2.replace(/\s+/g," ")),
+   "🔴 مسار البوت دايماً بيختار GPT — ما في فرع Gemini");
+// ننظّف المفتاح الوهمي حتى الفحص اللي بعده يشوف «بلا مفتاح»
+setSetting("ai_key", "");
+setSetting("ai_provider", "");
+
 // ═══════════ 🩺 تشخيص «ليش ما بيوصل رد» ═══════════
 const { botDiagnose } = await import("../src/bot/aiCore.js");
 const d = await botDiagnose();
@@ -143,7 +169,7 @@ ok(d.checks.some(c => /موقوف عام/.test(c.name)), "بيفحص الإيق�
 ok(d.checks.some(c => /ذكاء ميتا/.test(c.name)), "بيفحص التسليم لميتا");
 ok(d.checks.some(c => /توكن/.test(c.name)), "بيفحص توكنات الصفحات");
 ok(d.checks.some(c => /الذكاء بيرد/.test(c.name)), "بيجرّب نداء حقيقي للذكاء");
-const noKey = d.checks.find(c => /مفتاح الذكاء/.test(c.name));
+const noKey = d.checks.find(c => /مفتاح GPT/.test(c.name));
 ok(noKey && !noKey.ok && /ما في مفتاح/.test(noKey.detail),
    "بلا مفتاح بيوقف عند المفتاح ويقول السبب صراحةً");
 

@@ -93,23 +93,23 @@ export async function aiConfig() {
   const key      = process.env.OPENAI_API_KEY || (await setting("ai_key")) || "";
   const base     = (process.env.OPENAI_BASE_URL || (await setting("ai_base")) || DEFAULT_BASE).replace(/\/+$/, "");
   const model    = process.env.OPENAI_MODEL || (await setting("ai_model")) || DEFAULT_MODEL;
-  const gKey     = CONFIG.GEMINI_API_KEY;
-  const gModel   = CONFIG.MODEL_NAME;
-  // "openai" = أي بوابة متوافقة (AIsa وغيرها)
-  const useOpenAI = provider === "openai" ? true
-                  : provider === "gemini" ? false
-                  : !!key;                       // تلقائي: لو في مفتاح بوابة استخدمها
-  return { useOpenAI, key, base, model, gKey, gModel, provider };
+  // 🔴 Gemini انشال بالكامل بطلب صاحب المشروع: مشروع جوجل تبعه
+  //    موقوف بالفوترة (403 dunning)، وكان النظام يقع عليه بصمت
+  //    لمّا يلاقي GEMINI_API_KEY بالبيئة. هلأ النظام **دايماً**
+  //    على بوابة GPT المتوافقة، مهما كان بالبيئة أو الإعدادات.
+  //    فما في طريقة يرجع يستعمل Gemini.
+  const useOpenAI = true;
+  return { useOpenAI, key, base, model, provider };
 }
 
-// حالة الاتصال (للعرض بصفحة الإعدادات)
+// حالة الاتصال (للعرض بصفحة الإعدادات) — GPT فقط، ما في Gemini
 export async function aiStatus() {
   const c = await aiConfig();
   return {
-    provider: c.useOpenAI ? "بوابة متوافقة (OpenAI/AIsa)" : "Gemini",
-    base: c.useOpenAI ? c.base : "generativelanguage.googleapis.com",
-    model: c.useOpenAI ? c.model : c.gModel,
-    configured: c.useOpenAI ? !!c.key : !!c.gKey,
+    provider: "GPT (بوابة OpenAI)",
+    base: c.base,
+    model: c.model,
+    configured: !!c.key,
     key_source: process.env.OPENAI_API_KEY ? "متغيّر بيئة" : "إعدادات الموقع",
     key_masked: c.key ? c.key.slice(0, 7) + "•".repeat(8) + c.key.slice(-4) : ""
   };
@@ -150,28 +150,9 @@ export async function aiComplete(prompt, opts = {}) {
     } catch (e) { return { ok: false, text: "", error: e && e.message }; }
   }
 
-  // Gemini
-  if (!c.gKey) return { ok: false, text: "", error: "مفتاح Gemini غير مضبوط" };
-  try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${opts.model || c.gModel}:generateContent?key=${c.gKey}`,
-      {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature, maxOutputTokens: maxTokens,
-            ...(json ? { responseMimeType: "application/json" } : {})
-          }
-        }),
-        signal: AbortSignal.timeout(timeoutMs)
-      }
-    );
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) return { ok: false, text: "", error: d?.error?.message || `HTTP ${r.status}` };
-    const text = (d?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("");
-    return { ok: true, text };
-  } catch (e) { return { ok: false, text: "", error: e && e.message }; }
+  // 🔴 ما في مسار Gemini — انشال بالكامل. الوصول لهون مستحيل
+  //    لأنّ useOpenAI دايماً true، بس منخلّي حارس صريح للأمان.
+  return { ok: false, text: "", error: "المزوّد الوحيد المدعوم هو GPT — احفظ مفتاحك من /admin/ai" };
 }
 
 // مساعد: يرجّع كائن JSON مُحلّل (أو null)
@@ -217,12 +198,12 @@ export async function botDiagnose() {
       handed ? "التسليم شغّال — بوتنا صامت بالكامل عمداً" : "بوتنا هو اللي بيرد",
       "من /admin/ai غيّر «مين بيرد على الزبائن» لـ«بوتنا»");
 
-  // 3) مفتاح الذكاء
+  // 3) مفتاح الذكاء (GPT فقط — Gemini انشال)
   const c = await aiConfig();
-  const hasKey = c.useOpenAI ? !!c.key : !!c.gKey;
-  add("مفتاح الذكاء مضبوط", hasKey,
-      hasKey ? `${c.useOpenAI ? c.base : "Gemini"} · ${c.useOpenAI ? c.model : c.gModel}` : "ما في مفتاح",
-      "احفظ المفتاح من /admin/ai");
+  const hasKey = !!c.key;
+  add("مفتاح GPT مضبوط", hasKey,
+      hasKey ? `${c.base} · ${c.model}` : "ما في مفتاح",
+      "احفظ مفتاح GPT من /admin/ai");
 
   // 4) الذكاء بيرد فعلاً (نداء حقيقي)
   let aiOk = false, aiDetail = "ما انفحص — ما في مفتاح";
@@ -265,15 +246,7 @@ export async function botDiagnose() {
     }
   } catch { /* مش وضع قرص محلي */ }
 
-  // 7) هل الذكاء شغّال على المزوّد اللي اخترته فعلاً؟
-  //    لو في GEMINI_API_KEY بالبيئة وما في مفتاح بوابة، النظام
-  //    بيقع على Gemini بصمت — والتاجر فاكر إنه على GPT.
-  if (!c.useOpenAI && (process.env.GEMINI_API_KEY || c.gKey))
-    add("المزوّد هو اللي اخترته", false,
-        `شغّال على Gemini (${c.gModel}) — مش على GPT`,
-        "احفظ مفتاح GPT من /admin/ai، أو شيل GEMINI_API_KEY من متغيّرات البيئة");
-
-  // 8) توقيع الويبهوك — بلا سر أي حدا بيقدر يزوّر أحداث
+  // 7) توقيع الويبهوك — بلا سر أي حدا بيقدر يزوّر أحداث
   const sig = !!process.env.FB_APP_SECRET;
   add("سر التطبيق مضبوط", sig,
       sig ? "الأحداث بتتحقق" : "⚠️ الويبهوك بيقبل أي حدث بلا تحقق",
