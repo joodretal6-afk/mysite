@@ -149,6 +149,10 @@ ok(noKey && !noKey.ok && /ما في مفتاح/.test(noKey.detail),
 
 const uiSrc = fs.readFileSync("public/ai.html", "utf8");
 ok(/diagnose\(\)/.test(uiSrc), "زر التشخيص موجود بالصفحة");
+const srvSrc = fs.readFileSync("src/server.js", "utf8");
+ok(/botDiagnose/.test(srvSrc),
+   "🔴 التشخيص بينطبع بسجل الاستضافة عند الإقلاع — فالتاجر بيشوف السبب بلا ما يدخل الموقع");
+ok(/فحص جاهزية البوت/.test(srvSrc), "وبعنوان واضح بالسجل");
 
 // 🔴 مسار البوت ما عاد مثبّت على بوابة وحدة
 const aiSrc = fs.readFileSync("src/bot/ai.js", "utf8");
