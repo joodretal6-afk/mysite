@@ -8,3 +8,7 @@ npm-debug.log*
 .DS_Store
 data/backups/
 data/**/*.db
+
+# كشوفات حقيقية فيها بيانات زبائن — ممنوع ترفع لريبو عام
+*.pdf
+!docs/**/*.pdf

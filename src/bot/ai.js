@@ -8,8 +8,15 @@ import { COMMON_KNOWLEDGE, SALES_PERSONA, SALES_BEHAVIOR } from "./brain.js";
 import { ADDRESS_EXPERT } from "./addressExpert.js";
 import { buildNextTask, askGemini } from "./gemini.js";
 
-// عنوان البوابة المتوافقة مع OpenAI (افتراضياً AIsa — تم التحقق منها)
-const OAI_BASE = (process.env.OPENAI_BASE_URL || "https://api.aisa.one/v1").replace(/\/+$/, "");
+// 🔴 كان هون ثابت مثبّت على بوابة وحدة، فلمّا تغيّر المزوّد من
+//    صفحة /admin/ai كان **البوت يضل ينادي البوابة القديمة**
+//    والمفتاح الجديد بيروح على عنوان غلط. صار بينقرأ لحظياً
+//    من نفس مصدر الطبقة الموحّدة.
+const DEFAULT_BASE = "https://api.openai.com/v1";
+function oaiBase() {
+  const b = process.env.OPENAI_BASE_URL || siteSetting("ai_base") || DEFAULT_BASE;
+  return String(b).replace(/\/+$/, "");
+}
 
 // 🔑 المفتاح والنموذج: متغيّر بيئة أولاً، وإلا المحفوظ بصفحة /admin/ai.
 //    (نقرأه لحظياً عشان يشتغل فوراً بعد ما تحفظه بالموقع بلا إعادة تشغيل)
@@ -20,7 +27,15 @@ function siteSetting(key) {
   } catch { return ""; }
 }
 export function oaiKey()   { return process.env.OPENAI_API_KEY || siteSetting("ai_key") || ""; }
-export function oaiModel() { return process.env.OPENAI_MODEL || siteSetting("ai_model") || "qwen-flash"; }
+export function oaiModel() { return process.env.OPENAI_MODEL || siteSetting("ai_model") || "gpt-4o-mini"; }
+
+// نماذج التفكير (gpt-5 وأخواتها) بترفض max_tokens و temperature،
+// وبتاكل الرصيد بالتفكير فبترجع فاضي لو الحد ضيّق. الطبقة
+// الموحّدة عندها المنطق — منستوردها بدل ما نكرّره هون.
+async function oaiBody(args) {
+  const { buildBody } = await import("./aiCore.js");
+  return buildBody(args);
+}
 
 function chosenProvider() {
   if (CONFIG.AI_PROVIDER === "openai") return "openai";
@@ -89,15 +104,12 @@ ${conversationText.slice(0, 6000)}`;
   let raw = "";
   try {
     if (chosenProvider() === "openai") {
-      const resp = await fetch(`${OAI_BASE}/chat/completions`, {
+      const resp = await fetch(`${oaiBase()}/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${oaiKey()}` },
-        body: JSON.stringify({
-          model: oaiModel(),
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0,
-          response_format: { type: "json_object" }
-        }),
+        body: JSON.stringify(await oaiBody({
+          model: oaiModel(), prompt, json: true, temperature: 0, maxTokens: 700
+        })),
         signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
       });
       if (!resp.ok) { console.error("AI extract (openai) error:", resp.status, await resp.text()); return { ok: false, is_order: false, items: [], area: "", phone: "" }; }
@@ -151,7 +163,7 @@ async function transcribeOpenAI(audioPart) {
     const form = new FormData();
     form.append("file", blob, "audio.m4a");
     form.append("model", CONFIG.OPENAI_TRANSCRIBE_MODEL);
-    const r = await fetch(`${OAI_BASE}/audio/transcriptions`, {
+    const r = await fetch(`${oaiBase()}/audio/transcriptions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${oaiKey()}` },
       body: form,
@@ -197,30 +209,35 @@ async function askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmDat
   messages.push({ role: "user", content: finalUser || "..." });
 
   try {
-    const resp = await fetch(`${OAI_BASE}/chat/completions`, {
+    // مسار الرد على الزبون: نفس معالجة نماذج التفكير، بس هون
+    // المحادثة متعددة الرسائل فمنبني الجسم ومنستبدل الرسائل.
+    const model = oaiModel();
+    const body = await oaiBody({ model, prompt: "", json: false, temperature: 0.2, maxTokens: 400 });
+    body.messages = messages;
+
+    const resp = await fetch(`${oaiBase()}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${oaiKey()}`
       },
-      body: JSON.stringify({
-        model: oaiModel(),
-        messages,
-        temperature: 0.2,
-        max_tokens: 400
-      }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
     });
 
     if (!resp.ok) {
       console.error("OpenAI error:", resp.status, await resp.text());
-      return "أبشر، كمّل طلبك.";
+      // 🔴 ما منبعت رسالة تعبئة لمّا الذكاء يفشل.
+      //    "أبشر كمّل طلبك" بتوهم الزبون إنّ في حدا فاهمه، فبيكمّل
+      //    كلام ما حدا بيقراه، وبيروح الطلب. السكوت أصدق: الزبون
+      //    بيعيد أو بيتصل، وإنت بتشوف المحادثة بالوارد.
+      return null;
     }
     const data = await resp.json();
     const text = (data?.choices?.[0]?.message?.content || "").replace(/\*\*/g, "").trim();
-    return text || "يا هلا، تفضل شو طلبك؟";
+    return text || null;   // رد فاضي = سكوت كمان
   } catch (e) {
     console.error("OpenAI failed:", e && e.message);
-    return "أبشر، كمّل طلبك.";
+    return null;   // 🔴 فشل الذكاء = سكوت، مش رسالة تعبئة
   }
 }

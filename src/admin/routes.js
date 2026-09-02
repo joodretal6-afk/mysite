@@ -441,6 +441,49 @@ adminRouter.get("/api/ai/status", requireAuth, async (req, res) => {
   catch (e) { res.status(500).json({ error: e && e.message }); }
 });
 
+// ═══════════════════════════════════════════════════════════
+// 🎣 وضع الالتقاط — إعداداته
+// ═══════════════════════════════════════════════════════════
+adminRouter.get("/api/capture", requireAuth, (req, res) => {
+  try {
+    res.json({
+      enabled: String(getSetting("capture_external") || "") === "on",
+      handover: String(getSetting("handover_meta") || "") === "on",
+      delay_min: Number(getSetting("capture_delay_min")) || 3
+    });
+  } catch (e) { res.status(500).json({ error: e && e.message }); }
+});
+
+adminRouter.post("/api/capture", requireAuth, requireAdmin, (req, res) => {
+  try {
+    const on = req.body?.enabled === true || req.body?.enabled === "on";
+    const d = Number(req.body?.delay_min);
+    if (req.body?.delay_min !== undefined && (!Number.isFinite(d) || d < 1 || d > 120))
+      return res.status(400).json({ error: "مدة الانتظار لازم بين 1 و120 دقيقة" });
+    setSetting("capture_external", on ? "on" : "");
+    if (Number.isFinite(d)) setSetting("capture_delay_min", String(Math.round(d)));
+    if (req.body?.handover !== undefined) {
+      const h = req.body.handover === true || req.body.handover === "on";
+      setSetting("handover_meta", h ? "on" : "");
+      logActivity(req.user, "تسليم المحادثات", h ? "لذكاء ميتا — بوتنا صامت" : "رجّعناها لبوتنا");
+    }
+    logActivity(req.user, "وضع الالتقاط", on ? "تشغيل" : "إيقاف");
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e && e.message }); }
+});
+
+// 🩺 تشخيص شامل: ليش ما بيوصل رد للزبون
+adminRouter.get("/api/ai/diagnose", requireAuth, async (req, res) => {
+  try { const { botDiagnose } = await import("../bot/aiCore.js"); res.json(await botDiagnose()); }
+  catch (e) { res.status(500).json({ ok: false, error: e && e.message }); }
+});
+
+// البوابات الجاهزة — مصدرها الكود مش الواجهة، فما بينختلفوا
+adminRouter.get("/api/ai/presets", requireAuth, async (req, res) => {
+  try { const { PRESETS } = await import("../bot/aiCore.js"); res.json({ presets: PRESETS }); }
+  catch (e) { res.status(500).json({ error: e && e.message }); }
+});
+
 adminRouter.post("/api/ai/save", requireAuth, requireAdmin, (req, res) => {
   try {
     const { provider, base, model, key } = req.body || {};

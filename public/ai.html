@@ -57,6 +57,9 @@
       <h2>⚙️ إعداد المزوّد</h2>
       <div class="sub">أي بوابة متوافقة مع OpenAI بتشتغل (AIsa، OpenAI، وغيرها). خُذ الـ Base URL من صفحة Docs عند مزوّدك.</div>
       <div class="row">
+      <label>بوابة جاهزة — اضغط وبتنعبّى الحقول لحالها</label>
+      <div class="btns" id="presets" style="margin-bottom:12px"></div>
+      <div class="grid2">
         <div>
           <label>المزوّد</label>
           <select id="provider">
@@ -67,11 +70,12 @@
         </div>
         <div>
           <label>النموذج (Model)</label>
-          <input id="model" placeholder="gpt-4o-mini">
+          <input id="model" placeholder="qwen/qwen3.8-27b" list="model-list">
+          <datalist id="model-list"></datalist>
         </div>
       </div>
       <label>عنوان الـ API (Base URL)</label>
-      <input id="base" dir="ltr" placeholder="https://api.aisa.one/v1">
+      <input id="base" dir="ltr" placeholder="https://api.groq.com/openai/v1">
       <label>المفتاح (API Key)</label>
       <input id="key" dir="ltr" type="password" placeholder="اتركه فاضي للإبقاء على المفتاح الحالي">
       <div class="btns">
@@ -81,6 +85,53 @@
       </div>
       <div class="res" id="res"></div>
       <div class="note warn">🔒 المفتاح بينحفظ بقاعدة بيانات موقعك فقط — ما بينكتب بالكود ولا بينرفع للمستودع. إذا ظهر مفتاحك بأي صورة أو مكان عام، احذفه من لوحة المزوّد واعمل واحد جديد فوراً.</div>
+    </div>
+
+    <div class="card">
+      <h2>🩺 ليش ما بيوصل رد للزبون؟</h2>
+      <p style="font-size:13px;color:#666;line-height:1.8;margin-bottom:10px">
+        الرد بيمرّ بسلسلة حلقات، وأي حلقة مكسورة بتوقف كل شي بصمت.
+        اضغط الزر وبيفحصهم كلهم بالترتيب وبيقلّك أول حلقة مكسورة وشو الحل.
+      </p>
+      <div class="btns"><button class="btn p" onclick="diagnose()">🩺 افحص الآن</button></div>
+      <div id="diag-out"></div>
+    </div>
+
+    <div class="card">
+      <h2>🎣 التقاط الطلبات من ذكاء فيسبوك والردود اليدوية</h2>
+      <p style="font-size:13px;line-height:1.9;color:#666;margin-bottom:12px">
+        لمّا يرد <b>ذكاء ميتا</b> على زبونك، أو ترد إنت من الموبايل، الطلب ما بيوصل الموقع —
+        لأنّ ميتا ما بتعطي أي API بيسلّمك الطلب اللي أخذه ذكاؤها.<br>
+        وضع الالتقاط بيحل هاي: بيسمع المحادثة عبر قنوات فيسبوك الرسمية،
+        وبيستخرج الطلب <b>من كلام الزبون الحرفي</b> بذكائك إنت، وبيحفظه بحالة
+        «بحاجة مراجعة» حتى تأكده.<br>
+        🔴 <b>استماع بحت</b> — ما بيرد ولا رسالة، فما في خطر تتضاعف الردود على الزبون.
+      </p>
+      <div style="background:#fff4f4;border:1.5px solid #ffcdd2;border-radius:10px;padding:12px;margin-bottom:14px">
+        <label style="font-weight:700;color:#c62828">🤝 مين بيرد على الزبائن؟</label>
+        <select id="cap-handover" style="margin-top:6px">
+          <option value="">بوتنا هو اللي يرد (الوضع العادي)</option>
+          <option value="on">🤝 بوت ميتا هو اللي يرد — بوتنا صامت تماماً</option>
+        </select>
+        <p style="font-size:12.5px;color:#8d4a4a;line-height:1.8;margin-top:8px">
+          لمّا تختار بوت ميتا: بوتنا <b>ما بيبعث ولا كلمة</b> — لا رد، لا فاتورة، لا تنبيه،
+          ولا حتى رسالة لمّا يفشل الذكاء. بس بيضل يسمع ويلتقط الطلبات لعندك تلقائياً.
+        </p>
+      </div>
+      <div class="grid2">
+        <div>
+          <label>الالتقاط (بينشتغل لحاله مع التسليم)</label>
+          <select id="cap-on"><option value="">مطفأ</option><option value="on">شغّال</option></select>
+        </div>
+        <div>
+          <label>يستنى كم دقيقة بعد آخر رسالة</label>
+          <input id="cap-delay" type="number" min="1" max="120" value="3">
+        </div>
+      </div>
+      <div class="btns"><button class="btn p" onclick="saveCap()">💾 حفظ</button></div>
+      <div class="res" id="cap-res"></div>
+      <div class="note warn">⚠️ لازم تشترك بحقول <b>message_echoes</b> و<b>standby</b> و<b>messaging_handovers</b>
+        بإعدادات الويبهوك عند ميتا، وإلا ما رح توصلنا المحادثات الخارجية أصلاً.</div>
     </div>
 
     <div class="card">
@@ -109,6 +160,74 @@
         if(d.base&&d.base.startsWith('http'))$('base').value=d.base;
       }catch(e){}
     }
+    // بوابات جاهزة — بتنقرأ من الخادم فما في تكرار بين الواجهة والكود
+    let PRESETS = [];
+    (async function loadPresets(){
+      try {
+        const r = await fetch('/admin/api/ai/presets');
+        PRESETS = (await r.json()).presets || [];
+      } catch { return; }
+      document.getElementById('presets').innerHTML = PRESETS.map((p,i) =>
+        `<button class="btn g" onclick="usePreset(${i})">${p.name}</button>`).join('');
+    })();
+
+    window.usePreset = function(i){
+      const p = PRESETS[i]; if (!p) return;
+      document.getElementById('provider').value = 'openai';
+      document.getElementById('base').value  = p.base;
+      document.getElementById('model').value = p.model;
+      document.getElementById('model-list').innerHTML =
+        (p.models || []).map(m => `<option value="${m}">`).join('');
+      document.getElementById('res').textContent =
+        p.hint + ' — حط المفتاح تحت واضغط حفظ، وبعدها فحص الاتصال.';
+      document.getElementById('key').focus();
+    };
+
+    (async function loadCap(){
+      try {
+        const j = await (await fetch('/admin/api/capture')).json();
+        document.getElementById('cap-on').value = j.enabled ? 'on' : '';
+        document.getElementById('cap-handover').value = j.handover ? 'on' : '';
+        document.getElementById('cap-delay').value = j.delay_min || 3;
+      } catch {}
+    })();
+
+    window.saveCap = async function(){
+      const handover = document.getElementById('cap-handover').value === 'on';
+      const body = { enabled: document.getElementById('cap-on').value === 'on' || handover,
+                     handover,
+                     delay_min: Number(document.getElementById('cap-delay').value) };
+      const r = await fetch('/admin/api/capture', { method:'POST',
+        headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const j = await r.json();
+      document.getElementById('cap-res').textContent =
+        j.ok ? (handover
+                 ? '🤝 انحفظ: بوتنا صامت تماماً هلأ — ولا رسالة بتطلع منه. والطلبات بتوصلك بحالة «بحاجة مراجعة».'
+                 : body.enabled ? 'وضع الالتقاط شغّال. الطلبات الملتقطة بتظهر بحالة «بحاجة مراجعة».'
+                                : 'وضع الالتقاط مطفأ.')
+             : (j.error || 'صار خطأ');
+    };
+
+    window.diagnose = async function(){
+      const out = document.getElementById('diag-out');
+      out.innerHTML = '<div class="res">⏳ عم نفحص…</div>';
+      try {
+        const j = await (await fetch('/admin/api/ai/diagnose')).json();
+        const esc2 = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+        out.innerHTML =
+          `<div class="msg ${j.ok?'ok':'err'}" style="display:block;margin-top:10px"><b>${esc2(j.verdict)}</b></div>` +
+          '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px">' +
+          (j.checks||[]).map(c => `<tr style="border-bottom:1px solid #eee">
+            <td style="padding:8px;width:26px">${c.ok?'✅':'🔴'}</td>
+            <td style="padding:8px"><b>${esc2(c.name)}</b><br>
+              <span style="color:#777">${esc2(c.detail)}</span>
+              ${c.ok?'':`<br><span style="color:#c62828">الحل: ${esc2(c.fix)}</span>`}</td></tr>`).join('') +
+          '</table>' +
+          ((j.pages||[]).length ? '<div style="font-size:12.5px;color:#777;margin-top:10px">الصفحات: ' +
+            j.pages.map(p=>`${esc2(p.name)} ${p.token?'✅':'🔴'} <small>(${esc2(p.source)})</small>`).join(' · ') + '</div>' : '');
+      } catch(e){ out.innerHTML = '<div class="msg err" style="display:block">'+e.message+'</div>'; }
+    };
+
     async function save(){
       const body={provider:$('provider').value,base:$('base').value,model:$('model').value,key:$('key').value};
       const r=await fetch('/admin/api/ai/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});

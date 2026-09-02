@@ -10,12 +10,14 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { CONFIG, WEB } from "./config.js";
 import { SESSIONS_KV, countUsers, getUser, createUser, ordersStats, migrateFromTurso,
-  salesReport, listOrders } from "./db/database.js";
+  salesReport, listOrders, getChatMessages } from "./db/database.js";
 import { handleEvent } from "./bot/handler.js";
 import { adminRouter } from "./admin/routes.js";
 import { PAGES } from "./bot/brain.js";
 import { sendText, notifyTelegram } from "./bot/messenger.js";
 import { whatsappEnabled, handleWhatsAppMessage } from "./bot/whatsapp.js";
+import { captureEnabled, captureDelayMs, archiveExternal, captureOrderFrom,
+         isOurOwnEcho } from "./bot/capture.js";
 
 // ═══════════════════════════════════════════════════════════
 // 🔑 توكنات الصفحات — ثلاث مصادر بترتيب أولوية واضح
@@ -274,9 +276,25 @@ app.post("/webhook", async (req, res) => {
 
     (async () => {
       for (const entry of entries) {
+        // ── القناة الأساسية: المحادثات اللي بوتنا ماسكها ──
         for (const event of entry.messaging || []) {
+          // 🎣 رد الصفحة (echo): ممكن يكون ذكاء ميتا أو موظف من
+          //    الموبايل. البوت بيتجاهله، بس منأرشفه حتى يكون
+          //    تاريخ المحادثة كامل ونعرف مين رد فعلاً.
+          if (event?.message?.is_echo) { await captureEcho(entry.id, event); continue; }
           await handleEvent(event, env, ctx)
             .catch(e => console.error("Event error:", e && e.message));
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // 🎣 قناة standby: محادثة ماسكها تطبيق تاني (ذكاء ميتا
+        //    مثلاً) حسب بروتوكول التسليم. ممنوع نرد عليها —
+        //    الرد بيتضاعف على الزبون — بس مسموح نسمع.
+        //    وهيك الطلب بيوصل الموقع حتى لو مش بوتنا اللي رد.
+        // ═══════════════════════════════════════════════════════
+        for (const event of entry.standby || []) {
+          await captureStandby(entry.id, event)
+            .catch(e => console.error("Standby error:", e && e.message));
         }
       }
     })().catch(e => console.error("Webhook background error:", e && e.message));
@@ -317,6 +335,74 @@ app.post("/whatsapp", async (req, res) => {
     }
   } catch (e) { console.error("WhatsApp webhook error:", e && e.message); }
 });
+
+// ═══════════════════════════════════════════════════════════
+// 🎣 وضع الالتقاط — الطلب بيوصلك حتى لو مش بوتنا اللي رد
+//
+// المشكلة اللي بيحلها: ذكاء ميتا (Meta Business Agent) بيرد
+// على زبائنك جوّا ماسنجر وما بيعطيك الطلب — ما في API بيسلّمه.
+// ونفس الشي لمّا ترد إنت من الموبايل. بالحالتين الطلب بيضيع.
+// هون منسمع المحادثة عبر القنوات الرسمية ومنستخرج الطلب بنفسنا.
+//
+// 🔴 استماع بحت: ما منرد ولا رسالة من هون. الرد بيتضاعف على
+//    الزبون لأنّ في طرف تاني ماسك المحادثة أصلاً.
+// ═══════════════════════════════════════════════════════════
+
+// مؤقّت لكل محادثة: منستنى تهدأ قبل ما نستخرج، لأنّ الطلب
+// بينبني على مدار كذا رسالة مش رسالة وحدة.
+const _captureTimers = new Map();
+
+function scheduleCapture(pageId, senderId, pageConfig, source) {
+  const key = `${pageId}_${senderId}`;
+  clearTimeout(_captureTimers.get(key));
+  _captureTimers.set(key, setTimeout(async () => {
+    _captureTimers.delete(key);
+    try {
+      const rows = getChatMessages(pageId, senderId) || [];
+      const r = await captureOrderFrom({ pageId, senderId, pageConfig, rows, source });
+      if (!r.saved) console.log(`🎣 ما التقطنا طلب (${senderId}): ${r.reason}`);
+    } catch (e) { console.error("capture:", e && e.message); }
+  }, captureDelayMs()));
+}
+
+/** رد صادر من الصفحة — ذكاء ميتا أو موظف أو بوت تاني */
+async function captureEcho(pageId, event) {
+  try {
+    if (!captureEnabled()) return;
+    if (isOurOwnEcho(event, CONFIG.FB_APP_ID)) return;   // ردنا نحنا — مؤرشف أصلاً
+    const page = PAGES[pageId];
+    if (!page) return;
+    const senderId = event.recipient?.id;                 // المستلم = الزبون
+    const text = event.message?.text;
+    if (!senderId || !text) return;
+    archiveExternal({ pageId, pageName: page.name, senderId,
+                      direction: "out", body: text, source: "🤖 رد خارجي:" });
+  } catch (e) { console.error("captureEcho:", e && e.message); }
+}
+
+/** رسالة زبون بمحادثة ماسكها تطبيق تاني */
+async function captureStandby(pageId, event) {
+  if (!captureEnabled()) return;
+  const page = PAGES[pageId];
+  if (!page) return;
+
+  const senderId = event.sender?.id;
+  if (!senderId) return;
+
+  // echo داخل standby = رد الطرف التاني على الزبون
+  if (event.message?.is_echo) {
+    const to = event.recipient?.id;
+    if (to && event.message.text)
+      archiveExternal({ pageId, pageName: page.name, senderId: to,
+                        direction: "out", body: event.message.text, source: "🤖 رد خارجي:" });
+    return;
+  }
+  const text = event.message?.text;
+  if (!text) return;
+
+  archiveExternal({ pageId, pageName: page.name, senderId, direction: "in", body: text });
+  scheduleCapture(pageId, senderId, page, "محادثة خارجية");
+}
 
 // ═══════════════════════════════════════════════════════════
 // لوحة التحكم

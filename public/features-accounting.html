@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🧾 المحاسبة والأحمال — منصة الأجبان</title>
+  <link rel="stylesheet" href="/premium.css">
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:var(--green); color:#fff; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:19px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1240px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 10px; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .panel { display:none; } .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.8; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:12.5px; color:var(--mut); font-weight:600; }
+    input, select, textarea { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; min-width:130px; }
+    input:focus, select:focus { outline:none; border-color:var(--green); }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .btn.gray { background:#eceff1; color:#37474f; }
+    .btn.red { background:var(--red); }
+    .btn.sm { padding:5px 11px; font-size:12px; border-radius:8px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:9px 11px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; position:sticky; top:0; }
+    tr:hover { background:#fafcfa; }
+    td input { padding:5px 7px; font-size:13px; min-width:70px; border-radius:7px; }
+    .empty { text-align:center; padding:34px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .n.bad { color:var(--red); }
+    .sc .l { font-size:12px; color:var(--mut); margin-top:4px; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11.5px; font-weight:700; }
+    .pill.ok { background:#e8f5e9; color:#1b5e20; }
+    .pill.no { background:#ffebee; color:#c62828; }
+    .pill.unk { background:#fff8e1; color:#ef6c00; }
+    .drop { border:2px dashed var(--line); border-radius:14px; padding:26px; text-align:center; cursor:pointer; color:var(--mut); font-size:14px; }
+    .drop.on { border-color:var(--green); background:#f1f8f2; color:var(--green2); }
+    .msg { padding:10px 13px; border-radius:10px; font-size:13.5px; margin-bottom:10px; display:none; }
+    .msg.err { background:#ffebee; color:#c62828; display:block; }
+    .msg.ok { background:#e8f5e9; color:#1b5e20; display:block; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🧾 المحاسبة والأحمال</h1>
+  <a href="/admin/features">← كل الميزات</a>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-p="stmt">📄 قراءة كشف PDF</button>
+    <button class="tab" data-p="ledger">📊 دفتر الأستاذ (إكسل)</button>
+    <button class="tab" data-p="loads">🚚 الأحمال المُسلَّمة</button>
+    <button class="tab" data-p="recon">⚖️ المطابقة</button>
+    <button class="tab" data-p="cfg">⚙️ التسعير والأجرة</button>
+  </div>
+
+  <!-- ══════════ كشف PDF ══════════ -->
+  <div class="panel active" id="p-stmt">
+    <div class="card">
+      <h2>ارفع كشف شركة التوصيل</h2>
+      <p class="hint">
+        بيقرأ الكشف كامل — كل صفحة لحالها، وكل حساب («اسم الزبون») لحاله بتحصيله المستقل.
+        وبيحط عدد الحبّات لحاله: من جدول التسعير، أو من النمط المستنتج منه (15 = حبة، 27 = حبتين ⇒ 39 = 3 حبّات).<br>
+        <b>الحالات:</b> مبلغ 0 وأجرة 0 = ما وصل ولا كلّفنا شي (العدد 0). مبلغ 0 وأجرة 1.75 =
+        الزبون رفض عند الباب واحنا دفعنا التوصيل (العدد 0 والصافي بالسالب).<br>
+        <b>ما منخترع:</b> أي مبلغ ما إلو أساس بيتكتب «غير معروف». وإذا الكشف صورة ممسوحة مش PDF نصي، ما رح نقدر نقراه.
+      </p>
+      <div class="msg" id="stmt-msg"></div>
+      <div class="drop" id="drop">📄 اضغط هون لاختيار الملف (PDF / إكسل / CSV) — أو اسحبه ورميه</div>
+      <input type="file" id="file" accept=".pdf,.xlsx,.xlsm,.csv,.tsv,.json" hidden>
+      <div class="row" style="margin-top:10px">
+        <button class="btn gray sm" id="diag-btn" disabled>🔬 طلعلي شو قرأت بالضبط</button>
+        <span class="hint" style="margin:0">لو طلع عدد الطرود أقل من اللي بالكشف، اضغط هون — بيوريك كل صفحة وكل رقم قرأناه بلا تفسير.</span>
+      </div>
+      <div id="diag-out"></div>
+    </div>
+
+    <div id="preview" style="display:none">
+      <div id="pv-verify"></div>
+      <div class="grid" id="pv-sum"></div>
+      <div class="card"><h2>الحسابات داخل الكشف — كل واحد تحصيله لحاله</h2>
+        <p class="hint" id="pv-diag"></p>
+        <div class="tbl-scroll"><table id="pv-clients"></table></div>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between;margin-bottom:10px">
+          <h2 style="margin:0">تفصيل الكشف — <span id="pv-name"></span></h2>
+          <div class="row">
+            <button class="btn" id="save-stmt">💾 احفظ الكشف</button>
+            <button class="btn gray" id="cancel-stmt">إلغاء</button>
+          </div>
+        </div>
+        <div class="tbl-scroll"><table id="pv-tbl"></table></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>الكشوفات المحفوظة</h2>
+      <div class="tbl-scroll"><table id="stmt-list"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ دفتر الأستاذ ══════════ -->
+  <div class="panel" id="p-ledger">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>من تاريخ</label><input type="date" id="lg-from"></div>
+        <div class="field"><label>إلى تاريخ</label><input type="date" id="lg-to"></div>
+        <div class="field"><label>الحساب</label><select id="lg-client"><option value="">كل الحسابات</option></select></div>
+        <button class="btn" id="lg-go">عرض</button>
+        <button class="btn gray" id="lg-csv">⬇️ تصدير إكسل (CSV)</button>
+      </div>
+    </div>
+    <div class="grid" id="lg-sum"></div>
+    <div class="card">
+      <h2>حسب الحساب (كل صفحة لحالها)</h2>
+      <div class="tbl-scroll"><table id="lg-clients"></table></div>
+    </div>
+    <div class="card">
+      <h2>ملخّص يومي</h2>
+      <div class="tbl-scroll"><table id="lg-days"></table></div>
+    </div>
+    <div class="card">
+      <h2>كل الصفوف — تقدر تعدّل عدد القطع والملاحظة مباشرة</h2>
+      <div class="tbl-scroll"><table id="lg-rows"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الأحمال ══════════ -->
+  <div class="panel" id="p-loads">
+    <div class="card">
+      <h2>سجّل حمولة سلّمتها لشركة التوصيل</h2>
+      <p class="hint">عدد الطرود = كم بوليصة سلّمت. عدد القطع = مجموع الحبّات جوّا الطرود.</p>
+      <div class="msg" id="sh-msg"></div>
+      <div class="row">
+        <div class="field"><label>التاريخ</label><input type="date" id="sh-date"></div>
+        <div class="field"><label>عدد الطرود</label><input type="number" id="sh-pk" min="0" value="0"></div>
+        <div class="field"><label>عدد القطع</label><input type="number" id="sh-pc" min="0" value="0"></div>
+        <div class="field"><label>شركة التوصيل</label><input id="sh-co" placeholder="اسم الشركة"></div>
+        <div class="field"><label>الصفحة</label><input id="sh-pg" placeholder="اسم الصفحة (اختياري)"></div>
+        <div class="field"><label>ملاحظة</label><input id="sh-note" placeholder="اختياري"></div>
+        <button class="btn" id="sh-add">➕ سجّل</button>
+      </div>
+    </div>
+    <div class="grid" id="sh-sum"></div>
+    <div class="card"><div class="tbl-scroll"><table id="sh-tbl"></table></div></div>
+  </div>
+
+  <!-- ══════════ المطابقة ══════════ -->
+  <div class="panel" id="p-recon">
+    <div class="card">
+      <h2>طابق الكشف مع أحمالك ومع طلبات البوت</h2>
+      <p class="hint">هون بتشوف: سلّمت كم طرد؟ الكشف حاسبك على كم؟ والبوت سجّل كم طلب؟ أي فرق = لازم تسأل عنه.</p>
+      <div class="row">
+        <div class="field"><label>من</label><input type="date" id="rc-from"></div>
+        <div class="field"><label>إلى</label><input type="date" id="rc-to"></div>
+        <button class="btn" id="rc-go">طابق</button>
+      </div>
+    </div>
+    <div id="rc-out"></div>
+  </div>
+
+  <!-- ══════════ التسعير ══════════ -->
+  <div class="panel" id="p-cfg">
+    <div class="card">
+      <h2>أجرة خدمة التوصيل للطرد الواحد</h2>
+      <div class="msg" id="cfg-msg"></div>
+      <div class="row">
+        <div class="field"><label>دينار / طرد</label><input type="number" step="0.01" id="cfg-fee"></div>
+        <button class="btn" id="cfg-save">حفظ</button>
+      </div>
+      <p class="hint" style="margin-top:10px">بتنخصم من كل طرد مُحصّل. الطرد المرتجع (مبلغ 0) ما بتنخصم عليه.</p>
+    </div>
+    <div class="card">
+      <h2>جدول التسعير — المبلغ يساوي كم حبة</h2>
+      <p class="hint">هاد الجدول هو اللي بيخلّي النظام يفهم إنّ 15 دينار يعني حبة و27 دينار يعني حبتين. زيد كل مبلغ بتتعامل فيه.</p>
+      <div class="row">
+        <div class="field"><label>المبلغ (د)</label><input type="number" step="0.01" id="pr-amt"></div>
+        <div class="field"><label>عدد الحبّات</label><input type="number" min="1" id="pr-pc"></div>
+        <div class="field"><label>المنتج</label><input id="pr-prod" placeholder="اختياري"></div>
+        <button class="btn" id="pr-add">➕ أضف</button>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn gray" id="pr-learn">🎓 تعلّم من طلبات البوت</button>
+        <span class="hint" style="margin:0">بيقرأ طلباتك الحقيقية وبيضيف كل مبلغ متّفق عليه. المبلغ اللي إلو أكثر من تفسير بيتركه.</span>
+      </div>
+      <div class="tbl-scroll" style="margin-top:12px"><table id="pr-tbl"></table></div>
+    </div>
+  </div>
+</div>
+
+<script src="/theme.js"></script>
+<script>
+const API = "/admin/f-api/accounting";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const d2 = (n) => (Math.round((Number(n)||0)*100)/100).toFixed(2);
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  const j = await r.json().catch(() => ({ ok:false, error:"رد غير مفهوم من الخادم" }));
+  if (!j.ok) throw new Error(j.error || "خطأ");
+  return j;
+}
+function say(el, text, kind) { el.className = "msg " + kind; el.textContent = text; }
+function clear(el) { el.className = "msg"; el.textContent = ""; }
+
+// ── التبويبات ──
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  $("#p-" + t.dataset.p).classList.add("active");
+  ({ ledger: loadLedger, loads: loadShipments, cfg: loadCfg })[t.dataset.p]?.();
+});
+
+function scorecards(el, items) {
+  el.innerHTML = items.map(i =>
+    `<div class="sc"><div class="n${i.bad?" bad":""}">${esc(i.n)}</div><div class="l">${esc(i.l)}</div></div>`).join("");
+}
+const piecesCell = (p) => p == null
+  ? '<span class="pill unk">غير معروف</span>' : esc(p);
+const stateCell = (st) => {
+  const k = st === "مُحصّل" ? "ok" : st === "رفض عند الاستلام" ? "no" : "unk";
+  return `<span class="pill ${k}">${esc(st)}</span>`;
+};
+
+// ═══════════ قراءة PDF ═══════════
+let parsed = null, lastFile = null;
+
+$("#diag-btn").onclick = async () => {
+  if (!lastFile) return;
+  $("#diag-btn").disabled = true;
+  try {
+    const j = await api("/diag", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: lastFile.name, base64: lastFile.b64 })
+    });
+    const st = j.stats || {};
+    $("#diag-out").innerHTML = `<div class="card" style="margin-top:12px">
+      <h2>🔬 شو قرأناه من الملف</h2>
+      <div class="grid">
+        <div class="sc"><div class="n">${j.size_kb}</div><div class="l">حجم الملف (كيلو)</div></div>
+        <div class="sc"><div class="n">${st.streams_found ?? "—"}</div><div class="l">مجرى بالملف</div></div>
+        <div class="sc"><div class="n${st.streams_failed ? " bad" : ""}">${st.streams_failed ?? "—"}</div><div class="l">مجرى ما انفك</div></div>
+        <div class="sc"><div class="n">${j.pages.length}</div><div class="l">صفحة نصية</div></div>
+        <div class="sc"><div class="n">${j.total_numbers}</div><div class="l">رقم قرأناه</div></div>
+        <div class="sc"><div class="n">${j.total_trackings}</div><div class="l">بوليصة طلعت</div></div>
+      </div>
+      <div class="tbl-scroll"><table>
+        <tr><th>الصفحة</th><th>الحساب</th><th>مقاطع نص</th><th>أرقام</th><th>بوليصات</th></tr>
+        ${j.pages.map(p => `<tr><td>${p.page}</td><td>${esc(p.client || "—")}</td>
+          <td>${p.segments}</td><td>${p.numbers}</td>
+          <td><b style="color:${p.trackings ? "var(--green2)" : "var(--red)"}">${p.trackings}</b></td></tr>`).join("")}
+      </table></div>
+      ${j.pages.map(p => `<details style="margin-top:10px">
+        <summary style="cursor:pointer;font-size:13px;color:var(--mut)">أرقام صفحة ${p.page} الخام</summary>
+        <div style="font-size:12px;direction:ltr;text-align:left;background:#fafafa;padding:10px;border-radius:8px;margin-top:6px;line-height:1.9;word-break:break-all">
+          ${esc(p.sample_numbers.join(" · ")) || "—"}</div>
+        <div style="font-size:12px;color:var(--mut);margin-top:6px">أول مقاطع النص: ${esc(p.sample_text.join(" | ")).slice(0,400)}</div>
+      </details>`).join("")}
+      <p class="hint" style="margin-top:12px">إذا «مجرى ما انفك» أكبر من صفر، يعني في صفحات ما قدرنا نقراها — ابعتلي هالأرقام.
+      وإذا الأرقام موجودة بس البوليصات صفر، يعني شكل رقم البوليصة بكشفك مختلف عن اللي بنتوقعه.</p>
+    </div>`;
+  } catch (e) { $("#diag-out").innerHTML = `<div class="msg err" style="display:block">${esc(e.message)}</div>`; }
+  $("#diag-btn").disabled = false;
+};
+
+$("#drop").onclick = () => $("#file").click();
+["dragover","dragleave","drop"].forEach(ev => $("#drop").addEventListener(ev, (e) => {
+  e.preventDefault();
+  $("#drop").classList.toggle("on", ev === "dragover");
+  if (ev === "drop" && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+}));
+$("#file").onchange = (e) => e.target.files[0] && handleFile(e.target.files[0]);
+
+function handleFile(f) {
+  clear($("#stmt-msg"));
+  if (!/\.(pdf|xlsx|xlsm|csv|tsv|json)$/i.test(f.name))
+    return say($("#stmt-msg"), "المدعوم: PDF، إكسل (xlsx)، CSV، TSV، JSON", "err");
+  $("#drop").textContent = "⏳ عم نقرأ " + f.name + " …";
+  const rd = new FileReader();
+  rd.onload = async () => {
+    try {
+      const j = await api("/parse", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: f.name, base64: String(rd.result).split(",")[1] })
+      });
+      parsed = j;
+      lastFile = { name: f.name, b64: String(rd.result).split(",")[1] };
+      $("#diag-btn").disabled = !/\.pdf$/i.test(f.name);
+      renderPreview(j);
+      say($("#stmt-msg"), `تمت قراءة ${j.rows.length} بوليصة من الملف.`, "ok");
+    } catch (e) { say($("#stmt-msg"), e.message, "err"); $("#preview").style.display = "none"; }
+    $("#drop").textContent = "📄 اضغط هون لاختيار الملف (PDF / إكسل / CSV) — أو اسحبه ورميه";
+    $("#drop").classList.remove("on");
+    $("#file").value = "";
+  };
+  rd.readAsDataURL(f);
+}
+
+function renderPreview(j) {
+  $("#preview").style.display = "";
+  $("#pv-name").textContent = j.filename || "كشف";
+  const s = j.summary;
+  scorecards($("#pv-sum"), [
+    { n: s.count, l: "طرود بالكشف" },
+    { n: s.delivered, l: "مُحصّلة" },
+    { n: s.refused, l: "رفض عند الاستلام", bad: s.refused > 0 },
+    { n: s.cancelled, l: "ملغي بلا تكلفة" },
+    { n: d2(s.gross), l: "إجمالي التحصيل (د)" },
+    { n: d2(s.fees), l: `أجور التوصيل (${d2(j.fee_rate)} للطرد)` },
+    { n: d2(s.net), l: "الصافي لإلك (د)" },
+    { n: d2(s.lost), l: "خسارة الرفض (د)", bad: s.lost > 0 },
+    { n: s.pieces, l: "حبّات مباعة" },
+    { n: s.unknown, l: "مبالغ بلا أساس", bad: s.unknown > 0 }
+  ]);
+  // ✅ بانر التحقق الذاتي — أقوى إثبات إنّ ما ضاع ولا صف
+  const v = j.verify || {};
+  $("#pv-verify").innerHTML = v.stated_collection == null
+    ? `<div class="msg" style="display:block;background:#fff8e1;color:#ef6c00">
+         الكشف ما فيه سطر «مجموع التحصيل» نقارن فيه، فما بنقدر نتحقق تلقائياً.
+         قارن <b>${j.rows.length}</b> طرد و<b>${d2(j.summary.gross)}</b> د مع الكشف بعينك.</div>`
+    : v.match
+      ? `<div class="msg ok">✅ <b>مطابق للكشف تماماً.</b> الكشف بيقول مجموع التحصيل
+           <b>${d2(v.stated_collection)}</b> د واحنا حسبنا <b>${d2(v.our_collection)}</b> د،
+           ومجموع التوصيل <b>${d2(v.stated_delivery)}</b> د واحنا حسبنا <b>${d2(v.our_delivery)}</b> د.
+           يعني <b>${j.rows.length}</b> طرد هو العدد الكامل بالملف — ما ضاع ولا صف.</div>`
+      : `<div class="msg err">⚠️ <b>في فرق عن الكشف — يعني يمكن ضاع صف.</b><br>
+           مجموع التحصيل: الكشف <b>${d2(v.stated_collection)}</b> واحنا <b>${d2(v.our_collection)}</b>
+           (فرق <b>${d2(v.diff_collection)}</b>).<br>
+           مجموع التوصيل: الكشف <b>${d2(v.stated_delivery)}</b> واحنا <b>${d2(v.our_delivery)}</b>
+           (فرق <b>${d2(v.diff_delivery)}</b>).<br>
+           اضغط «طلعلي شو قرأت بالضبط» وابعتلي اللقطة.</div>`;
+
+  const dg = j.diagnostics || {};
+  const stt = dg.stats || {};
+  $("#pv-diag").innerHTML = `قرينا <b>${dg.pages || 0}</b> صفحة و<b>${(j.clients||[]).length}</b> حساب و<b>${j.rows.length}</b> بوليصة.` +
+    (stt.streams_failed ? ` <b style="color:var(--red)">⚠️ في ${stt.streams_failed} مجرى ما انفك — يمكن في صفحات ضايعة، اضغط «طلعلي شو قرأت».</b>` : "") +
+    (dg.arabic ? " الأسماء العربية انقرأت من الملف."
+               : " ⚠️ الأسماء العربية ما انقرأت (الملف بلا خريطة حروف) — الأرقام سليمة، بس الحسابات بتظهر «بلا اسم».") +
+    (dg.track_len ? ` رقم البوليصة بهالكشف <b>${dg.track_len}</b> خانة.` : "") +
+    (dg.fee_column ? " وعمود أجرة التوصيل موجود بالكشف وانقرأ بإشارته."
+                   : " والكشف ما فيه عمود أجرة واضح، فطبّقنا الأجرة الافتراضية على الطرود المُحصّلة.");
+
+  $("#pv-clients").innerHTML =
+    "<tr><th>الحساب</th><th>الصفحات</th><th>طرود</th><th>حبّات</th><th>التحصيل</th><th>الأجور</th><th>الصافي</th><th>مرفوض</th><th>خسارة</th></tr>" +
+    (j.clients || []).map(c => `<tr>
+      <td><b>${esc(c.client || "بلا اسم")}</b></td>
+      <td>${(c.pages||[]).join("، ")}</td>
+      <td>${c.summary.count}</td><td>${c.summary.pieces}</td>
+      <td>${d2(c.summary.gross)}</td><td>${d2(c.summary.fees)}</td>
+      <td><b>${d2(c.summary.net)}</b></td>
+      <td>${c.summary.refused || 0}</td>
+      <td class="${c.summary.lost ? "" : ""}">${d2(c.summary.lost)}</td></tr>`).join("");
+
+  $("#pv-tbl").innerHTML =
+    "<tr><th>#</th><th>الحساب</th><th>ص</th><th>رقم البوليصة</th><th>المبلغ</th><th>عدد الحبّات</th><th>أساس العدد</th><th>أجرة التوصيل</th><th>الصافي</th><th>الحالة</th></tr>" +
+    j.rows.map((r, i) => `<tr>
+      <td>${i+1}</td><td>${esc(r.client || "—")}</td><td>${r.page_no || ""}</td>
+      <td>${esc(r.tracking)}</td><td>${d2(r.amount)}</td>
+      <td>${piecesCell(r.pieces)}</td><td style="color:var(--mut);font-size:12px">${esc(r.basis || "")}</td>
+      <td>${d2(r.fee)}</td><td>${d2(r.net)}</td>
+      <td>${stateCell(r.state)}</td></tr>`).join("");
+}
+
+$("#cancel-stmt").onclick = () => { parsed = null; $("#preview").style.display = "none"; };
+
+$("#save-stmt").onclick = async () => {
+  if (!parsed) return;
+  $("#save-stmt").disabled = true;
+  try {
+    await api("/statements", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: parsed.filename, rows: parsed.rows })
+    });
+    say($("#stmt-msg"), "انحفظ الكشف. بتلاقيه بدفتر الأستاذ.", "ok");
+    parsed = null; $("#preview").style.display = "none";
+    loadStatements();
+  } catch (e) { say($("#stmt-msg"), e.message, "err"); }
+  $("#save-stmt").disabled = false;
+};
+
+async function loadStatements() {
+  const j = await api("/statements").catch(() => ({ rows: [] }));
+  const t = $("#stmt-list");
+  if (!j.rows?.length) return t.innerHTML = '<tr><td class="empty">ما في كشوفات محفوظة بعد</td></tr>';
+  t.innerHTML = "<tr><th>الملف</th><th>التاريخ</th><th>طرود</th><th>التحصيل</th><th>الأجور</th><th>الصافي</th><th></th></tr>" +
+    j.rows.map(r => `<tr>
+      <td>${esc(r.filename || "—")}</td>
+      <td>${new Date(r.created_at).toLocaleDateString("ar-JO")}</td>
+      <td>${r.rows_count}</td><td>${d2(r.gross)}</td><td>${d2(r.fees)}</td><td><b>${d2(r.net)}</b></td>
+      <td><button class="btn red sm" onclick="delStatement(${r.id})">حذف</button></td></tr>`).join("");
+}
+window.delStatement = async (id) => {
+  if (!confirm("تحذف الكشف وكل صفوفه؟")) return;
+  await api("/statements/" + id, { method: "DELETE" });
+  loadStatements(); loadLedger();
+};
+
+// ═══════════ دفتر الأستاذ ═══════════
+const lgRange = () => `?from=${$("#lg-from").value}&to=${$("#lg-to").value}` +
+  `&client=${encodeURIComponent($("#lg-client").value)}`;
+$("#lg-go").onclick = loadLedger;
+$("#lg-csv").onclick = () => { location.href = API + "/export.csv" + lgRange(); };
+
+async function loadLedger() {
+  const j = await api("/ledger" + lgRange()).catch(() => null);
+  if (!j) return;
+  const s = j.summary;
+  scorecards($("#lg-sum"), [
+    { n: s.count, l: "طرود" }, { n: s.delivered, l: "مُحصّلة" },
+    { n: s.refused, l: "رفض عند الاستلام", bad: s.refused > 0 },
+    { n: d2(s.gross), l: "إجمالي التحصيل (د)" },
+    { n: d2(s.fees), l: "أجور التوصيل (د)" },
+    { n: d2(s.net), l: "الصافي (د)" },
+    { n: d2(s.lost), l: "خسارة الرفض (د)", bad: s.lost > 0 },
+    { n: s.pieces, l: "حبّات مباعة" },
+    { n: s.unknown, l: "بلا أساس", bad: s.unknown > 0 }
+  ]);
+
+  const sel = $("#lg-client"), keep = sel.value;
+  sel.innerHTML = '<option value="">كل الحسابات</option>' +
+    (j.clients || []).map(c => `<option value="${esc(c.client)}">${esc(c.client)}</option>`).join("");
+  sel.value = keep;
+
+  $("#lg-clients").innerHTML = !(j.clients || []).length
+    ? '<tr><td class="empty">ما في حسابات بهالفترة</td></tr>'
+    : "<tr><th>الحساب</th><th>طرود</th><th>مُحصّل</th><th>مرفوض</th><th>حبّات</th><th>التحصيل</th><th>الأجور</th><th>الصافي</th><th>خسارة</th></tr>" +
+      j.clients.map(c => `<tr><td><b>${esc(c.client)}</b></td><td>${c.count}</td><td>${c.delivered}</td>
+        <td>${c.refused}</td><td>${c.pieces}</td><td>${d2(c.gross)}</td><td>${d2(c.fees)}</td>
+        <td><b>${d2(c.net)}</b></td><td>${d2(c.lost)}</td></tr>`).join("");
+
+  $("#lg-days").innerHTML = !j.days.length
+    ? '<tr><td class="empty">ما في بيانات بهالفترة</td></tr>'
+    : "<tr><th>اليوم</th><th>طرود</th><th>مرفوض</th><th>حبّات</th><th>التحصيل</th><th>الأجور</th><th>الصافي</th><th>خسارة</th></tr>" +
+      j.days.map(d => `<tr><td>${esc(d.day)}</td><td>${d.count}</td><td>${d.refused || 0}</td>
+        <td>${d.pieces}</td><td>${d2(d.gross)}</td><td>${d2(d.fees)}</td><td><b>${d2(d.net)}</b></td>
+        <td>${d2(d.lost)}</td></tr>`).join("");
+
+  $("#lg-rows").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في صفوف</td></tr>'
+    : "<tr><th>اليوم</th><th>الحساب</th><th>ص</th><th>البوليصة</th><th>المبلغ</th><th>الحبّات</th><th>الأساس</th><th>المنتج</th><th>الأجرة</th><th>الصافي</th><th>الحالة</th><th>ملاحظة</th><th></th></tr>" +
+      j.rows.map(r => `<tr data-id="${r.id}">
+        <td>${new Date(r.st_at).toLocaleDateString("ar-JO")}</td>
+        <td>${esc(r.client || "—")}</td><td>${r.page_no || ""}</td>
+        <td>${esc(r.tracking)}</td>
+        <td><input type="number" step="0.01" class="f-amount" value="${r.amount}"></td>
+        <td><input type="number" min="0" class="f-pieces" value="${r.pieces == null ? "" : r.pieces}" placeholder="؟"></td>
+        <td style="color:var(--mut);font-size:12px">${esc(r.basis || "")}</td>
+        <td><input class="f-product" value="${esc(r.product)}" style="min-width:110px"></td>
+        <td>${d2(r.fee)}</td><td><b>${d2(r.net)}</b></td>
+        <td>${stateCell(r.state)}</td>
+        <td><input class="f-note" value="${esc(r.note)}" style="min-width:130px"></td>
+        <td><button class="btn sm" onclick="saveRow(${r.id})">حفظ</button></td></tr>`).join("");
+}
+
+window.saveRow = async (id) => {
+  const tr = document.querySelector(`#lg-rows tr[data-id="${id}"]`);
+  const g = (c) => tr.querySelector("." + c).value;
+  try {
+    await api("/rows/" + id, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: g("f-amount"), pieces: g("f-pieces"), product: g("f-product"), note: g("f-note") })
+    });
+    loadLedger();
+  } catch (e) { alert(e.message); }
+};
+
+// ═══════════ الأحمال ═══════════
+$("#sh-add").onclick = async () => {
+  clear($("#sh-msg"));
+  try {
+    await api("/shipments", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        shipped_at: $("#sh-date").value, packages: Number($("#sh-pk").value),
+        pieces: Number($("#sh-pc").value), courier: $("#sh-co").value,
+        page_name: $("#sh-pg").value, note: $("#sh-note").value
+      })
+    });
+    say($("#sh-msg"), "انسجّلت الحمولة.", "ok");
+    $("#sh-note").value = "";
+    loadShipments();
+  } catch (e) { say($("#sh-msg"), e.message, "err"); }
+};
+
+async function loadShipments() {
+  const j = await api("/shipments").catch(() => null);
+  if (!j) return;
+  scorecards($("#sh-sum"), [
+    { n: j.totals.loads, l: "حمولة مسجّلة" },
+    { n: j.totals.packages, l: "إجمالي الطرود" },
+    { n: j.totals.pieces, l: "إجمالي القطع" }
+  ]);
+  $("#sh-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما سجّلت أي حمولة بعد</td></tr>'
+    : "<tr><th>التاريخ</th><th>الشركة</th><th>الصفحة</th><th>طرود</th><th>قطع</th><th>ملاحظة</th><th></th></tr>" +
+      j.rows.map(r => `<tr>
+        <td>${new Date(r.shipped_at).toLocaleDateString("ar-JO")}</td>
+        <td>${esc(r.courier || "—")}</td><td>${esc(r.page_name || "—")}</td>
+        <td>${r.packages}</td><td>${r.pieces}</td><td>${esc(r.note)}</td>
+        <td><button class="btn red sm" onclick="delShipment(${r.id})">حذف</button></td></tr>`).join("");
+}
+window.delShipment = async (id) => {
+  if (!confirm("تحذف الحمولة؟")) return;
+  await api("/shipments/" + id, { method: "DELETE" });
+  loadShipments();
+};
+
+// ═══════════ المطابقة ═══════════
+$("#rc-go").onclick = async () => {
+  const j = await api(`/reconcile?from=${$("#rc-from").value}&to=${$("#rc-to").value}`).catch(e => { alert(e.message); });
+  if (!j) return;
+  const g = j.gaps;
+  const line = (l, v, unit) => `<tr><td>${l}</td><td><b>${v}</b> ${unit || ""}</td></tr>`;
+  $("#rc-out").innerHTML = `
+    <div class="grid">
+      <div class="sc"><div class="n">${j.shipments.packages}</div><div class="l">طرود سلّمتها</div></div>
+      <div class="sc"><div class="n">${j.statement.count}</div><div class="l">طرود بالكشف</div></div>
+      <div class="sc"><div class="n">${j.orders.count}</div><div class="l">طلبات البوت</div></div>
+      <div class="sc"><div class="n${g.packages_vs_statement!==0?" bad":""}">${g.packages_vs_statement}</div><div class="l">فرق طرودك − الكشف</div></div>
+      <div class="sc"><div class="n${g.orders_vs_statement!==0?" bad":""}">${g.orders_vs_statement}</div><div class="l">فرق الطلبات − الكشف</div></div>
+      <div class="sc"><div class="n${g.money_vs_orders!==0?" bad":""}">${d2(g.money_vs_orders)}</div><div class="l">فرق المبالغ (د)</div></div>
+    </div>
+    <div class="card"><h2>التفصيل</h2><div class="tbl-scroll"><table>
+      ${line("إجمالي التحصيل بالكشف", d2(j.statement.gross), "د")}
+      ${line("أجور التوصيل", d2(j.statement.fees), "د")}
+      ${line("الصافي لإلك", d2(j.statement.net), "د")}
+      ${line("مرتجعات بالكشف", j.statement.returned, "طرد")}
+      ${line("إجمالي طلبات البوت", d2(j.orders.total), "د")}
+    </table></div>
+    <p class="hint" style="margin-top:10px">أي رقم بالأحمر يعني في فرق لازم تتأكد منه — إمّا طرد ما انحسب، أو طلب ما انشحن، أو مبلغ مختلف.</p>
+    </div>`;
+};
+
+// ═══════════ التسعير ═══════════
+async function loadCfg() {
+  const j = await api("/config").catch(() => null);
+  if (!j) return;
+  $("#cfg-fee").value = j.fee_rate;
+  $("#pr-tbl").innerHTML = !j.pricing.length
+    ? '<tr><td class="empty">جدول التسعير فاضي</td></tr>'
+    : "<tr><th>المبلغ (د)</th><th>عدد الحبّات</th><th>المنتج</th><th></th></tr>" +
+      j.pricing.map(p => `<tr><td>${d2(p.amount)}</td><td>${p.pieces}</td><td>${esc(p.product || "—")}</td>
+        <td><button class="btn red sm" onclick="delPrice(${p.amount})">حذف</button></td></tr>`).join("");
+}
+$("#cfg-save").onclick = async () => {
+  clear($("#cfg-msg"));
+  try {
+    await api("/config", { method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ fee_rate: Number($("#cfg-fee").value) }) });
+    say($("#cfg-msg"), "انحفظت الأجرة.", "ok");
+  } catch (e) { say($("#cfg-msg"), e.message, "err"); }
+};
+$("#pr-add").onclick = async () => {
+  clear($("#cfg-msg"));
+  try {
+    await api("/pricing", { method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ amount: Number($("#pr-amt").value), pieces: Number($("#pr-pc").value), product: $("#pr-prod").value }) });
+    $("#pr-amt").value = $("#pr-pc").value = $("#pr-prod").value = "";
+    loadCfg();
+  } catch (e) { say($("#cfg-msg"), e.message, "err"); }
+};
+window.delPrice = async (a) => { await api("/pricing/" + a, { method:"DELETE" }); loadCfg(); };
+
+$("#pr-learn").onclick = async () => {
+  clear($("#cfg-msg"));
+  $("#pr-learn").disabled = true;
+  try {
+    const j = await api("/learn", { method:"POST" });
+    const cf = j.conflicts.length
+      ? ` وفي ${j.conflicts.length} مبلغ إلو أكثر من تفسير تركناهم إلك (${j.conflicts.map(c=>c.amount).join("، ")}).`
+      : "";
+    say($("#cfg-msg"), `قرينا ${j.scanned} طلب، وتعلّمنا ${j.learned.length} مبلغ جديد، وحدّثنا ${j.rederived} صف.` + cf,
+        j.learned.length ? "ok" : "err");
+    loadCfg(); loadLedger();
+  } catch (e) { say($("#cfg-msg"), e.message, "err"); }
+  $("#pr-learn").disabled = false;
+};
+
+// ── إقلاع ──
+const today = new Date().toISOString().slice(0, 10);
+$("#sh-date").value = today;
+loadStatements();
+</script>
+</body>
+</html>

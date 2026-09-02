@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🧊 التشغيل وسلامة الغذاء — منصة الأجبان</title>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"violet")}catch(e){}</script>
+  <link rel="stylesheet" href="/premium.css">
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; --amber:#ef6c00; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:linear-gradient(120deg,var(--green2),var(--green)); color:#fff; padding:16px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:20px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1280px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 12px; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .tab .dot { display:inline-block; min-width:18px; padding:0 5px; margin-inline-start:6px; background:var(--red); color:#fff; border-radius:9px; font-size:11px; }
+    .panel { display:none; } .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.8; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:12.5px; color:var(--mut); font-weight:600; }
+    input, select, textarea { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; min-width:120px; }
+    input:focus, select:focus { outline:none; border-color:var(--green); }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .btn.gray { background:#eceff1; color:#37474f; } .btn.red { background:var(--red); }
+    .btn.sm { padding:5px 11px; font-size:12px; border-radius:8px; }
+    /* أزرار كبيرة للموبايل — الإدخال بيصير وإيد الموظف بالبراد */
+    .btn.big { padding:16px 22px; font-size:17px; border-radius:14px; min-width:120px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:9px 11px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    tr:hover { background:#fafcfa; }
+    td input { padding:5px 7px; font-size:13px; min-width:70px; border-radius:7px; }
+    .empty { text-align:center; padding:34px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .n.bad { color:var(--red); } .sc .n.warn { color:var(--amber); }
+    .sc .l { font-size:12px; color:var(--mut); margin-top:4px; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11.5px; font-weight:700; }
+    .pill.ok { background:#e8f5e9; color:#1b5e20; }
+    .pill.no { background:#ffebee; color:#c62828; }
+    .pill.unk { background:#fff8e1; color:#ef6c00; }
+    .msg { padding:10px 13px; border-radius:10px; font-size:13.5px; margin-bottom:10px; display:none; line-height:1.7; }
+    .msg.err { background:#ffebee; color:#c62828; display:block; }
+    .msg.ok { background:#e8f5e9; color:#1b5e20; display:block; }
+    .bar { height:6px; background:var(--line); border-radius:6px; overflow:hidden; min-width:70px; }
+    .bar i { display:block; height:100%; background:var(--green); }
+    .bar i.low { background:var(--amber); } .bar i.out { background:var(--red); }
+    /* بطاقة جهاز تبريد — إدخال القراءة بضغطة وحدة من الموبايل */
+    .unitbox { border:1.5px solid var(--line); border-radius:14px; padding:14px; margin-bottom:10px; }
+    .unitbox h3 { font-size:15px; color:var(--green2); margin-bottom:4px; }
+    .unitbox .rng { font-size:12.5px; color:var(--mut); margin-bottom:10px; }
+    .unitbox input { font-size:20px; font-weight:700; text-align:center; min-width:110px; padding:14px; }
+    .checkline { display:flex; align-items:center; gap:12px; padding:12px 6px; border-bottom:1px solid var(--line); }
+    .checkline .tx { flex:1; font-size:15px; line-height:1.6; }
+    .checkline .tx small { color:var(--mut); font-size:12px; display:block; }
+    .checkline .crit { color:var(--red); font-weight:700; }
+    .chk { width:30px; height:30px; min-width:30px; accent-color:var(--green); }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🧊 التشغيل وسلامة الغذاء</h1>
+  <a href="/admin/features">← كل الميزات</a>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-p="today">🌅 اليوم <span class="dot" id="today-dot" style="display:none">0</span></button>
+    <button class="tab" data-p="temp">🌡️ الحرارة</button>
+    <button class="tab" data-p="check">✅ قوائم الفحص</button>
+    <button class="tab" data-p="clean">🧼 النظافة</button>
+    <button class="tab" data-p="routine">🔁 المهام المتكررة</button>
+    <button class="tab" data-p="shift">👷 الورديات</button>
+    <button class="tab" data-p="inc">⚠️ الحوادث</button>
+    <button class="tab" data-p="comp">📊 لوحة الالتزام</button>
+    <button class="tab" data-p="setup">⚙️ الإعداد</button>
+  </div>
+
+  <!-- ══════════ اليوم ══════════ -->
+  <div class="panel active" id="p-today">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">لمحة اليوم</h2>
+        <div class="row">
+          <div class="field"><label>اليوم</label><input type="date" id="td-day"></div>
+          <button class="btn" id="td-go">تحديث</button>
+        </div>
+      </div>
+      <p class="hint">هاي أول شاشة بتفتحها الصبح: شو المطلوب اليوم، وشو لسا ما انعمل. الجهاز اللي ما إلو قراءة بيكتب «ما في قراءة» — مش «سليم».</p>
+    </div>
+    <div class="grid" id="td-sum"></div>
+    <div class="card"><h2>🌡️ أجهزة التبريد اليوم</h2><div class="tbl-scroll"><table id="td-units"></table></div></div>
+    <div class="card"><h2>✅ قوائم الفحص</h2><div class="tbl-scroll"><table id="td-lists"></table></div></div>
+    <div class="card"><h2>🧼 نظافة مستحقة اليوم</h2><div class="tbl-scroll"><table id="td-clean"></table></div></div>
+    <div class="card"><h2>🔁 مهام مستحقة</h2><div class="tbl-scroll"><table id="td-rt"></table></div></div>
+    <div class="card"><h2>⚠️ حوادث مفتوحة</h2><div class="tbl-scroll"><table id="td-inc"></table></div></div>
+  </div>
+
+  <!-- ══════════ الحرارة ══════════ -->
+  <div class="panel" id="p-temp">
+    <div class="card">
+      <h2>📥 سجّل قراءة</h2>
+      <p class="hint">اكتب الدرجة واضغط. إذا طلعت برّا المدى المسموح، النظام بيفتح حادثة على طول لحالها. الاسم إلزامي — بلا اسم ما في مسؤولية.</p>
+      <div class="msg" id="tp-msg"></div>
+      <div class="row" style="margin-bottom:12px">
+        <div class="field"><label>اسم اللي بياخد القراءة</label><input id="tp-person" placeholder="مثال: سامر"></div>
+        <div class="field"><label>اليوم</label><input type="date" id="tp-day"></div>
+      </div>
+      <div id="tp-units"></div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">📜 سجل القراءات</h2>
+        <div class="row">
+          <div class="field"><label>من</label><input type="date" id="tp-from"></div>
+          <div class="field"><label>إلى</label><input type="date" id="tp-to"></div>
+          <button class="btn gray sm" id="tp-flt">تصفية</button>
+          <button class="btn gray sm" onclick="location.href=API+'/temps.csv'">⬇️ تصدير</button>
+        </div>
+      </div>
+      <p class="hint">🔴 هاد سجل رقابي: ما بينمسح ولا بينكتب فوقه. التصحيح بينكتب كسطر جديد بسببه، والسطر الأصلي بيضل مكانه معلّم «مصحّحة».</p>
+      <div class="tbl-scroll"><table id="tp-tbl"></table></div>
+    </div>
+    <div class="card">
+      <h2>📆 تغطية السجل</h2>
+      <p class="hint">كم يوم من الفترة فيه قراءة فعلاً. «نسبة السلامة» محسوبة على الأيام المسجّلة بس — اليوم اللي ما انقاس فيه شي ما بينحسب يوم ناجح.</p>
+      <div class="tbl-scroll"><table id="tp-cov"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ قوائم الفحص ══════════ -->
+  <div class="panel" id="p-check">
+    <div class="card">
+      <h2>ابدأ / افتح تنفيذ</h2>
+      <div class="msg" id="ck-msg"></div>
+      <div class="row">
+        <div class="field"><label>القائمة</label><select id="ck-list"></select></div>
+        <div class="field"><label>اليوم</label><input type="date" id="ck-day"></div>
+        <div class="field"><label>المسؤول</label><input id="ck-person" placeholder="اسم الموظف"></div>
+        <button class="btn" id="ck-open">افتح</button>
+      </div>
+    </div>
+    <div id="ck-run" style="display:none">
+      <div class="grid" id="ck-sum"></div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between;margin-bottom:6px">
+          <h2 style="margin:0" id="ck-title"></h2>
+          <button class="btn" id="ck-close">🔒 أقفل التنفيذ</button>
+        </div>
+        <p class="hint">علّم البند لمّا تعمله — بينتسجّل باسمك وبالساعة. البند المعلّم <span class="crit" style="color:var(--red)">حرج</span> ما بينترك بلا سبب مكتوب.</p>
+        <div id="ck-items"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">التنفيذات السابقة</h2>
+        <button class="btn gray sm" onclick="location.href=API+'/checklists.csv'">⬇️ تصدير</button>
+      </div>
+      <div class="tbl-scroll"><table id="ck-runs"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ النظافة ══════════ -->
+  <div class="panel" id="p-clean">
+    <div class="card">
+      <h2>أضف بند نظافة</h2>
+      <p class="hint">الجدولة بتحدّد إيمتى البند بيستحق: يومي كل يوم، أسبوعي كل 7 أيام، شهري كل 30 يوم من آخر مرة انعمل فيها.</p>
+      <div class="msg" id="cn-msg"></div>
+      <div class="row">
+        <div class="field"><label>البند</label><input id="cn-name" placeholder="مثال: تعقيم طاولة التقطيع"></div>
+        <div class="field"><label>المكان</label><input id="cn-area" placeholder="المطبخ"></div>
+        <div class="field"><label>الجدولة</label><select id="cn-freq"></select></div>
+        <button class="btn" id="cn-add">💾 حفظ</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">بنود النظافة وحالتها</h2>
+        <div class="row">
+          <div class="field"><label>المنفّذ</label><input id="cn-person" placeholder="اسمك"></div>
+          <button class="btn gray sm" onclick="location.href=API+'/cleaning.csv'">⬇️ تصدير</button>
+        </div>
+      </div>
+      <div class="tbl-scroll"><table id="cn-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ المهام المتكررة ══════════ -->
+  <div class="panel" id="p-routine">
+    <div class="card">
+      <h2>أضف مهمة متكررة</h2>
+      <p class="hint">المهام اللي بتنسى عادة: معايرة الميزان، فحص طفايات الحريق، صيانة البراد. المتأخرة بتطلع بالأحمر بعدد أيام تأخيرها.</p>
+      <div class="msg" id="rt-msg"></div>
+      <div class="row">
+        <div class="field"><label>المهمة</label><input id="rt-name" placeholder="مثال: معايرة الميزان"></div>
+        <div class="field"><label>المسؤول</label><input id="rt-owner" placeholder="اختياري"></div>
+        <div class="field"><label>الجدولة</label><select id="rt-freq"></select></div>
+        <button class="btn" id="rt-add">💾 حفظ</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">المهام وحالتها</h2>
+        <div class="field"><label>المنفّذ</label><input id="rt-person" placeholder="اسمك"></div>
+      </div>
+      <div class="tbl-scroll"><table id="rt-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الورديات ══════════ -->
+  <div class="panel" id="p-shift">
+    <div class="card">
+      <h2>سجّل وردية</h2>
+      <div class="msg" id="sh-msg"></div>
+      <div class="row">
+        <div class="field"><label>اليوم</label><input type="date" id="sh-day"></div>
+        <div class="field"><label>الفترة</label><select id="sh-period"></select></div>
+        <div class="field"><label>الموظف</label><input id="sh-person"></div>
+        <div class="field"><label>الدور</label><input id="sh-role" placeholder="تحضير / بيع"></div>
+        <button class="btn" id="sh-add">➕ أضف</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">جدول الورديات</h2>
+        <div class="row">
+          <div class="field"><label>من</label><input type="date" id="sh-from"></div>
+          <div class="field"><label>إلى</label><input type="date" id="sh-to"></div>
+          <button class="btn gray sm" id="sh-go">عرض</button>
+        </div>
+      </div>
+      <p class="hint">اليوم اللي ما إلو ولا وردية مسجّلة بينكتب «مكشوف» — ما منفترض إنّ حدا كان موجود.</p>
+      <div class="tbl-scroll"><table id="sh-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الحوادث ══════════ -->
+  <div class="panel" id="p-inc">
+    <div class="card">
+      <h2>سجّل حادثة أو ملاحظة</h2>
+      <p class="hint">أي شي خرج عن المسار: عطل براد، شكوى زبون، بضاعة انهدرت. الحادثة ما بتنسكّر إلا لمّا تكتب السبب والإجراء التصحيحي — لأنّ هاد بالضبط اللي بتسأل عنه الرقابة.</p>
+      <div class="msg" id="in-msg"></div>
+      <div class="row">
+        <div class="field" style="flex:1"><label>الحادثة</label><input id="in-title" placeholder="مثال: البراد وقف ساعتين"></div>
+        <div class="field"><label>الخطورة</label><select id="in-sev"></select></div>
+        <div class="field"><label>اليوم</label><input type="date" id="in-day"></div>
+        <div class="field"><label>المسؤول</label><input id="in-person"></div>
+        <button class="btn" id="in-add">➕ سجّل</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">السجل</h2>
+        <button class="btn gray sm" onclick="location.href=API+'/incidents.csv'">⬇️ تصدير</button>
+      </div>
+      <div class="grid" id="in-sum"></div>
+      <div class="tbl-scroll"><table id="in-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ لوحة الالتزام ══════════ -->
+  <div class="panel" id="p-comp">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>من</label><input type="date" id="cp-from"></div>
+        <div class="field"><label>إلى</label><input type="date" id="cp-to"></div>
+        <button class="btn" id="cp-go">احسب</button>
+        <div class="field"><label>تقرير شهري</label><input type="month" id="cp-month"></div>
+        <button class="btn gray" id="cp-rep">📄 تقرير الرقابة (CSV)</button>
+      </div>
+      <p class="hint">كل نسبة هون إلها مقام حقيقي. المحور اللي ما إلو بيانات بيطلع «—» — ما منحسبه صفر ولا مية بالمية.</p>
+    </div>
+    <div class="grid" id="cp-sum"></div>
+    <div class="card"><h2>🧼 التزام النظافة بند بند</h2><div class="tbl-scroll"><table id="cp-clean"></table></div></div>
+    <div class="card"><h2>🌡️ تغطية الحرارة جهاز جهاز</h2><div class="tbl-scroll"><table id="cp-temp"></table></div></div>
+    <div class="card">
+      <h2>🧠 أكثر البنود اللي بتنتنسى</h2>
+      <p class="hint">مستخرجة من التنفيذات الحقيقية بس. إذا ما في تنفيذات، الجدول بيضل فاضي — ما منخمّن شو بينتنسى.</p>
+      <div class="tbl-scroll"><table id="cp-forg"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الإعداد ══════════ -->
+  <div class="panel" id="p-setup">
+    <div class="card">
+      <h2>🌡️ أجهزة التبريد ومداها المسموح</h2>
+      <p class="hint">«شامل» يعني القراءة على الحد بالضبط مقبولة (2° مقبولة بمدى 2–5). «غير شامل» يعني الحد نفسه مرفوض (مواصفة «أقل من 4» مش «4 أو أقل»). الفرق بيعني بضاعة بتتلف أو ما بتتلف — فاختار زي ما مكتوب على الجهاز.</p>
+      <div class="msg" id="un-msg"></div>
+      <div class="row">
+        <div class="field"><label>الاسم</label><input id="un-name" placeholder="مثال: براد الأجبان"></div>
+        <div class="field"><label>النوع</label><select id="un-kind"></select></div>
+        <div class="field"><label>أدنى درجة</label><input type="number" step="0.1" id="un-min"></div>
+        <div class="field"><label>أعلى درجة</label><input type="number" step="0.1" id="un-max"></div>
+        <div class="field"><label>الحدود</label><select id="un-bounds"></select></div>
+        <button class="btn" id="un-add">💾 حفظ</button>
+      </div>
+      <div class="tbl-scroll" style="margin-top:12px"><table id="un-tbl"></table></div>
+    </div>
+    <div class="card">
+      <h2>✅ قوائم الفحص وبنودها</h2>
+      <div class="msg" id="cs-msg"></div>
+      <div class="row">
+        <div class="field"><label>اسم القائمة</label><input id="cs-name" placeholder="مثال: إغلاق المحل"></div>
+        <div class="field"><label>النوع</label><select id="cs-kind"></select></div>
+        <button class="btn" id="cs-add">➕ قائمة</button>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div class="field"><label>أضف بند لقائمة</label><select id="cs-list"></select></div>
+        <div class="field" style="flex:1"><label>نص البند</label><input id="cs-item" placeholder="مثال: قياس حرارة البراد"></div>
+        <div class="field"><label>ترتيب</label><input type="number" id="cs-sort" value="0" style="min-width:80px"></div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding-bottom:10px">
+          <input type="checkbox" id="cs-crit" style="min-width:auto;width:18px;height:18px"> بند حرج
+        </label>
+        <button class="btn" id="cs-item-add">➕ بند</button>
+      </div>
+      <div id="cs-tree" style="margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/theme.js"></script>
+<script>
+const API = "/admin/f-api/ops";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+// 🔴 القاعدة بالواجهة: null = ما في بيانات = «—». ما منطبع صفر مكانها.
+const nn = (v, suffix) => (v == null ? "—" : v + (suffix || ""));
+const d1 = (n) => (Math.round((Number(n) || 0) * 10) / 10);
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  const j = await r.json().catch(() => ({ ok:false, error:"رد غير مفهوم من الخادم" }));
+  if (!j.ok) throw new Error(j.error || "خطأ");
+  return j;
+}
+const jpost = (body) => ({ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+function say(el, text, kind) { el.className = "msg " + kind; el.innerHTML = text; }
+function clear(el) { el.className = "msg"; el.textContent = ""; }
+function cards(el, items) {
+  el.innerHTML = items.map(i =>
+    `<div class="sc"><div class="n${i.k ? " " + i.k : ""}">${esc(i.n)}</div><div class="l">${esc(i.l)}</div></div>`).join("");
+}
+const statePill = (s) => {
+  const k = (s === "ضمن المدى" || s === "مسجّل" || s === "مكتمل") ? "ok"
+          : (s === "خارج المدى" || s === "أعلى من المدى" || s === "أدنى من المدى") ? "no" : "unk";
+  return `<span class="pill ${k}">${esc(s)}</span>`;
+};
+const todayStr = () => { const d = new Date(); const p = n => String(n).padStart(2,"0");
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate()); };
+
+let META = null, UNITS = [], LISTS = [];
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  $("#p-" + t.dataset.p).classList.add("active");
+  ({ today: loadToday, temp: loadTemps, check: loadRuns, clean: loadClean, routine: loadRoutines,
+     shift: loadShifts, inc: loadIncidents, comp: loadCompliance, setup: loadSetup })[t.dataset.p]?.();
+});
+
+// ══════════ اليوم ══════════
+$("#td-go").onclick = loadToday;
+async function loadToday() {
+  const day = $("#td-day").value || todayStr();
+  const j = await api("/today?day=" + day).catch(() => null);
+  if (!j) return;
+  const noRead = j.units.filter(u => u.state === "ما في قراءة").length;
+  const missed = j.lists.reduce((a, l) => a + (l.missed || 0), 0);
+  const pend = noRead + j.cleaning_due.length + j.routines_due.length + j.open_incidents.length + missed;
+  const dot = $("#today-dot");
+  dot.style.display = pend ? "" : "none"; dot.textContent = pend;
+
+  cards($("#td-sum"), [
+    { n: noRead, l: "جهاز بلا قراءة", k: noRead ? "bad" : "" },
+    { n: missed, l: "بند فحص انترك", k: missed ? "warn" : "" },
+    { n: j.cleaning_due.length, l: "نظافة مستحقة", k: j.cleaning_due.length ? "warn" : "" },
+    { n: j.routines_due.length, l: "مهمة مستحقة", k: j.routines_due.length ? "warn" : "" },
+    { n: j.open_incidents.length, l: "حادثة مفتوحة", k: j.open_incidents.length ? "bad" : "" },
+    { n: j.shifts.length, l: "وردية اليوم" }
+  ]);
+
+  $("#td-units").innerHTML = !j.units.length
+    ? '<tr><td class="empty">ما في أجهزة مسجّلة — أضفها من تبويب «الإعداد»</td></tr>'
+    : "<tr><th>الجهاز</th><th>المدى المسموح</th><th>قراءات اليوم</th><th>الحالة</th></tr>" +
+      j.units.map(u => `<tr><td><b>${esc(u.name)}</b></td>
+        <td>${u.min_c}° إلى ${u.max_c}° (${esc(u.bounds)})</td><td>${u.readings}</td>
+        <td>${statePill(u.state)}</td></tr>`).join("");
+
+  $("#td-lists").innerHTML = !j.lists.length
+    ? '<tr><td class="empty">ما في قوائم فحص — أضفها من «الإعداد»</td></tr>'
+    : "<tr><th>القائمة</th><th>النوع</th><th>الإنجاز</th><th>انترك</th><th></th></tr>" +
+      j.lists.map(l => `<tr><td><b>${esc(l.name)}</b></td><td>${esc(l.kind)}</td>
+        <td>${nn(l.percent, "%")}</td><td>${nn(l.missed)}</td>
+        <td><button class="btn sm" onclick="quickRun(${l.id})">${l.run_id ? "افتح" : "ابدأ"}</button></td></tr>`).join("");
+
+  const schedTbl = (rows) => !rows.length
+    ? '<tr><td class="empty">ما في شي مستحق — تمام 👌</td></tr>'
+    : "<tr><th>البند</th><th>الجدولة</th><th>آخر مرة</th><th>التأخير</th></tr>" +
+      rows.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.freq)}</td>
+        <td>${esc(r.last_day || "عمره ما انعمل")}</td>
+        <td>${r.overdue == null ? "—" : (r.overdue > 0 ? `<span class="pill no">${r.overdue} يوم</span>` : "—")}</td></tr>`).join("");
+  $("#td-clean").innerHTML = schedTbl(j.cleaning_due);
+  $("#td-rt").innerHTML = schedTbl(j.routines_due);
+
+  $("#td-inc").innerHTML = !j.open_incidents.length
+    ? '<tr><td class="empty">ما في حوادث مفتوحة</td></tr>'
+    : "<tr><th>اليوم</th><th>الحادثة</th><th>الخطورة</th><th>المصدر</th></tr>" +
+      j.open_incidents.map(i => `<tr><td>${esc(i.day)}</td><td>${esc(i.title)}</td>
+        <td><span class="pill ${i.severity === "عالية" ? "no" : "unk"}">${esc(i.severity)}</span></td>
+        <td>${esc(i.source)}</td></tr>`).join("");
+}
+window.quickRun = async (listId) => {
+  document.querySelector('.tab[data-p="check"]').click();
+  await loadRuns();
+  $("#ck-list").value = listId;
+  $("#ck-open").click();
+};
+
+// ══════════ الحرارة ══════════
+async function loadTemps() {
+  const u = await api("/units?day=" + ($("#tp-day").value || todayStr())).catch(() => null);
+  if (!u) return;
+  UNITS = u.rows.filter(x => x.active);
+  $("#tp-units").innerHTML = !UNITS.length
+    ? '<p class="empty">ما في أجهزة — أضفها من تبويب «الإعداد» أول.</p>'
+    : UNITS.map(x => `<div class="unitbox">
+        <h3>${esc(x.name)} <span style="font-size:12px;color:var(--mut)">${esc(x.kind)}</span></h3>
+        <div class="rng">المسموح: ${x.min_c}° إلى ${x.max_c}° (${esc(x.bounds)}) ·
+          اليوم: ${statePill(x.today_state)}
+          ${x.last_reading ? ` · آخر قراءة ${x.last_reading.celsius}°` : ""}</div>
+        <div class="row">
+          <input type="number" step="0.1" inputmode="decimal" id="tv-${x.id}" placeholder="°C">
+          <button class="btn big" onclick="saveTemp(${x.id})">💾 سجّل</button>
+        </div></div>`).join("");
+  loadTempRows();
+  loadCoverage();
+}
+
+window.saveTemp = async (unitId) => {
+  clear($("#tp-msg"));
+  const el = $("#tv-" + unitId);
+  try {
+    const j = await api("/temps", jpost({
+      unit_id: unitId, celsius: el.value, person: $("#tp-person").value,
+      day: $("#tp-day").value || undefined
+    }));
+    el.value = "";
+    say($("#tp-msg"), j.out
+      ? `⚠️ القراءة <b>${esc(j.status)}</b> بانحراف ${j.deviation}° — فتحنا حادثة رقم ${j.incident_id}. عالجها وسكّرها بالسبب والإجراء.`
+      : "انسجّلت القراءة ضمن المدى.", j.out ? "err" : "ok");
+    loadTemps();
+  } catch (e) { say($("#tp-msg"), e.message, "err"); }
+};
+
+$("#tp-flt").onclick = loadTempRows;
+async function loadTempRows() {
+  const q = [];
+  if ($("#tp-from").value) q.push("from=" + $("#tp-from").value);
+  if ($("#tp-to").value) q.push("to=" + $("#tp-to").value);
+  const j = await api("/temps?" + q.join("&")).catch(() => null);
+  if (!j) return;
+  $("#tp-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في قراءات مسجّلة بعد</td></tr>'
+    : "<tr><th>اليوم</th><th>الجهاز</th><th>القراءة</th><th>المسموح</th><th>النتيجة</th><th>المسؤول</th><th>ملاحظة</th><th></th></tr>" +
+      j.rows.map(r => `<tr${r.voided ? ' style="opacity:.55;text-decoration:line-through"' : ""}>
+        <td>${esc(r.day)}</td><td><b>${esc(r.name)}</b></td>
+        <td><b>${r.celsius}°</b></td><td>${r.min_c}° / ${r.max_c}°</td>
+        <td>${statePill(r.status)}</td><td>${esc(r.person)}</td>
+        <td>${esc(r.note)}${r.corrects_id ? ` <span class="pill unk">تصحيح لـ#${r.corrects_id}: ${esc(r.reason)}</span>` : ""}</td>
+        <td>${r.voided ? '<span class="pill unk">مصحّحة</span>' :
+              `<button class="btn gray sm" onclick="fixTemp(${r.id},${r.celsius})">تصحيح</button>`}</td></tr>`).join("");
+}
+
+window.fixTemp = async (id, cur) => {
+  const v = prompt("القراءة الصحيحة بالدرجات:", cur);
+  if (v === null) return;
+  const reason = prompt("ليش عم تصحّح؟ (إلزامي — السجل رقابي)");
+  if (!reason) { alert("لازم سبب للتصحيح."); return; }
+  try {
+    await api(`/temps/${id}/correct`, jpost({ celsius: v, reason, person: $("#tp-person").value }));
+    loadTemps();
+  } catch (e) { alert(e.message); }
+};
+
+async function loadCoverage() {
+  const q = [];
+  if ($("#tp-from").value) q.push("from=" + $("#tp-from").value);
+  if ($("#tp-to").value) q.push("to=" + $("#tp-to").value);
+  const j = await api("/temps/coverage?" + q.join("&")).catch(() => null);
+  if (!j) return;
+  $("#tp-cov").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في أجهزة</td></tr>'
+    : `<tr><th>الجهاز</th><th>أيام الفترة</th><th>أيام فيها قراءة</th><th>أيام بلا قراءة</th>
+       <th>قراءات خارج المدى</th><th>التغطية</th><th>نسبة السلامة</th></tr>` +
+      j.rows.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${r.days}</td><td>${r.logged_days}</td>
+        <td>${r.missing_days ? `<span class="pill no">${r.missing_days}</span>` : 0}</td>
+        <td>${r.out_readings ? `<span class="pill no">${r.out_readings}</span>` : 0}</td>
+        <td>${nn(r.coverage, "%")}</td><td>${nn(r.in_range, "%")}</td></tr>`).join("");
+}
+
+// ══════════ قوائم الفحص ══════════
+let RUN = null;
+async function loadRuns() {
+  const j = await api("/checklists").catch(() => null);
+  if (!j) return;
+  LISTS = j.rows;
+  $("#ck-list").innerHTML = LISTS.filter(l => l.active)
+    .map(l => `<option value="${l.id}">${esc(l.name)} (${esc(l.kind)})</option>`).join("");
+  const r = await api("/runs").catch(() => null);
+  if (!r) return;
+  $("#ck-runs").innerHTML = !r.rows.length
+    ? '<tr><td class="empty">ما في تنفيذات بعد</td></tr>'
+    : "<tr><th>اليوم</th><th>القائمة</th><th>الإنجاز</th><th>الحالة</th><th></th></tr>" +
+      r.rows.map(x => `<tr><td>${esc(x.day)}</td><td><b>${esc(x.name)}</b></td>
+        <td>${x.done}/${x.items} (${nn(x.percent, "%")})</td>
+        <td>${statePill(x.status)}</td>
+        <td><button class="btn gray sm" onclick="openRun(${x.id})">افتح</button></td></tr>`).join("");
+}
+
+$("#ck-open").onclick = async () => {
+  clear($("#ck-msg"));
+  try {
+    const j = await api("/runs", jpost({ checklist_id: $("#ck-list").value,
+      day: $("#ck-day").value || undefined, person: $("#ck-person").value }));
+    openRun(j.id);
+    loadRuns();
+  } catch (e) { say($("#ck-msg"), e.message, "err"); }
+};
+
+window.openRun = async (id) => {
+  const j = await api("/runs/" + id).catch(e => { say($("#ck-msg"), e.message, "err"); });
+  if (!j) return;
+  RUN = j;
+  $("#ck-run").style.display = "";
+  $("#ck-title").textContent = `${j.run.name} — ${j.run.day} (${j.run.status})`;
+  const s = j.summary;
+  cards($("#ck-sum"), [
+    { n: s.items, l: "بند" }, { n: s.done, l: "انعمل" },
+    { n: s.missed, l: "انترك", k: s.missed ? "warn" : "" },
+    { n: s.critical_missed, l: "بند حرج ناقص", k: s.critical_missed ? "bad" : "" },
+    { n: nn(s.percent, "%"), l: "نسبة الإنجاز" }
+  ]);
+  const locked = j.run.status !== "مفتوح";
+  $("#ck-close").disabled = locked;
+  $("#ck-items").innerHTML = !j.rows.length
+    ? '<p class="empty">القائمة بلا بنود — أضف بنودها من «الإعداد»</p>'
+    : j.rows.map(r => `<div class="checkline">
+        <input type="checkbox" class="chk" ${r.done ? "checked" : ""} ${locked ? "disabled" : ""}
+               onchange="markItem(${r.item_id}, this.checked)">
+        <div class="tx">${esc(r.text)} ${r.critical ? '<span class="crit">(حرج)</span>' : ""}
+          <small>${r.done ? `✔ ${esc(r.person)} · ${new Date(r.at).toLocaleTimeString("ar-JO",{hour:"2-digit",minute:"2-digit"})}` : "لسا ما انعمل"}</small></div>
+      </div>`).join("");
+};
+
+window.markItem = async (itemId, checked) => {
+  const person = $("#ck-person").value || RUN.run.person || prompt("اسمك؟");
+  if (checked && !person) { alert("لازم اسم المنفّذ."); openRun(RUN.run.id); return; }
+  $("#ck-person").value = person || "";
+  try {
+    await api(`/runs/${RUN.run.id}/item`, jpost({ item_id: itemId, done: checked, person }));
+    openRun(RUN.run.id);
+  } catch (e) { alert(e.message); openRun(RUN.run.id); }
+};
+
+$("#ck-close").onclick = async () => {
+  if (!RUN) return;
+  const crit = RUN.summary.critical_missed;
+  let reason = "";
+  if (crit) {
+    reason = prompt(`في ${crit} بند حرج ما انعمل. ليش؟ (رح تنفتح حادثة بهالسبب)`);
+    if (!reason) return;
+  }
+  try {
+    await api(`/runs/${RUN.run.id}/close`, jpost({ force: !!crit, reason, person: $("#ck-person").value }));
+    say($("#ck-msg"), "انقفل التنفيذ.", "ok");
+    openRun(RUN.run.id); loadRuns();
+  } catch (e) { say($("#ck-msg"), e.message, "err"); }
+};
+
+// ══════════ النظافة والمهام (نفس الشكل — نفس الكود) ══════════
+function schedTable(el, rows, doFn) {
+  el.innerHTML = !rows.length
+    ? '<tr><td class="empty">ما في بنود بعد</td></tr>'
+    : "<tr><th>البند</th><th>تفصيل</th><th>الجدولة</th><th>آخر مرة</th><th>من آخر مرة</th><th>التأخير</th><th>الحالة</th><th></th></tr>" +
+      rows.map(r => `<tr${r.active ? "" : ' style="opacity:.5"'}>
+        <td><b>${esc(r.name)}</b></td><td>${esc(r.area || r.owner || "—")}</td>
+        <td>${esc(r.freq)}</td><td>${esc(r.last_day || "عمره ما انعمل")}</td>
+        <td>${nn(r.days_since, " يوم")}</td>
+        <td>${r.overdue == null ? "—" : (r.overdue > 0 ? `<span class="pill no">${r.overdue} يوم</span>` : "—")}</td>
+        <td>${r.done_today ? '<span class="pill ok">انعمل اليوم</span>'
+             : r.due ? '<span class="pill unk">مستحق</span>' : '<span class="pill ok">مش مستحق</span>'}</td>
+        <td><button class="btn sm" onclick="${doFn}(${r.id})">✔ سجّل</button>
+            <button class="btn gray sm" onclick="${doFn}Toggle(${r.id})">${r.active ? "إيقاف" : "تفعيل"}</button></td></tr>`).join("");
+}
+
+async function loadClean() {
+  const j = await api("/cleaning?day=" + todayStr()).catch(() => null);
+  if (!j) return;
+  schedTable($("#cn-tbl"), j.rows, "doClean");
+}
+$("#cn-add").onclick = async () => {
+  clear($("#cn-msg"));
+  try {
+    await api("/cleaning", jpost({ name: $("#cn-name").value, area: $("#cn-area").value, freq: $("#cn-freq").value }));
+    $("#cn-name").value = $("#cn-area").value = "";
+    say($("#cn-msg"), "انحفظ البند.", "ok"); loadClean();
+  } catch (e) { say($("#cn-msg"), e.message, "err"); }
+};
+window.doClean = async (id) => {
+  const person = $("#cn-person").value || prompt("مين نفّذ؟");
+  if (!person) return;
+  $("#cn-person").value = person;
+  try { await api(`/cleaning/${id}/log`, jpost({ person })); loadClean(); }
+  catch (e) { alert(e.message); }
+};
+window.doCleanToggle = async (id) => { await api(`/cleaning/${id}/toggle`, { method:"POST" }); loadClean(); };
+
+async function loadRoutines() {
+  const j = await api("/routines?day=" + todayStr()).catch(() => null);
+  if (!j) return;
+  schedTable($("#rt-tbl"), j.rows, "doRoutine");
+}
+$("#rt-add").onclick = async () => {
+  clear($("#rt-msg"));
+  try {
+    await api("/routines", jpost({ name: $("#rt-name").value, owner: $("#rt-owner").value, freq: $("#rt-freq").value }));
+    $("#rt-name").value = $("#rt-owner").value = "";
+    say($("#rt-msg"), "انحفظت المهمة.", "ok"); loadRoutines();
+  } catch (e) { say($("#rt-msg"), e.message, "err"); }
+};
+window.doRoutine = async (id) => {
+  const person = $("#rt-person").value || prompt("مين نفّذ؟");
+  if (!person) return;
+  $("#rt-person").value = person;
+  try { await api(`/routines/${id}/log`, jpost({ person })); loadRoutines(); }
+  catch (e) { alert(e.message); }
+};
+window.doRoutineToggle = async (id) => { await api(`/routines/${id}/toggle`, { method:"POST" }); loadRoutines(); };
+
+// ══════════ الورديات ══════════
+$("#sh-go").onclick = loadShifts;
+async function loadShifts() {
+  const from = $("#sh-from").value || todayStr(), to = $("#sh-to").value || from;
+  const j = await api(`/shifts?from=${from}&to=${to}`).catch(() => null);
+  if (!j) return;
+  $("#sh-tbl").innerHTML = "<tr><th>اليوم</th>" + j.days[0]?.periods.map(p => `<th>${esc(p.period)}</th>`).join("") + "</tr>" +
+    j.days.map(d => `<tr><td><b>${esc(d.day)}</b>${j.uncovered.includes(d.day) ? ' <span class="pill no">مكشوف</span>' : ""}</td>` +
+      d.periods.map(p => `<td>${p.people.length
+        ? p.people.map(x => `${esc(x.person)}${x.role ? ` <small style="color:var(--mut)">(${esc(x.role)})</small>` : ""}
+            <button class="btn red sm" onclick="delShift(${x.id})">×</button>`).join("<br>")
+        : '<span style="color:var(--mut)">—</span>'}</td>`).join("") + "</tr>").join("");
+}
+$("#sh-add").onclick = async () => {
+  clear($("#sh-msg"));
+  try {
+    await api("/shifts", jpost({ day: $("#sh-day").value, period: $("#sh-period").value,
+      person: $("#sh-person").value, role: $("#sh-role").value }));
+    $("#sh-person").value = "";
+    say($("#sh-msg"), "انسجّلت الوردية.", "ok"); loadShifts();
+  } catch (e) { say($("#sh-msg"), e.message, "err"); }
+};
+window.delShift = async (id) => { await api("/shifts/" + id, { method:"DELETE" }); loadShifts(); };
+
+// ══════════ الحوادث ══════════
+async function loadIncidents() {
+  const j = await api("/incidents").catch(() => null);
+  if (!j) return;
+  cards($("#in-sum"), [
+    { n: j.totals.all, l: "حادثة" },
+    { n: j.totals.open, l: "مفتوحة", k: j.totals.open ? "bad" : "" },
+    { n: j.totals.high, l: "خطورة عالية", k: j.totals.high ? "bad" : "" },
+    { n: j.totals.closed_without_action, l: "مغلقة بلا إجراء", k: j.totals.closed_without_action ? "warn" : "" }
+  ]);
+  $("#in-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في حوادث — الحمد لله</td></tr>'
+    : "<tr><th>اليوم</th><th>الحادثة</th><th>المصدر</th><th>الخطورة</th><th>السبب</th><th>الإجراء التصحيحي</th><th>الحالة</th><th></th></tr>" +
+      j.rows.map(i => `<tr><td>${esc(i.day)}</td><td><b>${esc(i.title)}</b></td>
+        <td>${esc(i.source)}</td>
+        <td><span class="pill ${i.severity === "عالية" ? "no" : i.severity === "متوسطة" ? "unk" : "ok"}">${esc(i.severity)}</span></td>
+        <td>${esc(i.cause || "—")}</td><td>${esc(i.action || "—")}</td>
+        <td>${i.status === "مفتوحة" ? '<span class="pill no">مفتوحة</span>' : '<span class="pill ok">مغلقة</span>'}</td>
+        <td>${i.status === "مفتوحة" ? `<button class="btn sm" onclick="closeInc(${i.id})">سكّرها</button>` : ""}</td></tr>`).join("");
+}
+$("#in-add").onclick = async () => {
+  clear($("#in-msg"));
+  try {
+    await api("/incidents", jpost({ title: $("#in-title").value, severity: $("#in-sev").value,
+      day: $("#in-day").value || undefined, person: $("#in-person").value }));
+    $("#in-title").value = "";
+    say($("#in-msg"), "انسجّلت الحادثة.", "ok"); loadIncidents();
+  } catch (e) { say($("#in-msg"), e.message, "err"); }
+};
+window.closeInc = async (id) => {
+  const cause = prompt("شو كان السبب؟");
+  if (!cause) return;
+  const action = prompt("شو الإجراء التصحيحي اللي عملتوه؟");
+  if (!action) return;
+  try { await api(`/incidents/${id}/close`, jpost({ cause, action })); loadIncidents(); }
+  catch (e) { alert(e.message); }
+};
+
+// ══════════ لوحة الالتزام ══════════
+$("#cp-go").onclick = loadCompliance;
+$("#cp-rep").onclick = () => {
+  const m = $("#cp-month").value || todayStr().slice(0, 7);
+  location.href = `${API}/report/monthly.csv?month=${m}`;
+};
+async function loadCompliance() {
+  const q = [];
+  if ($("#cp-from").value) q.push("from=" + $("#cp-from").value);
+  if ($("#cp-to").value) q.push("to=" + $("#cp-to").value);
+  const j = await api("/compliance?" + q.join("&")).catch(() => null);
+  if (!j) return;
+  const bad = (v) => (v == null ? "" : v < 80 ? "bad" : v < 95 ? "warn" : "");
+  cards($("#cp-sum"), [
+    { n: nn(j.overall, "%"), l: "المعدّل العام", k: bad(j.overall) },
+    { n: nn(j.checklists.percent, "%"), l: `قوائم الفحص (${j.checklists.done}/${j.checklists.items})`, k: bad(j.checklists.percent) },
+    { n: j.checklists.critical_missed, l: "بند حرج انترك", k: j.checklists.critical_missed ? "bad" : "" },
+    { n: nn(j.cleaning.percent, "%"), l: `النظافة (${j.cleaning.done}/${j.cleaning.expected})`, k: bad(j.cleaning.percent) },
+    { n: nn(j.temperature.percent, "%"), l: "تغطية الحرارة", k: bad(j.temperature.percent) },
+    { n: j.temperature.missing_days, l: "يوم بلا قراءة", k: j.temperature.missing_days ? "bad" : "" },
+    { n: j.temperature.out_readings, l: "قراءة خارج المدى", k: j.temperature.out_readings ? "bad" : "" },
+    { n: j.incidents.all, l: `حوادث (مفتوحة ${j.incidents.open})`, k: j.incidents.open ? "warn" : "" }
+  ]);
+
+  $("#cp-clean").innerHTML = !j.cleaning.rows.length
+    ? '<tr><td class="empty">ما في بنود نظافة</td></tr>'
+    : "<tr><th>البند</th><th>المكان</th><th>الجدولة</th><th>المتوقّع</th><th>انعمل</th><th>الالتزام</th></tr>" +
+      j.cleaning.rows.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.area || "—")}</td>
+        <td>${esc(r.freq)}</td><td>${nn(r.expected)}</td><td>${r.done}</td>
+        <td>${nn(r.percent, "%")}</td></tr>`).join("");
+
+  $("#cp-temp").innerHTML = !j.temperature.rows.length
+    ? '<tr><td class="empty">ما في أجهزة</td></tr>'
+    : "<tr><th>الجهاز</th><th>أيام</th><th>فيها قراءة</th><th>بلا قراءة</th><th>خارج المدى</th><th>التغطية</th></tr>" +
+      j.temperature.rows.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${r.days}</td>
+        <td>${r.logged_days}</td>
+        <td>${r.missing_days ? `<span class="pill no">${r.missing_days}</span>` : 0}</td>
+        <td>${r.out_readings}</td><td>${nn(r.coverage, "%")}</td></tr>`).join("");
+
+  $("#cp-forg").innerHTML = !j.forgotten.length
+    ? '<tr><td class="empty">ما في بند انترك بهالفترة</td></tr>'
+    : "<tr><th>القائمة</th><th>البند</th><th>انفتح</th><th>انترك</th><th>نسبة النسيان</th></tr>" +
+      j.forgotten.map(f => `<tr><td>${esc(f.list)}</td>
+        <td><b>${esc(f.item)}</b>${f.critical ? ' <span class="pill no">حرج</span>' : ""}</td>
+        <td>${f.opened}</td><td>${f.missed}</td><td>${nn(f.miss_rate, "%")}</td></tr>`).join("");
+}
+
+// ══════════ الإعداد ══════════
+async function loadSetup() {
+  const u = await api("/units").catch(() => null);
+  if (u) {
+    $("#un-tbl").innerHTML = !u.rows.length
+      ? '<tr><td class="empty">ما في أجهزة — أضف أول براد من فوق</td></tr>'
+      : "<tr><th>الجهاز</th><th>النوع</th><th>أدنى</th><th>أعلى</th><th>الحدود</th><th>آخر قراءة</th><th></th></tr>" +
+        u.rows.map(x => `<tr${x.active ? "" : ' style="opacity:.5"'}>
+          <td><b>${esc(x.name)}</b></td><td>${esc(x.kind)}</td><td>${x.min_c}°</td><td>${x.max_c}°</td>
+          <td>${esc(x.bounds)}</td>
+          <td>${x.last_reading ? `${x.last_reading.celsius}° · ${esc(x.last_reading.person)}` : "—"}</td>
+          <td><button class="btn gray sm" onclick="toggleUnit(${x.id})">${x.active ? "إيقاف" : "تفعيل"}</button></td></tr>`).join("");
+  }
+  const j = await api("/checklists").catch(() => null);
+  if (!j) return;
+  LISTS = j.rows;
+  $("#cs-list").innerHTML = LISTS.map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join("");
+  $("#cs-tree").innerHTML = !LISTS.length
+    ? '<p class="empty">ما في قوائم بعد</p>'
+    : LISTS.map(l => `<div class="card" style="box-shadow:none;border:1px solid var(--line)">
+        <div class="row" style="justify-content:space-between">
+          <h2 style="margin:0">${esc(l.name)} <span style="font-size:12px;color:var(--mut)">${esc(l.kind)}</span></h2>
+          <button class="btn gray sm" onclick="toggleList(${l.id})">${l.active ? "إيقاف" : "تفعيل"}</button>
+        </div>
+        ${l.items.length ? l.items.map(i => `<div class="checkline">
+            <div class="tx">${esc(i.text)} ${i.critical ? '<span class="crit">(حرج)</span>' : ""}</div>
+            <button class="btn red sm" onclick="delItem(${i.id})">حذف</button></div>`).join("")
+          : '<p class="hint" style="margin:8px 0 0">ما في بنود — أضف بنودها من فوق</p>'}
+      </div>`).join("");
+}
+$("#cs-add").onclick = async () => {
+  clear($("#cs-msg"));
+  try {
+    await api("/checklists", jpost({ name: $("#cs-name").value, kind: $("#cs-kind").value }));
+    $("#cs-name").value = "";
+    say($("#cs-msg"), "انحفظت القائمة.", "ok"); loadSetup();
+  } catch (e) { say($("#cs-msg"), e.message, "err"); }
+};
+$("#cs-item-add").onclick = async () => {
+  clear($("#cs-msg"));
+  try {
+    await api(`/checklists/${$("#cs-list").value}/items`, jpost({
+      text: $("#cs-item").value, sort: $("#cs-sort").value, critical: $("#cs-crit").checked }));
+    $("#cs-item").value = ""; $("#cs-crit").checked = false;
+    say($("#cs-msg"), "انضاف البند.", "ok"); loadSetup();
+  } catch (e) { say($("#cs-msg"), e.message, "err"); }
+};
+window.toggleList = async (id) => { await api(`/checklists/${id}/toggle`, { method:"POST" }); loadSetup(); };
+window.delItem = async (id) => {
+  if (!confirm("تحذف البند؟")) return;
+  const j = await api("/checklists/items/" + id, { method:"DELETE" });
+  if (j.archived) alert(`البند مستعمل بـ${j.used} تنفيذ سابق، فما بينمسح — وقّفناه بدل ما نزوّر تاريخ التنفيذ.`);
+  loadSetup();
+};
+window.toggleUnit = async (id) => { await api(`/units/${id}/toggle`, { method:"POST" }); loadSetup(); };
+$("#un-add").onclick = async () => {
+  clear($("#un-msg"));
+  try {
+    await api("/units", jpost({ name: $("#un-name").value, kind: $("#un-kind").value,
+      min_c: $("#un-min").value, max_c: $("#un-max").value, bounds: $("#un-bounds").value }));
+    $("#un-name").value = "";
+    say($("#un-msg"), "انحفظ الجهاز.", "ok"); loadSetup();
+  } catch (e) { say($("#un-msg"), e.message, "err"); }
+};
+
+// ── إقلاع ──
+(async () => {
+  META = await api("/meta").catch(() => null);
+  if (META) {
+    const opts = (arr) => arr.map(x => `<option>${esc(x)}</option>`).join("");
+    $("#cn-freq").innerHTML = $("#rt-freq").innerHTML = opts(META.freqs);
+    $("#sh-period").innerHTML = opts(META.periods);
+    $("#in-sev").innerHTML = opts(META.severities);
+    $("#in-sev").value = "متوسطة";
+    $("#un-kind").innerHTML = opts(META.unit_kinds);
+    $("#un-bounds").innerHTML = opts(META.bounds);
+    $("#cs-kind").innerHTML = opts(META.checklist_kinds);
+  }
+  const t = todayStr();
+  ["#td-day", "#tp-day", "#ck-day", "#sh-day", "#sh-from", "#sh-to", "#in-day"].forEach(s => { $(s).value = t; });
+  const ago = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
+  $("#tp-from").value = $("#cp-from").value = ago;
+  $("#tp-to").value = $("#cp-to").value = t;
+  $("#cp-month").value = t.slice(0, 7);
+  loadToday();
+})();
+</script>
+</body>
+</html>

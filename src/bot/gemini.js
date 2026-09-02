@@ -90,15 +90,19 @@ export async function askGemini(history, userMsg, audioPart, pageConfig, memory,
 
     if (!resp.ok) {
       console.error("Gemini error:", resp.status, await resp.text());
-      return "أبشر، كمّل طلبك.";
+      // 🔴 ما منبعت رسالة تعبئة لمّا الذكاء يفشل.
+      //    "أبشر كمّل طلبك" بتوهم الزبون إنّ في حدا فاهمه، فبيكمّل
+      //    كلام ما حدا بيقراه، وبيروح الطلب. السكوت أصدق: الزبون
+      //    بيعيد أو بيتصل، وإنت بتشوف المحادثة بالوارد.
+      return null;
     }
 
     const data = await resp.json();
     const parts = data?.candidates?.[0]?.content?.parts || [];
     const text = parts.map(p => p.text || "").join("").replace(/\*\*/g, "").trim();
-    return text || "يا هلا، تفضل شو طلبك؟";
+    return text || null;   // رد فاضي = سكوت كمان
   } catch (e) {
     console.error("Gemini failed:", e && e.message);
-    return "أبشر، كمّل طلبك.";
+    return null;   // 🔴 فشل الذكاء = سكوت، مش رسالة تعبئة
   }
 }

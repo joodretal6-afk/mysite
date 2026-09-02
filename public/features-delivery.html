@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🚚 شركات التوصيل والبوالص — منصة الأجبان</title>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"violet")}catch(e){}</script>
+  <link rel="stylesheet" href="/premium.css">
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; --amber:#ef6c00; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:linear-gradient(120deg,var(--green2),var(--green)); color:#fff; padding:16px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:20px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1280px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 12px; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .tab .dot { display:inline-block; min-width:18px; padding:0 5px; margin-inline-start:6px; background:var(--red); color:#fff; border-radius:9px; font-size:11px; }
+    .panel { display:none; } .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.8; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:12.5px; color:var(--mut); font-weight:600; }
+    input, select, textarea { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; min-width:120px; }
+    input:focus, select:focus { outline:none; border-color:var(--green); }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .btn.gray { background:#eceff1; color:#37474f; } .btn.red { background:var(--red); }
+    .btn.sm { padding:5px 11px; font-size:12px; border-radius:8px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:9px 11px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    tr:hover { background:#fafcfa; }
+    td select { padding:5px 7px; font-size:12.5px; min-width:120px; border-radius:7px; }
+    .empty { text-align:center; padding:34px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .n.bad { color:var(--red); } .sc .n.warn { color:var(--amber); }
+    .sc .l { font-size:12px; color:var(--mut); margin-top:4px; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11.5px; font-weight:700; }
+    .pill.ok { background:#e8f5e9; color:#1b5e20; }
+    .pill.no { background:#ffebee; color:#c62828; }
+    .pill.unk { background:#fff8e1; color:#ef6c00; }
+    .msg { padding:10px 13px; border-radius:10px; font-size:13.5px; margin-bottom:10px; display:none; line-height:1.7; }
+    .msg.err { background:#ffebee; color:#c62828; display:block; }
+    .msg.ok { background:#e8f5e9; color:#1b5e20; display:block; }
+    .na { color:var(--mut); }
+    .best { background:#e8f5e9 !important; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🚚 شركات التوصيل والبوالص</h1>
+  <a href="/admin/features">← كل الميزات</a>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-p="cour">🏢 الشركات</button>
+    <button class="tab" data-p="rates">💵 التسعيرة</button>
+    <button class="tab" data-p="wb">📄 البوالص</button>
+    <button class="tab" data-p="late">⏰ المتأخرة <span class="dot" id="late-dot" style="display:none">0</span></button>
+    <button class="tab" data-p="perf">📊 الأداء</button>
+    <button class="tab" data-p="cmp">⚖️ المقارنة</button>
+    <button class="tab" data-p="quote">🧮 حاسبة الشحن</button>
+    <button class="tab" data-p="claims">🧾 المطالبات</button>
+    <button class="tab" data-p="rep">📅 التقرير الشهري</button>
+  </div>
+
+  <!-- ══════════ الشركات ══════════ -->
+  <div class="panel active" id="p-cour">
+    <div class="card">
+      <h2>أضف شركة توصيل</h2>
+      <p class="hint">«السعر الافتراضي» بينستخدم لأي منطقة ما إلها تسعيرة خاصة. إذا تركته فاضي، البوالص عند هالشركة رح تطلع أجرتها «غير معروف» — وهاد أصدق من رقم مخترع.</p>
+      <div class="msg" id="co-msg"></div>
+      <div class="row">
+        <div class="field"><label>اسم الشركة</label><input id="co-name" placeholder="مثال: سبيدي"></div>
+        <div class="field"><label>الهاتف</label><input id="co-phone" placeholder="اختياري"></div>
+        <div class="field"><label>السعر الافتراضي (د)</label><input type="number" step="0.01" id="co-price" placeholder="اتركه فاضي إذا ما بتعرف"></div>
+        <div class="field"><label>مناطق التغطية</label><input id="co-areas" placeholder="عمّان، الزرقاء، إربد"></div>
+        <div class="field"><label>ملاحظات</label><input id="co-note" placeholder="اختياري"></div>
+        <button class="btn" id="co-add">💾 حفظ</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>الشركات المسجّلة</h2>
+      <p class="hint">نسبة التسليم محسوبة من البوالص <b>المغلقة</b> فقط. الشركة اللي لسا ما إلها بوالص مغلقة بتطلع «—» مش 0%.</p>
+      <div class="tbl-scroll"><table id="co-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ التسعيرة ══════════ -->
+  <div class="panel" id="p-rates">
+    <div class="card">
+      <h2>تسعيرة منطقة</h2>
+      <p class="hint">سعر المنطقة بيغلب السعر الافتراضي للشركة. «مدة التوصيل» هي اللي بتوعد فيها الشركة — واحنا منقارنها بالأيام الفعلية بتبويب المقارنة.</p>
+      <div class="msg" id="rt-msg"></div>
+      <div class="row">
+        <div class="field"><label>الشركة</label><select id="rt-cour"></select></div>
+        <div class="field"><label>المنطقة / المحافظة</label><input id="rt-area" placeholder="مثال: إربد"></div>
+        <div class="field"><label>السعر (د)</label><input type="number" step="0.01" id="rt-price"></div>
+        <div class="field"><label>مدة التوصيل (يوم)</label><input type="number" id="rt-eta" placeholder="اختياري"></div>
+        <button class="btn" id="rt-add">💾 حفظ التسعيرة</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>جدول التسعيرة</h2>
+      <div class="tbl-scroll"><table id="rt-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ البوالص ══════════ -->
+  <div class="panel" id="p-wb">
+    <div class="card">
+      <h2>سجّل بوليصة</h2>
+      <p class="hint">إذا تركت الأجرة فاضية، النظام بياخدها من تسعيرة المنطقة أو السعر الافتراضي وبيكتب لك من وين إجت. رقم الطلب بينتحقّق منه — ما بينربط برقم مش موجود.</p>
+      <div class="msg" id="wb-msg"></div>
+      <div class="row">
+        <div class="field"><label>رقم البوليصة</label><input id="wb-track" placeholder="JO-1001"></div>
+        <div class="field"><label>الشركة</label><select id="wb-cour"></select></div>
+        <div class="field"><label>المنطقة</label><input id="wb-area" placeholder="إربد"></div>
+        <div class="field"><label>تاريخ الشحن</label><input type="date" id="wb-day"></div>
+        <div class="field"><label>مبلغ التحصيل</label><input type="number" step="0.01" id="wb-cod" placeholder="اختياري"></div>
+        <div class="field"><label>الأجرة</label><input type="number" step="0.01" id="wb-fee" placeholder="من التسعيرة"></div>
+        <div class="field"><label>رقم الطلب</label><input type="number" id="wb-order" placeholder="اختياري"></div>
+        <button class="btn" id="wb-add">➕ سجّل</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">البوالص</h2>
+        <div class="row">
+          <div class="field"><label>الشركة</label><select id="wb-fc"><option value="">الكل</option></select></div>
+          <div class="field"><label>الحالة</label><select id="wb-fs"><option value="">الكل</option></select></div>
+          <button class="btn gray sm" id="wb-refresh">🔄 تحديث</button>
+          <button class="btn gray sm" id="wb-csv">⬇️ تصدير CSV</button>
+        </div>
+      </div>
+      <div class="grid" id="wb-sum"></div>
+      <div class="tbl-scroll"><table id="wb-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ المتأخرة ══════════ -->
+  <div class="panel" id="p-late">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>اعتبرها متأخرة بعد (يوم)</label><input type="number" id="lt-days" value="5"></div>
+        <button class="btn" id="lt-go">عرض</button>
+      </div>
+      <p class="hint">هون بس البوالص اللي لسا ما انغلقت (لا سُلّمت ولا رجعت) وعدّى على شحنها أكثر من الحد.</p>
+    </div>
+    <div class="card">
+      <div class="tbl-scroll"><table id="lt-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الأداء ══════════ -->
+  <div class="panel" id="p-perf">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>من</label><input type="date" id="pf-from"></div>
+        <div class="field"><label>إلى</label><input type="date" id="pf-to"></div>
+        <button class="btn" id="pf-go">عرض</button>
+      </div>
+      <p class="hint">كل رقم بهاد الجدول إلو مصدر: العمود الأخير بيقول على كم بوليصة انبنى. اللي بلا بيانات بيطلع «—» مع سبب — مش صفر.</p>
+    </div>
+    <div class="card"><div class="tbl-scroll"><table id="pf-tbl"></table></div></div>
+  </div>
+
+  <!-- ══════════ المقارنة ══════════ -->
+  <div class="panel" id="p-cmp">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>المنطقة</label><input id="cm-area" placeholder="إربد"></div>
+        <button class="btn" id="cm-go">قارن</button>
+      </div>
+      <div class="msg" id="cm-msg"></div>
+      <p class="hint">«الأيام الفعلية» بتغلب المدة المعلنة، لأنها محسوبة من توصيلات صارت فعلاً.</p>
+    </div>
+    <div class="card"><div class="tbl-scroll"><table id="cm-tbl"></table></div></div>
+  </div>
+
+  <!-- ══════════ الحاسبة ══════════ -->
+  <div class="panel" id="p-quote">
+    <div class="card">
+      <h2>كم رح تكلّفني الشحنة؟</h2>
+      <div class="row">
+        <div class="field"><label>المنطقة</label><input id="qt-area" placeholder="إربد"></div>
+        <div class="field"><label>عدد الطرود</label><input type="number" id="qt-n" value="1"></div>
+        <button class="btn" id="qt-go">احسب</button>
+      </div>
+      <div class="msg" id="qt-msg"></div>
+    </div>
+    <div class="card"><div class="tbl-scroll"><table id="qt-tbl"></table></div></div>
+  </div>
+
+  <!-- ══════════ المطالبات ══════════ -->
+  <div class="panel" id="p-claims">
+    <div class="card">
+      <h2>افتح مطالبة</h2>
+      <p class="hint">القيمة اختيارية — إذا ما بتعرفها اتركها فاضية وبتظهر «—». ما في مطالبتين مفتوحتين على نفس البوليصة.</p>
+      <div class="msg" id="cl-msg"></div>
+      <div class="row">
+        <div class="field"><label>البوليصة</label><select id="cl-wb"></select></div>
+        <div class="field"><label>النوع</label><select id="cl-kind"></select></div>
+        <div class="field"><label>القيمة (د)</label><input type="number" step="0.01" id="cl-amt" placeholder="اختياري"></div>
+        <div class="field"><label>ملاحظة</label><input id="cl-note" placeholder="اختياري"></div>
+        <button class="btn" id="cl-add">🧾 افتح</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="grid" id="cl-sum"></div>
+      <div class="tbl-scroll"><table id="cl-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ التقرير الشهري ══════════ -->
+  <div class="panel" id="p-rep">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>الشهر</label><input type="month" id="rp-month"></div>
+        <button class="btn" id="rp-go">اعرض التقرير</button>
+        <button class="btn gray" id="rp-print">🖨️ طباعة</button>
+      </div>
+      <div class="msg" id="rp-msg"></div>
+    </div>
+    <div class="card">
+      <div class="grid" id="rp-sum"></div>
+      <div class="tbl-scroll"><table id="rp-tbl"></table></div>
+    </div>
+  </div>
+</div>
+
+<script src="/theme.js"></script>
+<script>
+const API = "/admin/f-api/delivery";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const d2 = (n) => (Math.round((Number(n)||0)*100)/100).toFixed(2);
+// 🔴 null معناها «ما منعرف» — بتطلع شرطة، وممنوع تتحوّل لصفر
+const na = (v, suf = "") => v == null ? '<span class="na">—</span>' : esc(v) + suf;
+const money = (v) => v == null ? '<span class="na">—</span>' : d2(v);
+const pct = (v) => v == null ? '<span class="na">—</span>' : d2(v) + "%";
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  const j = await r.json().catch(() => ({ ok:false, error:"رد غير مفهوم من الخادم" }));
+  if (!j.ok) throw new Error(j.error || "خطأ");
+  return j;
+}
+const jpost = (body) => ({ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+function say(el, text, kind) { el.className = "msg " + kind; el.innerHTML = text; }
+function clear(el) { el.className = "msg"; el.textContent = ""; }
+function cards(el, items) {
+  el.innerHTML = items.map(i =>
+    `<div class="sc"><div class="n${i.k?" "+i.k:""}">${i.n}</div><div class="l">${esc(i.l)}</div></div>`).join("");
+}
+const statusPill = (s) => {
+  const k = s === "تم التسليم" ? "ok" : (s === "قيد التجهيز" || s === "بالطريق") ? "unk" : "no";
+  return `<span class="pill ${k}">${esc(s)}</span>`;
+};
+
+let META = { statuses: [], claim_kinds: [], claim_statuses: [] }, COURIERS = [];
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  $("#p-" + t.dataset.p).classList.add("active");
+  ({ cour: loadCouriers, rates: loadRates, wb: loadWaybills, late: loadLate,
+     perf: loadPerf, claims: loadClaims })[t.dataset.p]?.();
+});
+
+// ══════════ التمهيد ══════════
+async function boot() {
+  const j = await api("/meta").catch(() => null);
+  if (j) {
+    META = j;
+    $("#wb-fs").innerHTML = '<option value="">الكل</option>' +
+      META.statuses.map(s => `<option>${esc(s)}</option>`).join("");
+    $("#cl-kind").innerHTML = META.claim_kinds.map(s => `<option>${esc(s)}</option>`).join("");
+  }
+  const now = new Date();
+  $("#wb-day").value = now.toISOString().slice(0, 10);
+  $("#rp-month").value = now.toISOString().slice(0, 7);
+  await loadCouriers();
+  refreshLateDot();
+}
+
+// ══════════ (1) الشركات ══════════
+async function loadCouriers() {
+  const j = await api("/couriers").catch(() => null);
+  if (!j) return;
+  COURIERS = j.rows;
+  $("#co-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في شركات بعد — أضف أول شركة من فوق</td></tr>'
+    : "<tr><th>الشركة</th><th>الهاتف</th><th>السعر الافتراضي</th><th>بوالص</th><th>مفتوحة</th>" +
+      "<th>نسبة التسليم</th><th>نسبة الرفض</th><th>متوسط الأيام</th><th>تكلفة الطرد</th><th>الأساس</th><th></th></tr>" +
+      j.rows.map(r => `<tr${r.active ? "" : ' style="opacity:.5"'}>
+        <td><b>${esc(r.name)}</b></td><td>${na(r.phone || null)}</td>
+        <td>${money(r.default_price)}</td>
+        <td>${r.waybills}</td><td>${r.open}</td>
+        <td>${pct(r.delivery_rate)}</td><td>${pct(r.refusal_rate)}</td>
+        <td>${na(r.avg_days, " يوم")}</td><td>${money(r.cost_per_parcel)}</td>
+        <td style="white-space:normal;color:var(--mut);font-size:12px">${esc(r.basis)}</td>
+        <td><button class="btn gray sm" onclick="toggleCourier(${r.id})">${r.active ? "إيقاف" : "تفعيل"}</button>
+            <button class="btn red sm" onclick="delCourier(${r.id})">حذف</button></td></tr>`).join("");
+
+  const opts = COURIERS.filter(c => c.active).map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
+  ["#rt-cour", "#wb-cour"].forEach(s => { const el = $(s); const k = el.value; el.innerHTML = opts; el.value = k; });
+  const el = $("#wb-fc"); const keep = el.value;
+  el.innerHTML = '<option value="">الكل</option>' +
+    COURIERS.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
+  el.value = keep;
+}
+
+$("#co-add").onclick = async () => {
+  clear($("#co-msg"));
+  try {
+    await api("/couriers", jpost({
+      name: $("#co-name").value, phone: $("#co-phone").value,
+      default_price: $("#co-price").value, areas: $("#co-areas").value, note: $("#co-note").value
+    }));
+    say($("#co-msg"), "انحفظت الشركة.", "ok");
+    ["#co-name", "#co-phone", "#co-price", "#co-areas", "#co-note"].forEach(s => $(s).value = "");
+    loadCouriers();
+  } catch (e) { say($("#co-msg"), e.message, "err"); }
+};
+window.toggleCourier = async (id) => { await api(`/couriers/${id}/toggle`, { method:"POST" }); loadCouriers(); };
+window.delCourier = async (id) => {
+  if (!confirm("تحذف الشركة؟")) return;
+  const j = await api("/couriers/" + id, { method:"DELETE" }).catch(e => { alert(e.message); });
+  if (j && j.archived) alert(`الشركة إلها ${j.waybills} بوليصة مسجّلة، فما بتنمسح — وقّفناها بدل ما نمحي تاريخها.`);
+  loadCouriers();
+};
+
+// ══════════ (2) التسعيرة ══════════
+async function loadRates() {
+  const j = await api("/rates").catch(() => null);
+  if (!j) return;
+  $("#rt-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في تسعيرة بعد</td></tr>'
+    : "<tr><th>المنطقة</th><th>الشركة</th><th>السعر</th><th>مدة التوصيل المعلنة</th><th></th></tr>" +
+      j.rows.map(r => `<tr><td><b>${esc(r.area)}</b></td><td>${esc(r.courier_name)}</td>
+        <td>${d2(r.price)}</td><td>${na(r.eta_days, " يوم")}</td>
+        <td><button class="btn red sm" onclick="delRate(${r.id})">حذف</button></td></tr>`).join("");
+}
+$("#rt-add").onclick = async () => {
+  clear($("#rt-msg"));
+  try {
+    await api("/rates", jpost({ courier_id: $("#rt-cour").value, area: $("#rt-area").value,
+                                price: $("#rt-price").value, eta_days: $("#rt-eta").value }));
+    say($("#rt-msg"), "انحفظت التسعيرة.", "ok");
+    $("#rt-price").value = $("#rt-eta").value = "";
+    loadRates();
+  } catch (e) { say($("#rt-msg"), e.message, "err"); }
+};
+window.delRate = async (id) => { await api("/rates/" + id, { method:"DELETE" }); loadRates(); };
+
+// ══════════ (3+4) البوالص ══════════
+async function loadWaybills() {
+  const qs = new URLSearchParams();
+  if ($("#wb-fc").value) qs.set("courier_id", $("#wb-fc").value);
+  if ($("#wb-fs").value) qs.set("status", $("#wb-fs").value);
+  const j = await api("/waybills?" + qs).catch(() => null);
+  if (!j) return;
+  const t = j.totals;
+  cards($("#wb-sum"), [
+    { n: t.count, l: "بوليصة" },
+    { n: t.open, l: "لسا مفتوحة", k: t.open ? "warn" : "" },
+    { n: t.delivered, l: "تم تسليمها" },
+    { n: t.delivery_rate == null ? "—" : d2(t.delivery_rate) + "%", l: "نسبة التسليم (من المغلقة)" }
+  ]);
+  $("#wb-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في بوالص بهاي التصفية</td></tr>'
+    : "<tr><th>البوليصة</th><th>الشركة</th><th>المنطقة</th><th>الحالة</th><th>غيّر الحالة</th>" +
+      "<th>الشحن</th><th>الإغلاق</th><th>التحصيل</th><th>الأجرة</th><th>أساس الأجرة</th><th>الطلب</th><th></th></tr>" +
+      j.rows.map(r => `<tr>
+        <td><b>${esc(r.tracking)}</b></td><td>${esc(r.courier_name)}</td><td>${esc(r.area)}</td>
+        <td>${statusPill(r.status)}</td>
+        <td><select onchange="chStatus(${r.id}, this.value)">
+          <option value="">— انقل إلى —</option>
+          ${META.statuses.filter(s => s !== r.status).map(s => `<option>${esc(s)}</option>`).join("")}
+        </select></td>
+        <td>${esc(day(r.shipped_at))}</td><td>${na(r.closed_at ? day(r.closed_at) : null)}</td>
+        <td>${money(r.cod_amount)}</td><td>${money(r.fee)}</td>
+        <td style="color:var(--mut);font-size:12px">${esc(r.fee_basis)}</td>
+        <td>${na(r.order_id)}</td>
+        <td><button class="btn gray sm" onclick="wbLog(${r.id})">السجل</button>
+            <button class="btn red sm" onclick="delWb(${r.id})">حذف</button></td></tr>`).join("");
+  fillClaimWaybills(j.rows);
+}
+const day = (ts) => new Date(Number(ts)).toLocaleDateString("ar-JO");
+
+$("#wb-add").onclick = async () => {
+  clear($("#wb-msg"));
+  try {
+    await api("/waybills", jpost({
+      tracking: $("#wb-track").value, courier_id: $("#wb-cour").value, area: $("#wb-area").value,
+      shipped_at: $("#wb-day").value, cod_amount: $("#wb-cod").value,
+      fee: $("#wb-fee").value, order_id: $("#wb-order").value, actor: "المشرف"
+    }));
+    say($("#wb-msg"), "انسجّلت البوليصة.", "ok");
+    ["#wb-track", "#wb-cod", "#wb-fee", "#wb-order"].forEach(s => $(s).value = "");
+    loadWaybills(); refreshLateDot();
+  } catch (e) { say($("#wb-msg"), e.message, "err"); }
+};
+$("#wb-refresh").onclick = loadWaybills;
+$("#wb-fc").onchange = loadWaybills;
+$("#wb-fs").onchange = loadWaybills;
+$("#wb-csv").onclick = () => {
+  const qs = new URLSearchParams();
+  if ($("#wb-fc").value) qs.set("courier_id", $("#wb-fc").value);
+  if ($("#wb-fs").value) qs.set("status", $("#wb-fs").value);
+  location.href = API + "/export.csv?" + qs;
+};
+
+window.chStatus = async (id, to) => {
+  if (!to) return;
+  try {
+    await api(`/waybills/${id}/status`, jpost({ status: to, actor: "المشرف" }));
+    loadWaybills(); refreshLateDot();
+  } catch (e) { alert(e.message); loadWaybills(); }
+};
+window.delWb = async (id) => {
+  if (!confirm("تحذف البوليصة وسجلها؟")) return;
+  try { await api("/waybills/" + id, { method:"DELETE" }); loadWaybills(); }
+  catch (e) { alert(e.message); }
+};
+window.wbLog = async (id) => {
+  const j = await api("/waybills/" + id).catch(e => { alert(e.message); });
+  if (!j) return;
+  const w = window.open("", "_blank");
+  w.document.write(`<html dir="rtl"><head><meta charset="utf-8"><title>سجل ${esc(j.waybill.tracking)}</title>
+    <style>body{font-family:Tahoma;padding:20px}table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border:1px solid #ddd;padding:7px;text-align:right}th{background:#f0f4f1}</style></head><body>
+    <h2>سجل البوليصة ${esc(j.waybill.tracking)} — ${esc(j.waybill.courier_name)}</h2>
+    <p>المنطقة: ${esc(j.waybill.area)} · الحالة الحالية: <b>${esc(j.waybill.status)}</b></p>
+    <table><tr><th>التاريخ</th><th>من</th><th>إلى</th><th>مين غيّر</th><th>ملاحظة</th></tr>
+    ${j.events.map(e => `<tr><td>${new Date(e.at).toLocaleString("ar-JO")}</td>
+      <td>${esc(e.from_status || "—")}</td><td>${esc(e.to_status)}</td>
+      <td>${esc(e.actor)}</td><td>${esc(e.note)}</td></tr>`).join("")}
+    </table></body></html>`);
+  w.document.close();
+};
+
+// ══════════ (7) المتأخرة ══════════
+async function refreshLateDot() {
+  const j = await api("/late?days=" + ($("#lt-days").value || 5)).catch(() => null);
+  if (!j) return;
+  const d = $("#late-dot");
+  d.style.display = j.count ? "" : "none";
+  d.textContent = j.count;
+}
+$("#lt-go").onclick = loadLate;
+async function loadLate() {
+  const j = await api("/late?days=" + ($("#lt-days").value || 5)).catch(() => null);
+  if (!j) return;
+  $("#lt-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في بوالص متأخرة — تمام 👌</td></tr>'
+    : "<tr><th>البوليصة</th><th>الشركة</th><th>المنطقة</th><th>الحالة</th><th>تاريخ الشحن</th><th>عمرها</th><th>التحصيل</th></tr>" +
+      j.rows.map(r => `<tr><td><b>${esc(r.tracking)}</b></td><td>${esc(r.courier_name)}</td>
+        <td>${esc(r.area)}</td><td>${statusPill(r.status)}</td><td>${esc(day(r.shipped_at))}</td>
+        <td><b style="color:var(--red)">${r.age_days} يوم</b></td><td>${money(r.cod_amount)}</td></tr>`).join("");
+  refreshLateDot();
+}
+
+// ══════════ (5) الأداء ══════════
+$("#pf-go").onclick = loadPerf;
+async function loadPerf() {
+  const qs = new URLSearchParams();
+  if ($("#pf-from").value) qs.set("from", $("#pf-from").value);
+  if ($("#pf-to").value) qs.set("to", $("#pf-to").value);
+  const j = await api("/performance?" + qs).catch(() => null);
+  if (!j) return;
+  $("#pf-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في شركات بعد</td></tr>'
+    : "<tr><th>الشركة</th><th>بوالص</th><th>مغلقة</th><th>سُلّمت</th><th>رُفضت</th><th>مرتجع</th><th>ضاعت</th>" +
+      "<th>نسبة التسليم</th><th>نسبة الرفض</th><th>متوسط الأيام</th><th>تكلفة الطرد</th><th>مجموع الأجور</th>" +
+      "<th>أجور مجهولة</th><th>مبني على</th></tr>" +
+      j.rows.map(r => `<tr>
+        <td><b>${esc(r.name)}</b></td><td>${r.waybills}</td><td>${r.closed}</td><td>${r.delivered}</td>
+        <td>${r.refused}</td><td>${r.returned}</td><td>${r.lost}</td>
+        <td>${pct(r.delivery_rate)}</td><td>${pct(r.refusal_rate)}</td>
+        <td>${na(r.avg_days, " يوم")}${r.avg_days_sample ? ` <span class="na">(${r.avg_days_sample})</span>` : ""}</td>
+        <td>${money(r.cost_per_parcel)}</td><td>${money(r.fee_total)}</td>
+        <td>${r.fee_unknown ? `<span class="pill unk">${r.fee_unknown}</span>` : "0"}</td>
+        <td style="white-space:normal;color:var(--mut);font-size:12px">${esc(r.basis)}</td></tr>`).join("");
+}
+
+// ══════════ (6) المقارنة ══════════
+$("#cm-go").onclick = async () => {
+  clear($("#cm-msg"));
+  try {
+    const j = await api("/compare?area=" + encodeURIComponent($("#cm-area").value));
+    if (j.note) say($("#cm-msg"), "⚠️ " + j.note, "err");
+    else say($("#cm-msg"),
+      `الأرخص: <b>${esc(j.cheapest.name)}</b> بـ ${d2(j.cheapest.price)} د` +
+      (j.fastest ? ` · الأسرع: <b>${esc(j.fastest.name)}</b> بـ ${d2(j.fastest.days)} يوم (${esc(j.fastest.basis)})` : ""),
+      "ok");
+    $("#cm-tbl").innerHTML = !j.rows.length
+      ? '<tr><td class="empty">ما في شركات نشطة</td></tr>'
+      : "<tr><th>الشركة</th><th>السعر</th><th>أساس السعر</th><th>مدة معلنة</th><th>أيام فعلية</th>" +
+        "<th>بوالص بالمنطقة</th><th>نسبة التسليم</th></tr>" +
+        j.rows.map(r => `<tr${j.cheapest && r.courier_id === j.cheapest.courier_id ? ' class="best"' : ""}>
+          <td><b>${esc(r.name)}</b></td><td>${money(r.price)}</td>
+          <td style="color:var(--mut);font-size:12px">${esc(r.price_basis)}</td>
+          <td>${na(r.eta_days, " يوم")}</td>
+          <td>${na(r.actual_days, " يوم")}${r.actual_days_sample ? ` <span class="na">(${r.actual_days_sample})</span>` : ""}</td>
+          <td>${r.waybills}</td><td>${pct(r.delivery_rate)}</td></tr>`).join("");
+  } catch (e) { say($("#cm-msg"), e.message, "err"); }
+};
+
+// ══════════ (9) الحاسبة ══════════
+$("#qt-go").onclick = async () => {
+  clear($("#qt-msg"));
+  try {
+    const j = await api(`/quote?area=${encodeURIComponent($("#qt-area").value)}&parcels=${$("#qt-n").value}`);
+    if (j.note) say($("#qt-msg"), "⚠️ " + j.note, "err");
+    else say($("#qt-msg"),
+      `أرخص خيار: <b>${esc(j.best.name)}</b> — ${d2(j.best.total)} د لـ ${j.parcels} طرد` +
+      (j.saving ? ` · بتوفّر <b>${d2(j.saving)}</b> د عن أغلى خيار` : ""), "ok");
+    $("#qt-tbl").innerHTML = !j.options.length
+      ? '<tr><td class="empty">ما في شركات نشطة</td></tr>'
+      : "<tr><th>الشركة</th><th>سعر الطرد</th><th>أساس السعر</th><th>المجموع</th><th>مدة متوقّعة</th><th>أساس المدة</th><th>نسبة التسليم</th></tr>" +
+        j.options.map(o => `<tr${j.best && o.courier_id === j.best.courier_id ? ' class="best"' : ""}>
+          <td><b>${esc(o.name)}</b></td><td>${money(o.unit_price)}</td>
+          <td style="color:var(--mut);font-size:12px">${esc(o.price_basis)}</td>
+          <td><b>${money(o.total)}</b></td><td>${na(o.expected_days, " يوم")}</td>
+          <td style="color:var(--mut);font-size:12px">${esc(o.days_basis)}</td>
+          <td>${pct(o.delivery_rate)}</td></tr>`).join("");
+  } catch (e) { say($("#qt-msg"), e.message, "err"); }
+};
+
+// ══════════ (8) المطالبات ══════════
+function fillClaimWaybills(rows) {
+  const el = $("#cl-wb"); const keep = el.value;
+  el.innerHTML = rows.map(r => `<option value="${r.id}">${esc(r.tracking)} — ${esc(r.courier_name)}</option>`).join("");
+  el.value = keep;
+}
+async function loadClaims() {
+  const wb = await api("/waybills").catch(() => null);
+  if (wb) fillClaimWaybills(wb.rows);
+  const j = await api("/claims").catch(() => null);
+  if (!j) return;
+  const t = j.totals;
+  cards($("#cl-sum"), [
+    { n: t.count, l: "مطالبة" },
+    { n: t.open, l: "مفتوحة", k: t.open ? "warn" : "" },
+    { n: t.amount_at_risk == null ? "—" : d2(t.amount_at_risk), l: "مبلغ معرّض للخطر (د)", k: "bad" },
+    { n: t.compensated == null ? "—" : d2(t.compensated), l: "تعويضات مقبوضة (د)" },
+    { n: t.amount_unknown, l: "مطالبات بلا قيمة معروفة" },
+    { n: t.avg_days_to_resolve == null ? "—" : d2(t.avg_days_to_resolve), l: "متوسط أيام الحل" }
+  ]);
+  $("#cl-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في مطالبات — الحمد لله</td></tr>'
+    : "<tr><th>البوليصة</th><th>الشركة</th><th>النوع</th><th>القيمة</th><th>الحالة</th>" +
+      "<th>فُتحت</th><th>عمرها</th><th>أيام الحل</th><th>ملاحظة</th><th></th></tr>" +
+      j.rows.map(r => `<tr>
+        <td><b>${esc(r.tracking)}</b></td><td>${esc(r.courier_name)}</td><td>${esc(r.kind)}</td>
+        <td>${money(r.amount)}</td>
+        <td><span class="pill ${r.status === "معوّضة" ? "ok" : r.status === "مفتوحة" ? "unk" : "no"}">${esc(r.status)}</span></td>
+        <td>${esc(day(r.opened_at))}</td><td>${na(r.age_days, " يوم")}</td><td>${na(r.days_to_resolve, " يوم")}</td>
+        <td style="white-space:normal">${esc(r.note)}</td>
+        <td>${r.status === "مفتوحة" ? `<select onchange="resolveClaim(${r.id}, this.value)">
+            <option value="">— أغلقها بـ —</option>
+            ${META.claim_statuses.filter(s => s !== "مفتوحة").map(s => `<option>${esc(s)}</option>`).join("")}
+          </select>` : "—"}</td></tr>`).join("");
+}
+$("#cl-add").onclick = async () => {
+  clear($("#cl-msg"));
+  try {
+    await api("/claims", jpost({ waybill_id: $("#cl-wb").value, kind: $("#cl-kind").value,
+                                 amount: $("#cl-amt").value, note: $("#cl-note").value }));
+    say($("#cl-msg"), "انفتحت المطالبة.", "ok");
+    $("#cl-amt").value = $("#cl-note").value = "";
+    loadClaims();
+  } catch (e) { say($("#cl-msg"), e.message, "err"); }
+};
+window.resolveClaim = async (id, status) => {
+  if (!status) return;
+  try { await api(`/claims/${id}/resolve`, jpost({ status })); loadClaims(); }
+  catch (e) { alert(e.message); loadClaims(); }
+};
+
+// ══════════ (10) التقرير الشهري ══════════
+$("#rp-go").onclick = loadReport;
+$("#rp-print").onclick = () => window.print();
+async function loadReport() {
+  clear($("#rp-msg"));
+  try {
+    const j = await api("/report?month=" + encodeURIComponent($("#rp-month").value));
+    if (j.empty) say($("#rp-msg"), "ما في ولا بوليصة بهاد الشهر.", "err");
+    const t = j.totals;
+    cards($("#rp-sum"), [
+      { n: t.waybills, l: "بوليصة بالشهر" },
+      { n: t.delivered, l: "تم تسليمها" },
+      { n: t.fees == null ? "—" : d2(t.fees), l: "مجموع أجور التوصيل (د)" },
+      { n: t.fee_unknown, l: "بوالص أجرتها غير معروفة", k: t.fee_unknown ? "warn" : "" }
+    ]);
+    $("#rp-tbl").innerHTML = !j.couriers.length
+      ? '<tr><td class="empty">ما في حركة بهاد الشهر</td></tr>'
+      : "<tr><th>الشركة</th><th>بوالص</th><th>سُلّمت</th><th>رُفضت</th><th>ضاعت</th><th>نسبة التسليم</th>" +
+        "<th>متوسط الأيام</th><th>أجور</th><th>تكلفة الطرد</th><th>مُحصّل</th></tr>" +
+        j.couriers.map(c => `<tr><td><b>${esc(c.name)}</b></td><td>${c.waybills}</td><td>${c.delivered}</td>
+          <td>${c.refused}</td><td>${c.lost}</td><td>${pct(c.delivery_rate)}</td>
+          <td>${na(c.avg_days, " يوم")}</td><td>${money(c.fee_total)}</td>
+          <td>${money(c.cost_per_parcel)}</td><td>${money(c.collected)}</td></tr>`).join("");
+  } catch (e) { say($("#rp-msg"), e.message, "err"); }
+}
+
+boot();
+</script>
+</body>
+</html>

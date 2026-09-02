@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>💵 الخزنة والتدفق النقدي — منصة الأجبان</title>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"violet")}catch(e){}</script>
+  <link rel="stylesheet" href="/premium.css">
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; --amber:#ef6c00; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:linear-gradient(120deg,var(--green2),var(--green)); color:#fff; padding:16px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:20px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1280px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 12px; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .tab .dot { display:inline-block; min-width:18px; padding:0 5px; margin-inline-start:6px; background:var(--red); color:#fff; border-radius:9px; font-size:11px; }
+    .panel { display:none; } .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.8; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:12.5px; color:var(--mut); font-weight:600; }
+    input, select, textarea { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; min-width:120px; }
+    input:focus, select:focus { outline:none; border-color:var(--green); }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .btn.gray { background:#eceff1; color:#37474f; } .btn.red { background:var(--red); }
+    .btn.sm { padding:5px 11px; font-size:12px; border-radius:8px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:9px 11px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    tr:hover { background:#fafcfa; }
+    td input { padding:5px 7px; font-size:13px; min-width:70px; border-radius:7px; }
+    .empty { text-align:center; padding:34px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .n.bad { color:var(--red); } .sc .n.warn { color:var(--amber); }
+    .sc .l { font-size:12px; color:var(--mut); margin-top:4px; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11.5px; font-weight:700; }
+    .pill.ok { background:#e8f5e9; color:#1b5e20; }
+    .pill.no { background:#ffebee; color:#c62828; }
+    .pill.unk { background:#fff8e1; color:#ef6c00; }
+    .msg { padding:10px 13px; border-radius:10px; font-size:13.5px; margin-bottom:10px; display:none; line-height:1.7; }
+    .msg.err { background:#ffebee; color:#c62828; display:block; }
+    .msg.ok { background:#e8f5e9; color:#1b5e20; display:block; }
+    .bar { height:6px; background:var(--line); border-radius:6px; overflow:hidden; min-width:70px; }
+    .bar i { display:block; height:100%; background:var(--green); }
+    .bar i.low { background:var(--amber); } .bar i.out { background:var(--red); }
+    .plus { color:var(--green2); font-weight:700; } .minus { color:var(--red); font-weight:700; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>💵 الخزنة والتدفق النقدي</h1>
+  <a href="/admin/features">← كل الميزات</a>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-p="acc">🏦 الخزائن</button>
+    <button class="tab" data-p="mv">🔁 الحركات</button>
+    <button class="tab" data-p="tr">↔️ التحويلات</button>
+    <button class="tab" data-p="cr">🚚 شركات التوصيل</button>
+    <button class="tab" data-p="db">🧾 الذمم</button>
+    <button class="tab" data-p="ch">📄 الشيكات <span class="dot" id="ch-dot" style="display:none">0</span></button>
+    <button class="tab" data-p="rc">🔄 المصاريف المتكررة</button>
+    <button class="tab" data-p="fc">🔮 التدفق المتوقّع</button>
+    <button class="tab" data-p="rp">📊 التقارير</button>
+  </div>
+
+  <!-- ══════════ الخزائن ══════════ -->
+  <div class="panel active" id="p-acc">
+    <div class="grid" id="ov-sum"></div>
+    <div class="card">
+      <h2>أضف خزنة</h2>
+      <p class="hint">الرصيد الافتتاحي بينكتب كحركة موثّقة باسمها — ما في رصيد بيوقع من السما. بعدها كل تغيّر بالرصيد لازم يكون بحركة.</p>
+      <div class="msg" id="ac-msg"></div>
+      <div class="row">
+        <div class="field"><label>الاسم</label><input id="ac-name" placeholder="مثال: صندوق المحل"></div>
+        <div class="field"><label>النوع</label><select id="ac-kind"></select></div>
+        <div class="field"><label>المسؤول</label><input id="ac-holder" placeholder="اختياري"></div>
+        <div class="field"><label>الرصيد الافتتاحي</label><input type="number" step="0.01" id="ac-open" value="0"></div>
+        <button class="btn" id="ac-add">💾 حفظ</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>الخزائن وأرصدتها</h2>
+      <p class="hint">الرصيد = مجموع الحركات. الخزنة اللي ما إلها حركات بتطلع «—» بخانة آخر حركة بدل تاريخ مخترع.</p>
+      <div class="tbl-scroll"><table id="ac-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الحركات ══════════ -->
+  <div class="panel" id="p-mv">
+    <div class="card">
+      <h2>سجّل حركة</h2>
+      <p class="hint">«قبض» بيزيد الخزنة و«صرف» بينقّصها — مهما كتبت الإشارة، النظام بيصحّحها حسب النوع.</p>
+      <div class="msg" id="mv-msg"></div>
+      <div class="row">
+        <div class="field"><label>الخزنة</label><select id="mv-acc"></select></div>
+        <div class="field"><label>النوع</label><select id="mv-kind"></select></div>
+        <div class="field"><label>التصنيف</label><select id="mv-cat"></select></div>
+        <div class="field"><label>المبلغ</label><input type="number" step="0.01" id="mv-amt"></div>
+        <div class="field"><label>الطرف</label><input id="mv-party" placeholder="اختياري"></div>
+        <div class="field"><label>التاريخ</label><input type="date" id="mv-day"></div>
+        <div class="field"><label>ملاحظة</label><input id="mv-note" placeholder="اختياري"></div>
+        <button class="btn" id="mv-add">➕ سجّل</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">آخر الحركات</h2>
+        <div class="row">
+          <div class="field"><label>الخزنة</label><select id="mv-f-acc"><option value="">الكل</option></select></div>
+          <div class="field"><label>النوع</label><select id="mv-f-kind"><option value="">الكل</option></select></div>
+          <button class="btn gray sm" onclick="location.href=API+'/export/moves.csv'">⬇️ تصدير</button>
+        </div>
+      </div>
+      <div class="tbl-scroll"><table id="mv-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ التحويلات ══════════ -->
+  <div class="panel" id="p-tr">
+    <div class="card">
+      <h2>حوّل بين الخزائن</h2>
+      <p class="hint">التحويل بيكتب حركتين مترابطتين — صرف من المصدر وقبض بالوجهة. مجموع فلوسك ما بيتغيّر، بس مكانها بيتغيّر. وحذف التحويل بيشيل الحركتين مع بعض.</p>
+      <div class="msg" id="tr-msg"></div>
+      <div class="row">
+        <div class="field"><label>من</label><select id="tr-from"></select></div>
+        <div class="field"><label>إلى</label><select id="tr-to"></select></div>
+        <div class="field"><label>المبلغ</label><input type="number" step="0.01" id="tr-amt"></div>
+        <div class="field"><label>التاريخ</label><input type="date" id="tr-day"></div>
+        <div class="field"><label>ملاحظة</label><input id="tr-note" placeholder="اختياري"></div>
+        <button class="btn" id="tr-add">↔️ حوّل</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>سجل التحويلات</h2>
+      <div class="tbl-scroll"><table id="tr-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ شركات التوصيل ══════════ -->
+  <div class="panel" id="p-cr">
+    <div class="grid" id="cr-sum"></div>
+    <div class="card">
+      <h2>سجّل مستحق على شركة توصيل</h2>
+      <p class="hint">كل حمولة سلّمتها وفلوسها لسا عندهم. «تاريخ الوصول المتوقّع» اختياري — بس بلاه ما بندخّل المستحق بالتدفق المتوقّع، لأنّا ما منخمّن متى بيوصل.</p>
+      <div class="msg" id="du-msg"></div>
+      <div class="row">
+        <div class="field"><label>الشركة</label><input id="du-courier" placeholder="مثال: أرامكس"></div>
+        <div class="field"><label>مرجع/كشف</label><input id="du-ref" placeholder="اختياري"></div>
+        <div class="field"><label>المبلغ</label><input type="number" step="0.01" id="du-amt"></div>
+        <div class="field"><label>تاريخ التسليم</label><input type="date" id="du-day"></div>
+        <div class="field"><label>الوصول المتوقّع</label><input type="date" id="du-exp"></div>
+        <button class="btn" id="du-add">➕ سجّل مستحق</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>استلم دفعة وطابقها</h2>
+      <p class="hint">الواصل بس بيدخل الخزنة. المخصوم (أجور التوصيل) بيغطّي من المستحق بس ما بيمرّ على فلوسك. المطابقة بتصير FIFO — أقدم مستحق بينسدّ أول.</p>
+      <div class="msg" id="se-msg"></div>
+      <div class="row">
+        <div class="field"><label>الشركة</label><select id="se-courier"></select></div>
+        <div class="field"><label>الخزنة</label><select id="se-acc"></select></div>
+        <div class="field"><label>الواصل</label><input type="number" step="0.01" id="se-amt"></div>
+        <div class="field"><label>المخصوم</label><input type="number" step="0.01" id="se-fee" value="0"></div>
+        <div class="field"><label>التاريخ</label><input type="date" id="se-day"></div>
+        <button class="btn" id="se-add">💰 استلم</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>حالة كل شركة</h2>
+      <div class="tbl-scroll"><table id="cr-tbl"></table></div>
+    </div>
+    <div class="card">
+      <h2>تفصيل المستحقات</h2>
+      <div class="tbl-scroll"><table id="du-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الذمم ══════════ -->
+  <div class="panel" id="p-db">
+    <div class="grid" id="db-sum"></div>
+    <div class="card">
+      <h2>سجّل ذمّة</h2>
+      <p class="hint">«لنا» = فلوس إلك عند غيرك. «علينا» = فلوس عليك. أعمار الدين بتنحسب من تاريخ الاستحقاق إذا مكتوب، وإلا من تاريخ نشوء الدين.</p>
+      <div class="msg" id="db-msg"></div>
+      <div class="row">
+        <div class="field"><label>الطرف</label><input id="db-party" placeholder="اسم الزبون / المورد"></div>
+        <div class="field"><label>الاتجاه</label><select id="db-dir"></select></div>
+        <div class="field"><label>المبلغ</label><input type="number" step="0.01" id="db-amt"></div>
+        <div class="field"><label>تاريخ الدين</label><input type="date" id="db-day"></div>
+        <div class="field"><label>الاستحقاق</label><input type="date" id="db-due"></div>
+        <div class="field"><label>الهاتف</label><input id="db-phone" placeholder="اختياري"></div>
+        <button class="btn" id="db-add">➕ سجّل</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">أعمار الدين</h2>
+        <div class="row">
+          <div class="field"><label>الاتجاه</label><select id="db-filter"><option value="">الكل</option><option>لنا</option><option>علينا</option></select></div>
+          <label style="font-size:12.5px;color:var(--mut)"><input type="checkbox" id="db-open" style="min-width:auto" checked> المفتوحة بس</label>
+          <button class="btn gray sm" onclick="location.href=API+'/export/aging.csv'">⬇️ تصدير</button>
+        </div>
+      </div>
+      <div class="tbl-scroll"><table id="db-aging"></table></div>
+    </div>
+    <div class="card">
+      <h2>الذمم بالتفصيل</h2>
+      <div class="tbl-scroll"><table id="db-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ الشيكات ══════════ -->
+  <div class="panel" id="p-ch">
+    <div class="grid" id="ch-sum"></div>
+    <div class="card">
+      <h2>سجّل شيك</h2>
+      <p class="hint">الشيك ما بينتعلّم «محصّل» إلا لمّا تضغط «اصرف» وتختار الخزنة — لأنّ التحصيل حركة نقدية حقيقية لازم تنكتب.</p>
+      <div class="msg" id="ch-msg"></div>
+      <div class="row">
+        <div class="field"><label>النوع</label><select id="ch-dir"></select></div>
+        <div class="field"><label>رقم الشيك</label><input id="ch-num"></div>
+        <div class="field"><label>البنك</label><input id="ch-bank" placeholder="اختياري"></div>
+        <div class="field"><label>الطرف</label><input id="ch-party" placeholder="اختياري"></div>
+        <div class="field"><label>المبلغ</label><input type="number" step="0.01" id="ch-amt"></div>
+        <div class="field"><label>الاستحقاق</label><input type="date" id="ch-due"></div>
+        <button class="btn" id="ch-add">➕ سجّل</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px">
+        <h2 style="margin:0">الشيكات</h2>
+        <div class="row">
+          <div class="field"><label>نبّهني قبل (يوم)</label><input type="number" id="ch-warn" value="7" style="min-width:90px"></div>
+          <button class="btn gray sm" id="ch-go">تحديث</button>
+        </div>
+      </div>
+      <div class="tbl-scroll"><table id="ch-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ المصاريف المتكررة ══════════ -->
+  <div class="panel" id="p-rc">
+    <div class="grid" id="rc-sum"></div>
+    <div class="card">
+      <h2>أضف مصروف متكرر</h2>
+      <p class="hint">إيجار، إنترنت، رواتب… بتنكتب مرة وبتضل تذكّرك كل شهر. الترحيل بيصير مرة وحدة بس لكل شهر مهما ضغطت.</p>
+      <div class="msg" id="rc-msg"></div>
+      <div class="row">
+        <div class="field"><label>الاسم</label><input id="rc-name" placeholder="مثال: إيجار المحل"></div>
+        <div class="field"><label>التصنيف</label><select id="rc-cat"></select></div>
+        <div class="field"><label>المبلغ</label><input type="number" step="0.01" id="rc-amt"></div>
+        <div class="field"><label>يوم الاستحقاق</label><input type="number" min="1" max="31" id="rc-dom" value="1"></div>
+        <div class="field"><label>الخزنة</label><select id="rc-acc"></select></div>
+        <button class="btn" id="rc-add">➕ أضف</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>الجدول الشهري</h2>
+      <div class="tbl-scroll"><table id="rc-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ التدفق المتوقّع ══════════ -->
+  <div class="panel" id="p-fc">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>كم أسبوع جاي؟</label><input type="number" min="1" max="26" id="fc-weeks" value="6"></div>
+        <button class="btn" id="fc-go">احسب</button>
+        <button class="btn gray" id="fc-csv">⬇️ تصدير</button>
+      </div>
+      <p class="hint" style="margin:10px 0 0">🔴 هاد مش تنبّؤ ذكي. كل سطر هون التزام مكتوب عندك: شيك بتاريخه، مستحق إلو تاريخ وصول متوقّع، ذمّة إلها استحقاق، أو مصروف متكرر بجدوله. اللي ما إلو تاريخ ما بيدخل — بيطلع بقائمة المستثنى تحت.</p>
+    </div>
+    <div class="grid" id="fc-sum"></div>
+    <div class="card">
+      <h2>الأسابيع الجاية</h2>
+      <div class="tbl-scroll"><table id="fc-tbl"></table></div>
+    </div>
+    <div class="card">
+      <h2>تفصيل الالتزامات</h2>
+      <div class="tbl-scroll"><table id="fc-rows"></table></div>
+    </div>
+    <div class="card">
+      <h2>⚠️ مستثنى من التوقّع</h2>
+      <p class="hint">هدول مبالغ حقيقية بس ما إلها تاريخ، فما منقدر نحطها بأسبوع معيّن. حطّ إلها تاريخ حتى تدخل الحساب.</p>
+      <div class="tbl-scroll"><table id="fc-exc"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ التقارير ══════════ -->
+  <div class="panel" id="p-rp">
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>من</label><input type="date" id="rp-from"></div>
+        <div class="field"><label>إلى</label><input type="date" id="rp-to"></div>
+        <button class="btn" id="rp-go">اعرض</button>
+        <button class="btn gray" id="rp-csv">⬇️ تصدير يومي</button>
+      </div>
+    </div>
+    <div class="grid" id="rp-sum"></div>
+    <div class="card">
+      <h2>التقرير اليومي</h2>
+      <p class="hint">«الرصيد بنهاية اليوم» تراكمي من كل الحركات قبل الفترة كمان — عشان الرقم يكون صادق مش مبتور.</p>
+      <div class="tbl-scroll"><table id="rp-day"></table></div>
+    </div>
+    <div class="card">
+      <h2>التقرير الشهري</h2>
+      <div class="tbl-scroll"><table id="rp-mon"></table></div>
+    </div>
+  </div>
+</div>
+
+<script src="/theme.js"></script>
+<script>
+const API = "/admin/f-api/cash";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const d2 = (n) => (Math.round((Number(n)||0)*100)/100).toFixed(2);
+const dash = (v, f) => v == null ? "—" : (f ? f(v) : v);
+const money = (n) => `<span class="${Number(n) < 0 ? "minus" : "plus"}">${d2(n)}</span>`;
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  const j = await r.json().catch(() => ({ ok:false, error:"رد غير مفهوم من الخادم" }));
+  if (!j.ok) throw new Error(j.error || "خطأ");
+  return j;
+}
+const jpost = (body) => ({ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+function say(el, text, kind) { el.className = "msg " + kind; el.innerHTML = text; }
+function clear(el) { el.className = "msg"; el.textContent = ""; }
+function cards(el, items) {
+  el.innerHTML = items.map(i =>
+    `<div class="sc"><div class="n${i.k?" "+i.k:""}">${esc(i.n)}</div><div class="l">${esc(i.l)}</div></div>`).join("");
+}
+const bucketPill = (b) => {
+  const k = b === "مسدّد" || b === "غير مستحق بعد" ? "ok" : b === "60+" ? "no" : "unk";
+  return `<span class="pill ${k}">${esc(b)}</span>`;
+};
+
+let META = null, ACCOUNTS = [];
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  $("#p-" + t.dataset.p).classList.add("active");
+  ({ acc: loadAccounts, mv: loadMoves, tr: loadTransfers, cr: loadCouriers,
+     db: loadDebts, ch: loadCheques, rc: loadRecurring, fc: loadForecast, rp: loadReports })[t.dataset.p]?.();
+});
+
+// ══════════ الخزائن ══════════
+async function loadAccounts() {
+  const [j, ov] = await Promise.all([api("/accounts"), api("/overview").catch(() => null)]);
+  ACCOUNTS = j.rows;
+  const t = j.totals;
+  cards($("#ov-sum"), [
+    { n: d2(t.total), l: "مجموع الخزائن (د)" },
+    { n: d2(t.cash), l: "نقدي" },
+    { n: d2(t.bank), l: "بنكي" },
+    { n: d2(t.wallet), l: "محافظ" },
+    { n: ov ? d2(ov.courier_outstanding) : "—", l: "لسا عند شركات التوصيل" },
+    { n: ov ? d2(ov.owed_to_us) : "—", l: "ذمم لنا" },
+    { n: ov ? d2(ov.owed_by_us) : "—", l: "ذمم علينا", k: ov && ov.owed_by_us ? "warn" : "" },
+    { n: ov ? d2(ov.forecast_lowest) : "—", l: "أخفض رصيد متوقّع (4 أسابيع)",
+      k: ov && ov.forecast_lowest < 0 ? "bad" : "" }
+  ]);
+
+  $("#ac-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في خزائن بعد — أضف أول خزنة من فوق</td></tr>'
+    : "<tr><th>الخزنة</th><th>النوع</th><th>المسؤول</th><th>الرصيد</th><th>عدد الحركات</th><th>آخر حركة</th><th></th></tr>" +
+      j.rows.map(a => `<tr${a.active ? "" : ' style="opacity:.5"'}>
+        <td><b>${esc(a.name)}</b></td><td>${esc(a.kind)}</td><td>${esc(a.holder || "—")}</td>
+        <td><b>${money(a.balance)}</b></td><td>${a.moves}</td>
+        <td>${esc(dash(a.last_day))}</td>
+        <td><button class="btn gray sm" onclick="ledger(${a.id})">كشف</button>
+            <button class="btn gray sm" onclick="toggleAcc(${a.id})">${a.active ? "إيقاف" : "تفعيل"}</button>
+            <button class="btn red sm" onclick="delAcc(${a.id})">حذف</button></td></tr>`).join("");
+
+  const opts = (extra) => (extra || "") +
+    ACCOUNTS.filter(a => a.active).map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join("");
+  ["#mv-acc", "#tr-from", "#tr-to", "#se-acc", "#rc-acc"].forEach(s => {
+    const el = $(s); const k = el.value; el.innerHTML = opts('<option value="">اختر…</option>'); el.value = k;
+  });
+  const f = $("#mv-f-acc"); const fk = f.value; f.innerHTML = opts('<option value="">الكل</option>'); f.value = fk;
+}
+
+$("#ac-add").onclick = async () => {
+  clear($("#ac-msg"));
+  try {
+    await api("/accounts", jpost({ name: $("#ac-name").value, kind: $("#ac-kind").value,
+      holder: $("#ac-holder").value, opening: $("#ac-open").value }));
+    say($("#ac-msg"), "انفتحت الخزنة.", "ok");
+    $("#ac-name").value = $("#ac-holder").value = ""; $("#ac-open").value = "0";
+    loadAccounts();
+  } catch (e) { say($("#ac-msg"), e.message, "err"); }
+};
+window.toggleAcc = async (id) => { try { await api(`/accounts/${id}/toggle`, { method:"POST" }); loadAccounts(); } catch (e) { alert(e.message); } };
+window.delAcc = async (id) => {
+  if (!confirm("تحذف الخزنة؟")) return;
+  try {
+    const j = await api("/accounts/" + id, { method:"DELETE" });
+    if (j.archived) alert(`الخزنة إلها ${j.moves} حركة مسجّلة، فما بتنمسح — وقّفناها بدل ما نمحي تاريخ فلوس.`);
+    loadAccounts();
+  } catch (e) { alert(e.message); }
+};
+
+window.ledger = async (id) => {
+  let j; try { j = await api(`/accounts/${id}/ledger`); } catch (e) { return alert(e.message); }
+  const w = window.open("", "_blank");
+  w.document.write(`<html dir="rtl"><head><meta charset="utf-8"><title>كشف ${esc(j.account.name)}</title>
+    <style>body{font-family:Tahoma;padding:20px}table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border:1px solid #ddd;padding:7px;text-align:right}th{background:#f0f4f1}</style></head><body>
+    <h2>كشف خزنة: ${esc(j.account.name)}</h2>
+    <p>قبض: <b>${d2(j.in)}</b> · صرف: <b>${d2(j.out)}</b> · الرصيد: <b>${d2(j.balance)}</b></p>
+    <table><tr><th>التاريخ</th><th>النوع</th><th>التصنيف</th><th>الطرف</th><th>المبلغ</th><th>الرصيد بعدها</th><th>المرجع</th><th>ملاحظة</th></tr>
+    ${j.rows.map(r => `<tr><td>${new Date(r.at).toLocaleDateString("ar-JO")}</td><td>${esc(r.kind)}</td>
+      <td>${esc(r.category)}</td><td>${esc(r.party || "—")}</td><td>${d2(r.amount)}</td><td>${d2(r.balance)}</td>
+      <td>${esc(r.ref_type ? r.ref_type + ":" + r.ref_id : "—")}</td><td>${esc(r.note)}</td></tr>`).join("")}
+    </table></body></html>`);
+  w.document.close();
+};
+
+// ══════════ الحركات ══════════
+async function loadMoves() {
+  if (!ACCOUNTS.length) await loadAccounts();
+  const q = new URLSearchParams();
+  if ($("#mv-f-acc").value) q.set("account_id", $("#mv-f-acc").value);
+  if ($("#mv-f-kind").value) q.set("kind", $("#mv-f-kind").value);
+  let j; try { j = await api("/moves?" + q); } catch { return; }
+  $("#mv-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في حركات بعد</td></tr>'
+    : `<tr><th>التاريخ</th><th>الخزنة</th><th>النوع</th><th>التصنيف</th><th>الطرف</th><th>المبلغ</th><th>المرجع</th><th>ملاحظة</th><th></th></tr>` +
+      j.rows.map(r => `<tr>
+        <td>${new Date(r.at).toLocaleDateString("ar-JO")}</td>
+        <td><b>${esc(r.account_name)}</b></td><td>${esc(r.kind)}</td><td>${esc(r.category)}</td>
+        <td>${esc(r.party || "—")}</td><td><b>${money(r.amount)}</b></td>
+        <td style="color:var(--mut);font-size:12px">${esc(r.ref_type ? r.ref_type + ":" + r.ref_id : "—")}</td>
+        <td>${esc(r.note)}</td>
+        <td><button class="btn red sm" onclick="delMove(${r.id})">حذف</button></td></tr>`).join("");
+}
+$("#mv-f-acc").onchange = loadMoves;
+$("#mv-f-kind").onchange = loadMoves;
+
+$("#mv-add").onclick = async () => {
+  clear($("#mv-msg"));
+  try {
+    await api("/moves", jpost({ account_id: $("#mv-acc").value, kind: $("#mv-kind").value,
+      category: $("#mv-cat").value, amount: $("#mv-amt").value, party: $("#mv-party").value,
+      day: $("#mv-day").value || undefined, note: $("#mv-note").value }));
+    say($("#mv-msg"), "انسجّلت الحركة.", "ok");
+    $("#mv-amt").value = $("#mv-note").value = "";
+    loadMoves(); loadAccounts();
+  } catch (e) { say($("#mv-msg"), e.message, "err"); }
+};
+window.delMove = async (id) => {
+  if (!confirm("تحذف الحركة؟ الرصيد رح يتغيّر.")) return;
+  try { await api("/moves/" + id, { method:"DELETE" }); loadMoves(); loadAccounts(); }
+  catch (e) { alert(e.message); }
+};
+
+// ══════════ التحويلات ══════════
+async function loadTransfers() {
+  if (!ACCOUNTS.length) await loadAccounts();
+  let j; try { j = await api("/transfers"); } catch { return; }
+  $("#tr-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في تحويلات بعد</td></tr>'
+    : "<tr><th>التاريخ</th><th>من</th><th>إلى</th><th>المبلغ</th><th>ملاحظة</th><th></th></tr>" +
+      j.rows.map(t => `<tr><td>${new Date(t.at).toLocaleDateString("ar-JO")}</td>
+        <td>${esc(t.from_name)}</td><td>${esc(t.to_name)}</td><td><b>${d2(t.amount)}</b></td>
+        <td>${esc(t.note)}</td>
+        <td><button class="btn red sm" onclick="delTr(${t.id})">حذف</button></td></tr>`).join("");
+}
+$("#tr-add").onclick = async () => {
+  clear($("#tr-msg"));
+  try {
+    await api("/transfers", jpost({ from_id: $("#tr-from").value, to_id: $("#tr-to").value,
+      amount: $("#tr-amt").value, day: $("#tr-day").value || undefined, note: $("#tr-note").value }));
+    say($("#tr-msg"), "انحوّل المبلغ — انكتبت حركتين موازنتين.", "ok");
+    $("#tr-amt").value = "";
+    loadTransfers(); loadAccounts();
+  } catch (e) { say($("#tr-msg"), e.message, "err"); }
+};
+window.delTr = async (id) => {
+  if (!confirm("تحذف التحويل؟ الحركتين رح ينشالوا سوا.")) return;
+  try { await api("/transfers/" + id, { method:"DELETE" }); loadTransfers(); loadAccounts(); }
+  catch (e) { alert(e.message); }
+};
+
+// ══════════ شركات التوصيل ══════════
+async function loadCouriers() {
+  if (!ACCOUNTS.length) await loadAccounts();
+  let j; try { j = await api("/couriers"); } catch { return; }
+  const t = j.totals;
+  cards($("#cr-sum"), [
+    { n: d2(t.due), l: "إجمالي المستحقات" },
+    { n: d2(t.covered), l: "اللي وصل" },
+    { n: d2(t.outstanding), l: "لسا عندهم", k: t.outstanding ? "warn" : "" },
+    { n: d2(t.overpaid), l: "فايض غير مفسّر", k: t.overpaid ? "bad" : "" }
+  ]);
+
+  $("#cr-tbl").innerHTML = !j.couriers.length
+    ? '<tr><td class="empty">ما في شركات مسجّلة بعد</td></tr>'
+    : "<tr><th>الشركة</th><th>المستحق</th><th>المُغطّى</th><th>لسا عندهم</th><th>فايض</th></tr>" +
+      j.couriers.map(c => `<tr><td><b>${esc(c.courier)}</b></td><td>${d2(c.due)}</td><td>${d2(c.covered)}</td>
+        <td><b>${d2(c.outstanding)}</b></td>
+        <td>${c.overpaid ? `<span class="pill no">${d2(c.overpaid)}</span>` : "—"}</td></tr>`).join("");
+
+  $("#du-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في مستحقات مسجّلة</td></tr>'
+    : "<tr><th>الشركة</th><th>المرجع</th><th>التسليم</th><th>الوصول المتوقّع</th><th>المبلغ</th><th>المُغطّى</th><th>الباقي</th><th>الحالة</th><th></th></tr>" +
+      j.rows.map(r => `<tr><td><b>${esc(r.courier)}</b></td><td>${esc(r.ref || "—")}</td>
+        <td>${esc(r.day)}</td><td>${esc(r.expect_day || "—")}</td>
+        <td>${d2(r.amount)}</td><td>${d2(r.paid)}</td><td><b>${d2(r.remaining)}</b></td>
+        <td><span class="pill ${r.remaining <= 0 ? "ok" : r.paid > 0 ? "unk" : "no"}">${esc(r.status)}</span></td>
+        <td><button class="btn red sm" onclick="delDue(${r.id})">حذف</button></td></tr>`).join("");
+
+  const cs = j.couriers.map(c => `<option>${esc(c.courier)}</option>`).join("");
+  const el = $("#se-courier"); const k = el.value;
+  el.innerHTML = '<option value="">اختر…</option>' + cs; el.value = k;
+}
+window.delDue = async (id) => {
+  if (!confirm("تحذف المستحق؟")) return;
+  try { await api("/dues/" + id, { method:"DELETE" }); loadCouriers(); } catch (e) { alert(e.message); }
+};
+
+$("#du-add").onclick = async () => {
+  clear($("#du-msg"));
+  try {
+    await api("/dues", jpost({ courier: $("#du-courier").value, ref: $("#du-ref").value,
+      amount: $("#du-amt").value, day: $("#du-day").value || undefined, expect_day: $("#du-exp").value }));
+    say($("#du-msg"), "انسجّل المستحق.", "ok");
+    $("#du-amt").value = $("#du-ref").value = "";
+    loadCouriers();
+  } catch (e) { say($("#du-msg"), e.message, "err"); }
+};
+
+$("#se-add").onclick = async () => {
+  clear($("#se-msg"));
+  try {
+    const j = await api("/settlements", jpost({ courier: $("#se-courier").value,
+      account_id: $("#se-acc").value, amount: $("#se-amt").value, fee: $("#se-fee").value,
+      day: $("#se-day").value || undefined }));
+    let m = `الدفعة غطّت ${d2(j.covering)} د من المستحق. الباقي عندهم: <b>${d2(j.outstanding_after)}</b> د.`;
+    if (j.overpaid > 0) m += `<br>⚠️ في فايض ${d2(j.overpaid)} د — يعني في مستحق ما سجّلته. راجع كشوفاتك.`;
+    say($("#se-msg"), m, "ok");
+    $("#se-amt").value = ""; $("#se-fee").value = "0";
+    loadCouriers(); loadAccounts();
+  } catch (e) { say($("#se-msg"), e.message, "err"); }
+};
+
+// ══════════ الذمم ══════════
+async function loadDebts() {
+  if (!ACCOUNTS.length) await loadAccounts();
+  const q = new URLSearchParams();
+  if ($("#db-filter").value) q.set("direction", $("#db-filter").value);
+  if ($("#db-open").checked) q.set("open", "1");
+  let j; try { j = await api("/debts?" + q); } catch { return; }
+
+  cards($("#db-sum"), [
+    { n: d2(j.aging["لنا"].total), l: "إلنا عند الناس" },
+    { n: d2(j.aging["علينا"].total), l: "علينا للناس", k: j.aging["علينا"].total ? "warn" : "" },
+    { n: d2(j.net), l: "الصافي", k: j.net < 0 ? "bad" : "" },
+    { n: d2(j.aging["لنا"]["60+"]), l: "متأخّر 60+ يوم إلنا", k: j.aging["لنا"]["60+"] ? "bad" : "" }
+  ]);
+
+  const B = ["غير مستحق بعد", "0-30", "31-60", "60+"];
+  $("#db-aging").innerHTML =
+    "<tr><th>الاتجاه</th>" + B.map(b => `<th>${b}</th>`).join("") + "<th>المجموع</th></tr>" +
+    ["لنا", "علينا"].map(d => `<tr><td><b>${d}</b></td>` +
+      B.map(b => `<td>${d2(j.aging[d][b])}</td>`).join("") +
+      `<td><b>${d2(j.aging[d].total)}</b></td></tr>`).join("");
+
+  $("#db-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في ذمم مطابقة</td></tr>'
+    : "<tr><th>الطرف</th><th>الاتجاه</th><th>المبلغ</th><th>المسدّد</th><th>الباقي</th><th>الاستحقاق</th><th>العمر</th><th>الشريحة</th><th>سداد</th><th></th></tr>" +
+      j.rows.map(d => `<tr data-d="${d.id}">
+        <td><b>${esc(d.party)}</b>${d.phone ? ` <span style="color:var(--mut)">${esc(d.phone)}</span>` : ""}</td>
+        <td>${esc(d.direction)}</td><td>${d2(d.amount)}</td><td>${d2(d.paid)}</td>
+        <td><b>${d2(d.remaining)}</b></td><td>${esc(d.due_day || "—")}</td>
+        <td>${d.age_days} يوم</td><td>${bucketPill(d.bucket)}</td>
+        <td>${d.remaining > 0 ? `<input type="number" step="0.01" class="pay-a" placeholder="مبلغ">
+             <button class="btn sm" onclick="payDebt(${d.id})">سدّد</button>` : "—"}</td>
+        <td><button class="btn red sm" onclick="delDebt(${d.id})">حذف</button></td></tr>`).join("");
+}
+$("#db-filter").onchange = loadDebts;
+$("#db-open").onchange = loadDebts;
+
+$("#db-add").onclick = async () => {
+  clear($("#db-msg"));
+  try {
+    await api("/debts", jpost({ party: $("#db-party").value, direction: $("#db-dir").value,
+      amount: $("#db-amt").value, day: $("#db-day").value || undefined,
+      due_day: $("#db-due").value, phone: $("#db-phone").value }));
+    say($("#db-msg"), "انسجّلت الذمّة.", "ok");
+    $("#db-party").value = $("#db-amt").value = $("#db-phone").value = "";
+    loadDebts();
+  } catch (e) { say($("#db-msg"), e.message, "err"); }
+};
+
+window.payDebt = async (id) => {
+  const tr = document.querySelector(`#db-tbl tr[data-d="${id}"]`);
+  const acc = $("#mv-acc").value || (ACCOUNTS.find(a => a.active) || {}).id;
+  if (!acc) return alert("افتح خزنة أول حتى تسجّل السداد.");
+  try {
+    await api(`/debts/${id}/pay`, jpost({ account_id: acc, amount: tr.querySelector(".pay-a").value }));
+    loadDebts(); loadAccounts();
+  } catch (e) { alert(e.message); }
+};
+window.delDebt = async (id) => {
+  if (!confirm("تحذف الذمّة؟")) return;
+  try { await api("/debts/" + id, { method:"DELETE" }); loadDebts(); } catch (e) { alert(e.message); }
+};
+
+// ══════════ الشيكات ══════════
+async function loadCheques() {
+  if (!ACCOUNTS.length) await loadAccounts();
+  let j; try { j = await api("/cheques?warn=" + ($("#ch-warn").value || 7)); } catch { return; }
+  const t = j.totals;
+  cards($("#ch-sum"), [
+    { n: d2(t.in_open), l: "شيكات إلنا قيد التحصيل" },
+    { n: d2(t.out_open), l: "شيكات علينا", k: t.out_open ? "warn" : "" },
+    { n: d2(t.net), l: "الصافي", k: t.net < 0 ? "bad" : "" },
+    { n: t.near, l: "قرب استحقاقها", k: t.near ? "warn" : "" },
+    { n: t.overdue, l: "فات استحقاقها", k: t.overdue ? "bad" : "" }
+  ]);
+  const d = $("#ch-dot");
+  d.style.display = (t.near + t.overdue) ? "" : "none";
+  d.textContent = t.near + t.overdue;
+
+  $("#ch-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في شيكات مسجّلة</td></tr>'
+    : "<tr><th>النوع</th><th>الرقم</th><th>البنك</th><th>الطرف</th><th>المبلغ</th><th>الاستحقاق</th><th>باقي</th><th>الحالة</th><th></th></tr>" +
+      j.rows.map(c => `<tr>
+        <td>${esc(c.direction)}</td><td><b>${esc(c.number)}</b></td><td>${esc(c.bank || "—")}</td>
+        <td>${esc(c.party || "—")}</td><td>${d2(c.amount)}</td><td>${esc(c.due_day)}</td>
+        <td>${c.status !== "قيد التحصيل" ? "—" :
+          `<span class="pill ${c.overdue ? "no" : c.near ? "unk" : "ok"}">${c.overdue ? "متأخّر " + (-c.days_left) : c.days_left} يوم</span>`}</td>
+        <td><span class="pill ${c.status === "محصّل" ? "ok" : c.status === "مرتجع" ? "no" : "unk"}">${esc(c.status)}</span></td>
+        <td>${c.status === "قيد التحصيل"
+          ? `<button class="btn sm" onclick="cashCheque(${c.id})">اصرف</button>
+             <button class="btn gray sm" onclick="chStatus(${c.id},'مرتجع')">مرتجع</button>` : ""}
+            <button class="btn red sm" onclick="delCheque(${c.id})">حذف</button></td></tr>`).join("");
+}
+$("#ch-go").onclick = loadCheques;
+
+$("#ch-add").onclick = async () => {
+  clear($("#ch-msg"));
+  try {
+    await api("/cheques", jpost({ direction: $("#ch-dir").value, number: $("#ch-num").value,
+      bank: $("#ch-bank").value, party: $("#ch-party").value, amount: $("#ch-amt").value,
+      due_day: $("#ch-due").value }));
+    say($("#ch-msg"), "انسجّل الشيك.", "ok");
+    $("#ch-num").value = $("#ch-amt").value = "";
+    loadCheques();
+  } catch (e) { say($("#ch-msg"), e.message, "err"); }
+};
+window.cashCheque = async (id) => {
+  const acc = prompt("رقم الخزنة اللي رح تنزل فيها:\n" +
+    ACCOUNTS.filter(a => a.active).map(a => `${a.id} = ${a.name}`).join("\n"));
+  if (!acc) return;
+  try { await api(`/cheques/${id}/cash`, jpost({ account_id: Number(acc) })); loadCheques(); loadAccounts(); }
+  catch (e) { alert(e.message); }
+};
+window.chStatus = async (id, status) => {
+  try { await api(`/cheques/${id}/status`, jpost({ status })); loadCheques(); } catch (e) { alert(e.message); }
+};
+window.delCheque = async (id) => {
+  if (!confirm("تحذف الشيك؟")) return;
+  try { await api("/cheques/" + id, { method:"DELETE" }); loadCheques(); } catch (e) { alert(e.message); }
+};
+
+// ══════════ المصاريف المتكررة ══════════
+async function loadRecurring() {
+  if (!ACCOUNTS.length) await loadAccounts();
+  let j; try { j = await api("/recurring"); } catch { return; }
+  cards($("#rc-sum"), [
+    { n: d2(j.totals.monthly), l: "الالتزام الشهري (د)" },
+    { n: j.totals.pending, l: `ما انسدّ بشهر ${j.month}`, k: j.totals.pending ? "warn" : "" },
+    { n: j.totals.overdue, l: "فات موعده", k: j.totals.overdue ? "bad" : "" }
+  ]);
+  $("#rc-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في مصاريف متكررة — أضف الإيجار والإنترنت والرواتب</td></tr>'
+    : "<tr><th>الاسم</th><th>التصنيف</th><th>المبلغ</th><th>يوم الاستحقاق</th><th>الخزنة</th><th>هذا الشهر</th><th></th></tr>" +
+      j.rows.map(r => `<tr${r.active ? "" : ' style="opacity:.5"'}>
+        <td><b>${esc(r.name)}</b></td><td>${esc(r.category)}</td><td>${d2(r.amount)}</td>
+        <td>${esc(r.this_month_day || "—")}</td><td>${esc(r.account_name || "—")}</td>
+        <td>${r.posted_this_month ? '<span class="pill ok">مسدّد</span>'
+             : r.overdue ? '<span class="pill no">متأخّر</span>' : '<span class="pill unk">لسا</span>'}</td>
+        <td>${r.active && !r.posted_this_month ? `<button class="btn sm" onclick="postRc(${r.id})">رحّل</button>` : ""}
+            <button class="btn gray sm" onclick="toggleRc(${r.id})">${r.active ? "إيقاف" : "تفعيل"}</button>
+            <button class="btn red sm" onclick="delRc(${r.id})">حذف</button></td></tr>`).join("");
+}
+$("#rc-add").onclick = async () => {
+  clear($("#rc-msg"));
+  try {
+    await api("/recurring", jpost({ name: $("#rc-name").value, category: $("#rc-cat").value,
+      amount: $("#rc-amt").value, day_of_month: Number($("#rc-dom").value),
+      account_id: $("#rc-acc").value || undefined }));
+    say($("#rc-msg"), "انضاف المصروف المتكرر.", "ok");
+    $("#rc-name").value = $("#rc-amt").value = "";
+    loadRecurring();
+  } catch (e) { say($("#rc-msg"), e.message, "err"); }
+};
+window.postRc = async (id) => {
+  try {
+    const j = await api(`/recurring/${id}/post`, jpost({}));
+    say($("#rc-msg"), `انصرف المبلغ بتاريخ ${esc(j.day)}.`, "ok");
+    loadRecurring(); loadAccounts();
+  } catch (e) { say($("#rc-msg"), e.message, "err"); }
+};
+window.toggleRc = async (id) => { try { await api(`/recurring/${id}/toggle`, { method:"POST" }); loadRecurring(); } catch (e) { alert(e.message); } };
+window.delRc = async (id) => {
+  if (!confirm("تحذف المصروف المتكرر؟")) return;
+  try { await api("/recurring/" + id, { method:"DELETE" }); loadRecurring(); } catch (e) { alert(e.message); }
+};
+
+// ══════════ التدفق المتوقّع ══════════
+async function loadForecast() {
+  let j; try { j = await api("/forecast?weeks=" + ($("#fc-weeks").value || 6)); } catch { return; }
+  cards($("#fc-sum"), [
+    { n: d2(j.opening), l: "الرصيد اليوم" },
+    { n: d2(j.closing), l: `المتوقّع بعد ${j.weeks} أسابيع`, k: j.closing < 0 ? "bad" : "" },
+    { n: d2(j.lowest), l: "أخفض نقطة متوقّعة", k: j.lowest < 0 ? "bad" : "" },
+    { n: j.excluded.length, l: "التزام بلا تاريخ (مستثنى)", k: j.excluded.length ? "warn" : "" }
+  ]);
+
+  $("#fc-tbl").innerHTML =
+    "<tr><th>الأسبوع</th><th>من</th><th>إلى</th><th>داخل</th><th>خارج</th><th>الصافي</th><th>الرصيد بنهايته</th></tr>" +
+    j.buckets.map(b => `<tr><td><b>أسبوع ${b.week}</b></td><td>${esc(b.from)}</td><td>${esc(b.to)}</td>
+      <td class="plus">${d2(b.inflow)}</td><td class="minus">${d2(b.outflow)}</td>
+      <td>${money(b.net)}</td>
+      <td><b class="${b.closing < 0 ? "minus" : "plus"}">${d2(b.closing)}</b></td></tr>`).join("");
+
+  const rows = j.buckets.flatMap(b => b.rows.map(r => ({ ...r, week: b.week })));
+  $("#fc-rows").innerHTML = !rows.length
+    ? '<tr><td class="empty">ما في التزامات مسجّلة بهالمدى — ما منخترع أرقام</td></tr>'
+    : "<tr><th>الأسبوع</th><th>التاريخ</th><th>المصدر</th><th>البيان</th><th>المبلغ</th></tr>" +
+      rows.sort((a, b) => a.day.localeCompare(b.day))
+        .map(r => `<tr><td>أسبوع ${r.week}</td><td>${esc(r.day)}</td>
+          <td><span class="pill unk">${esc(r.source)}</span></td><td>${esc(r.label)}</td>
+          <td><b>${money(r.amount)}</b></td></tr>`).join("");
+
+  $("#fc-exc").innerHTML = !j.excluded.length
+    ? '<tr><td class="empty">كل التزاماتك إلها تاريخ 👌</td></tr>'
+    : "<tr><th>المصدر</th><th>البيان</th><th>المبلغ</th><th>ليش مستثنى</th></tr>" +
+      j.excluded.map(x => `<tr><td>${esc(x.source)}</td><td>${esc(x.label)}</td>
+        <td>${d2(x.amount)}</td><td style="color:var(--red)">${esc(x.reason)}</td></tr>`).join("");
+}
+$("#fc-go").onclick = loadForecast;
+$("#fc-csv").onclick = () => { location.href = API + "/export/forecast.csv?weeks=" + ($("#fc-weeks").value || 6); };
+
+// ══════════ التقارير ══════════
+async function loadReports() {
+  const q = new URLSearchParams();
+  if ($("#rp-from").value) q.set("from", $("#rp-from").value);
+  if ($("#rp-to").value) q.set("to", $("#rp-to").value);
+  const [d, m] = await Promise.all([api("/report/daily?" + q), api("/report/monthly?months=12")])
+    .catch(() => [null, null]);
+  if (!d) return;
+  cards($("#rp-sum"), [
+    { n: d2(d.opening), l: "رصيد بداية الفترة" },
+    { n: d2(d.totals.in), l: "قبض" },
+    { n: d2(d.totals.out), l: "صرف" },
+    { n: d2(d.totals.net), l: "الصافي", k: d.totals.net < 0 ? "bad" : "" },
+    { n: d2(d.closing), l: "رصيد نهاية الفترة" }
+  ]);
+  $("#rp-day").innerHTML = !d.days.length
+    ? '<tr><td class="empty">ما في حركات بهالفترة</td></tr>'
+    : "<tr><th>اليوم</th><th>حركات</th><th>قبض</th><th>صرف</th><th>الصافي</th><th>الرصيد بنهاية اليوم</th></tr>" +
+      d.days.map(x => `<tr><td><b>${esc(x.day)}</b></td><td>${x.count}</td>
+        <td class="plus">${d2(x.in)}</td><td class="minus">${d2(x.out)}</td>
+        <td>${money(x.net)}</td><td><b>${d2(x.closing)}</b></td></tr>`).join("");
+  $("#rp-mon").innerHTML = !m.months.length
+    ? '<tr><td class="empty">ما في بيانات شهرية</td></tr>'
+    : "<tr><th>الشهر</th><th>حركات</th><th>قبض</th><th>صرف</th><th>الصافي</th></tr>" +
+      m.months.map(x => `<tr><td><b>${esc(x.month)}</b></td><td>${x.count}</td>
+        <td class="plus">${d2(x.in)}</td><td class="minus">${d2(x.out)}</td>
+        <td>${money(x.net)}</td></tr>`).join("");
+}
+$("#rp-go").onclick = loadReports;
+$("#rp-csv").onclick = () => {
+  const q = new URLSearchParams();
+  if ($("#rp-from").value) q.set("from", $("#rp-from").value);
+  if ($("#rp-to").value) q.set("to", $("#rp-to").value);
+  location.href = API + "/export/daily.csv?" + q;
+};
+
+// ── إقلاع ──
+(async () => {
+  try { META = await api("/meta"); } catch { return; }
+  const fill = (sel, arr, extra) => $(sel).innerHTML = (extra || "") + arr.map(v => `<option>${esc(v)}</option>`).join("");
+  fill("#ac-kind", META.account_kinds);
+  fill("#mv-kind", META.move_kinds);
+  fill("#mv-f-kind", META.move_kinds, '<option value="">الكل</option>');
+  fill("#mv-cat", META.categories);
+  fill("#db-dir", META.directions);
+  fill("#ch-dir", META.cheque_directions);
+  fill("#rc-cat", META.categories);
+  ["#mv-day", "#tr-day", "#du-day", "#se-day", "#db-day"].forEach(s => $(s).value = META.today);
+  loadAccounts();
+})();
+</script>
+</body>
+</html>

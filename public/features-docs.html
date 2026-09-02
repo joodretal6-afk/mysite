@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🗂️ الأرشيف والوثائق — منصة الأجبان</title>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"violet")}catch(e){}</script>
+  <link rel="stylesheet" href="/premium.css">
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; --amber:#ef6c00; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:linear-gradient(120deg,var(--green2),var(--green)); color:#fff; padding:16px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:20px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1280px; margin:0 auto; padding:18px; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 12px; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .tab .dot { display:inline-block; min-width:18px; padding:0 5px; margin-inline-start:6px; background:var(--red); color:#fff; border-radius:9px; font-size:11px; }
+    .panel { display:none; } .panel.active { display:block; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.8; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:12.5px; color:var(--mut); font-weight:600; }
+    input, select, textarea { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; min-width:120px; }
+    input:focus, select:focus, textarea:focus { outline:none; border-color:var(--green); }
+    textarea { min-width:260px; min-height:70px; resize:vertical; }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .btn.gray { background:#eceff1; color:#37474f; } .btn.red { background:var(--red); }
+    .btn.sm { padding:5px 11px; font-size:12px; border-radius:8px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:9px 11px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; }
+    tr:hover { background:#fafcfa; }
+    .empty { text-align:center; padding:34px 14px; color:var(--mut); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+    .sc { background:var(--card); border-radius:12px; padding:13px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .sc .n { font-size:20px; font-weight:800; color:var(--green2); }
+    .sc .n.bad { color:var(--red); } .sc .n.warn { color:var(--amber); }
+    .sc .l { font-size:12px; color:var(--mut); margin-top:4px; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11.5px; font-weight:700; }
+    .pill.ok { background:#e8f5e9; color:#1b5e20; }
+    .pill.no { background:#ffebee; color:#c62828; }
+    .pill.unk { background:#fff8e1; color:#ef6c00; }
+    .drop { border:2px dashed var(--line); border-radius:14px; padding:26px; text-align:center; cursor:pointer; color:var(--mut); font-size:14px; }
+    .drop.on { border-color:var(--green); background:#f1f8f2; color:var(--green2); }
+    .msg { padding:10px 13px; border-radius:10px; font-size:13.5px; margin-bottom:10px; display:none; line-height:1.7; }
+    .msg.err { background:#ffebee; color:#c62828; display:block; }
+    .msg.ok { background:#e8f5e9; color:#1b5e20; display:block; }
+    .msg.warn { background:#fff8e1; color:#ef6c00; display:block; }
+    .snip { display:block; white-space:normal; color:var(--mut); font-size:12px; margin-top:3px; max-width:520px; }
+    .chip { display:inline-block; background:#eceff1; color:#37474f; border-radius:20px; padding:2px 9px; font-size:11.5px; margin-inline-end:4px; cursor:pointer; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🗂️ الأرشيف والوثائق والامتثال</h1>
+  <a href="/admin/features">← كل الميزات</a>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-p="arch">📚 الأرشيف والبحث</button>
+    <button class="tab" data-p="up">⬆️ رفع وثيقة</button>
+    <button class="tab" data-p="lic">📜 التراخيص والشهادات <span class="dot" id="lic-dot" style="display:none">0</span></button>
+    <button class="tab" data-p="con">📝 العقود</button>
+    <button class="tab" data-p="comp">✅ لوحة الامتثال</button>
+    <button class="tab" data-p="acc">👁️ سجل الوصول</button>
+  </div>
+
+  <!-- ══════════ الأرشيف والبحث ══════════ -->
+  <div class="panel active" id="p-arch">
+    <div class="card">
+      <h2>بحث وفلترة</h2>
+      <p class="hint">البحث بيدوّر جوّا <b>محتوى الوثيقة</b> نفسها مش بالاسم بس. الوثيقة اللي ما قدرنا نقرأ محتواها بتنلاقى بالاسم والوسوم بس — وهاي بتكون معلّمة بوضوح.</p>
+      <div class="row">
+        <div class="field" style="flex:1"><label>كلمة البحث</label><input id="q" placeholder="مثال: رخصة مهن" style="min-width:240px"></div>
+        <div class="field"><label>المجلد</label><select id="f-folder"><option value="">الكل</option></select></div>
+        <div class="field"><label>النوع</label><select id="f-type"><option value="">الكل</option></select></div>
+        <div class="field"><label>الوسم</label><select id="f-tag"><option value="">الكل</option></select></div>
+        <button class="btn" id="go">🔎 بحث</button>
+        <button class="btn gray" id="reset">مسح الفلاتر</button>
+        <button class="btn gray" id="exp">⬇️ تصدير الفهرس CSV</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <h2 style="margin:0">الوثائق</h2><span class="hint" id="cnt" style="margin:0"></span>
+      </div>
+      <div class="tbl-scroll"><table id="tbl"></table></div>
+    </div>
+    <div class="card" id="viewer" style="display:none">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0" id="v-title"></h2>
+        <button class="btn gray sm" onclick="document.getElementById('viewer').style.display='none'">إغلاق</button>
+      </div>
+      <div class="msg" id="v-msg"></div>
+      <p class="hint" id="v-meta"></p>
+      <div class="tbl-scroll"><table id="v-acc"></table></div>
+      <h2 style="margin-top:12px">النص المستخرج</h2>
+      <pre id="v-text" style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.9;max-height:340px;overflow:auto"></pre>
+    </div>
+  </div>
+
+  <!-- ══════════ رفع وثيقة ══════════ -->
+  <div class="panel" id="p-up">
+    <div class="card">
+      <h2>ارفع وثيقة للأرشيف</h2>
+      <p class="hint">المدعوم للقراءة: PDF نصي، إكسل، CSV، TSV، JSON، نص. الصور بتنحفظ وبتنزل عادي بس محتواها ما بينقرأ. الحد الأقصى 15 ميجا.</p>
+      <div class="msg" id="up-msg"></div>
+      <div class="row" style="margin-bottom:10px">
+        <div class="field"><label>اسم الوثيقة *</label><input id="u-title" placeholder="مثال: رخصة المهن 2026"></div>
+        <div class="field"><label>النوع</label><input id="u-type" value="عام" placeholder="تراخيص / عقود / فواتير"></div>
+        <div class="field"><label>المجلد</label><input id="u-folder" value="عام"></div>
+        <div class="field"><label>الوسوم (بفواصل)</label><input id="u-tags" placeholder="بلدية, 2026"></div>
+        <div class="field"><label>تاريخ الوثيقة</label><input type="date" id="u-date"></div>
+        <div class="field"><label>اسمك (لسجل الوصول)</label><input id="u-who" placeholder="أبو محمد"></div>
+      </div>
+      <div class="drop" id="drop">📎 اضغط هون لاختيار الملف — أو اسحبه ورميه</div>
+      <input type="file" id="file" hidden>
+      <p class="hint" id="u-pick" style="margin-top:8px"></p>
+      <button class="btn" id="u-go" disabled>💾 ارفع للأرشيف</button>
+    </div>
+  </div>
+
+  <!-- ══════════ التراخيص ══════════ -->
+  <div class="panel" id="p-lic">
+    <div class="card">
+      <h2>أضف ترخيص أو شهادة</h2>
+      <p class="hint">🔴 تاريخ الانتهاء بتكتبه إنت — النظام ما بيستنتجه من الملف أبداً.</p>
+      <div class="msg" id="l-msg"></div>
+      <div class="row">
+        <div class="field"><label>الاسم *</label><input id="l-name" placeholder="رخصة مهن"></div>
+        <div class="field"><label>النوع</label><input id="l-kind" value="رخصة"></div>
+        <div class="field"><label>الجهة</label><input id="l-issuer" placeholder="أمانة عمّان"></div>
+        <div class="field"><label>الرقم</label><input id="l-num"></div>
+        <div class="field"><label>تاريخ الإصدار</label><input type="date" id="l-from"></div>
+        <div class="field"><label>تاريخ الانتهاء *</label><input type="date" id="l-to"></div>
+        <div class="field"><label>الوثيقة المرفقة</label><select id="l-file"><option value="">— بلا —</option></select></div>
+        <button class="btn" id="l-add">💾 حفظ</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <h2 style="margin:0">التراخيص وعدّاد الأيام</h2>
+        <div class="field"><label>نبّهني قبل (يوم)</label><input type="number" id="l-warn" value="30" style="min-width:90px"></div>
+      </div>
+      <div class="tbl-scroll"><table id="l-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ العقود ══════════ -->
+  <div class="panel" id="p-con">
+    <div class="card">
+      <h2>أضف عقد</h2>
+      <p class="hint">اكتب البنود المهمة اللي بتحتاج ترجعلها (الأجرة، مدّة الإخطار، شروط الإلغاء) — بتنحفظ نصّاً زي ما كتبتها.</p>
+      <div class="msg" id="c-msg"></div>
+      <div class="row" style="margin-bottom:8px">
+        <div class="field"><label>عنوان العقد *</label><input id="c-title" placeholder="عقد إيجار المستودع"></div>
+        <div class="field"><label>الطرف الثاني</label><input id="c-party"></div>
+        <div class="field"><label>النوع</label>
+          <select id="c-kind"><option>مورد</option><option>شركة توصيل</option><option>إيجار</option><option>خدمات</option><option>موظف</option></select></div>
+        <div class="field"><label>البداية</label><input type="date" id="c-from"></div>
+        <div class="field"><label>النهاية *</label><input type="date" id="c-to"></div>
+        <div class="field"><label>تنبيه قبل (يوم)</label><input type="number" id="c-notice" value="30" style="min-width:100px"></div>
+        <div class="field"><label>القيمة (دينار)</label><input type="number" step="0.01" id="c-value"></div>
+        <div class="field"><label>الوثيقة المرفقة</label><select id="c-file"><option value="">— بلا —</option></select></div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:1"><label>البنود المهمة</label><textarea id="c-terms" placeholder="مثال: أجرة 1.75 د للطرد — إخطار الإلغاء قبل 60 يوم"></textarea></div>
+        <button class="btn" id="c-add">💾 حفظ</button>
+      </div>
+    </div>
+    <div class="card"><h2>العقود وتواريخ تجديدها</h2><div class="tbl-scroll"><table id="c-tbl"></table></div></div>
+  </div>
+
+  <!-- ══════════ الامتثال ══════════ -->
+  <div class="panel" id="p-comp">
+    <div class="grid" id="cm-sum"></div>
+    <div class="card">
+      <h2>🔴 منتهي — لازم إجراء اليوم</h2>
+      <div class="tbl-scroll"><table id="cm-exp"></table></div>
+    </div>
+    <div class="card">
+      <h2>🟠 بينتهي خلال 30 يوم</h2>
+      <div class="tbl-scroll"><table id="cm-soon"></table></div>
+    </div>
+    <div class="card">
+      <h2>📋 وثائق مطلوبة وناقصة</h2>
+      <p class="hint">حدّد أنواع الوثائق اللي لازم تكون موجودة عندك، والنظام بيقارنها بأرشيفك ويقول شو الناقص. النوع بينحسب موجود لمّا ترفع وثيقة بنفس النوع.</p>
+      <div class="msg" id="rq-msg"></div>
+      <div class="row" style="margin-bottom:10px">
+        <div class="field"><label>نوع وثيقة مطلوبة</label><input id="rq-type" placeholder="مثال: شهادة صحية"></div>
+        <div class="field" style="flex:1"><label>ملاحظة</label><input id="rq-note" placeholder="لوزارة الصحة"></div>
+        <button class="btn" id="rq-add">➕ أضف</button>
+      </div>
+      <div class="tbl-scroll"><table id="cm-miss"></table></div>
+    </div>
+  </div>
+
+  <!-- ══════════ سجل الوصول ══════════ -->
+  <div class="panel" id="p-acc">
+    <div class="card">
+      <h2>مين فتح شو ومتى</h2>
+      <p class="hint">كل رفع وفتح وتنزيل وتعديل بينكتب هون. الاسم بيجي من خانة «اسمك» وقت الرفع أو من جلسة المستخدم — وإذا ما انكتب بيضل «غير معروف» بدل اسم مخترع.</p>
+      <div class="row" style="margin-bottom:10px">
+        <div class="field"><label>فلترة باسم الشخص</label><input id="a-who" placeholder="اتركه فاضي للكل"></div>
+        <button class="btn" id="a-go">تحديث</button>
+      </div>
+      <div class="tbl-scroll"><table id="a-tbl"></table></div>
+    </div>
+  </div>
+</div>
+
+<script src="/theme.js"></script>
+<script>
+const API = "/admin/f-api/docs";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const say = (el, m, k) => { el.className = "msg " + k; el.textContent = m; };
+const clear = (el) => { el.className = "msg"; el.textContent = ""; };
+const dstr = (ts) => new Date(ts).toLocaleString("ar-JO");
+
+async function api(p, o) {
+  const r = await fetch(API + p, o);
+  const j = await r.json().catch(() => ({ ok:false, error:"رد غير مفهوم من الخادم" }));
+  if (!r.ok || j.ok === false) throw new Error(j.error || "صار خطأ");
+  return j;
+}
+const jpost = (b, m = "POST") => ({ method:m, headers:{ "Content-Type":"application/json" }, body:JSON.stringify(b) });
+
+// ══════════ التبويبات ══════════
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  $("#p-" + t.dataset.p).classList.add("active");
+  ({ arch:loadFiles, lic:loadLicenses, con:loadContracts, comp:loadCompliance, acc:loadAccess, up:loadFacets }[t.dataset.p] || (()=>{}))();
+});
+
+function scorecards(el, arr) {
+  el.innerHTML = arr.map(c => `<div class="sc"><div class="n ${c.bad?"bad":c.warn?"warn":""}">${esc(c.n)}</div><div class="l">${esc(c.l)}</div></div>`).join("");
+}
+const statePill = (s) => `<span class="pill ${s==="منتهي"?"no":s==="ساري"?"ok":"unk"}">${esc(s)}</span>`;
+const leftTxt = (d) => d == null ? "—" : d < 0 ? `متأخر ${Math.abs(d)} يوم` : d === 0 ? "اليوم" : `باقي ${d} يوم`;
+
+// ══════════ الأرشيف ══════════
+let FILES = [];
+function filterQS() {
+  const p = new URLSearchParams();
+  if ($("#q").value.trim()) p.set("q", $("#q").value.trim());
+  if ($("#f-folder").value) p.set("folder", $("#f-folder").value);
+  if ($("#f-type").value) p.set("doc_type", $("#f-type").value);
+  if ($("#f-tag").value) p.set("tag", $("#f-tag").value);
+  return p.toString();
+}
+
+async function loadFiles() {
+  await loadFacets();
+  const j = await api("/files?" + filterQS()).catch(e => { alert(e.message); return null; });
+  if (!j) return;
+  FILES = j.rows;
+  $("#cnt").textContent = `${j.count} وثيقة`;
+  $("#tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في وثائق مطابقة</td></tr>'
+    : "<tr><th>الوثيقة</th><th>النوع</th><th>المجلد</th><th>الوسوم</th><th>تاريخ الوثيقة</th><th>الحجم</th><th>المحتوى</th><th></th></tr>" +
+      j.rows.map(r => `<tr>
+        <td><b>${esc(r.title)}</b><span class="snip">${esc(r.filename)}${r.snippet ? " — " + esc(r.snippet) : ""}</span></td>
+        <td>${esc(r.doc_type)}</td><td>${esc(r.folder)}</td>
+        <td>${(r.tags||[]).map(t => `<span class="chip" onclick="byTag('${esc(t)}')">${esc(t)}</span>`).join("")}</td>
+        <td>${esc(r.doc_date || "—")}</td><td>${Math.max(1, Math.round(r.size/1024))} ك.ب</td>
+        <td>${r.extracted ? '<span class="pill ok">مقروء</span>' : '<span class="pill unk">بالاسم والوسوم بس</span>'}</td>
+        <td><button class="btn gray sm" onclick="openDoc(${r.id})">فتح</button>
+            <button class="btn gray sm" onclick="location.href=API+'/files/${r.id}/download'">⬇️ تنزيل</button>
+            <button class="btn red sm" onclick="delDoc(${r.id})">حذف</button></td></tr>`).join("");
+  fillFileSelects();
+}
+
+window.byTag = (t) => { $("#f-tag").value = t; loadFiles(); };
+
+async function loadFacets() {
+  const j = await api("/facets").catch(() => null);
+  if (!j) return;
+  const fill = (sel, arr) => { const el = $(sel), k = el.value;
+    el.innerHTML = '<option value="">الكل</option>' + arr.map(x => `<option>${esc(x)}</option>`).join(""); el.value = k; };
+  fill("#f-folder", j.folders); fill("#f-type", j.types); fill("#f-tag", j.tags);
+}
+
+function fillFileSelects() {
+  const opts = '<option value="">— بلا —</option>' + FILES.map(f => `<option value="${f.id}">${esc(f.title)}</option>`).join("");
+  ["#l-file", "#c-file"].forEach(s => { const el = $(s), k = el.value; el.innerHTML = opts; el.value = k; });
+}
+
+$("#go").onclick = loadFiles;
+$("#q").addEventListener("keydown", e => { if (e.key === "Enter") loadFiles(); });
+["#f-folder","#f-type","#f-tag"].forEach(s => $(s).onchange = loadFiles);
+$("#reset").onclick = () => { $("#q").value = ""; ["#f-folder","#f-type","#f-tag"].forEach(s => $(s).value = ""); loadFiles(); };
+$("#exp").onclick = () => { location.href = API + "/export.csv?" + filterQS(); };
+
+window.openDoc = async (id) => {
+  const who = encodeURIComponent($("#u-who").value.trim());
+  const j = await api(`/files/${id}?who=` + who).catch(e => { alert(e.message); return null; });
+  if (!j) return;
+  const f = j.file;
+  $("#viewer").style.display = "";
+  $("#v-title").textContent = f.title;
+  $("#v-meta").innerHTML = `النوع: <b>${esc(f.doc_type)}</b> · المجلد: <b>${esc(f.folder)}</b> · الملف: ${esc(f.filename)} · الحجم: ${Math.round(f.size/1024)} ك.ب · رُفعت: ${dstr(f.created_at)}`;
+  if (f.extracted) clear($("#v-msg")); else say($("#v-msg"), f.extract_note, "warn");
+  $("#v-text").textContent = f.extracted ? f.body_text : "";
+  $("#v-acc").innerHTML = "<tr><th>الوقت</th><th>مين</th><th>شو عمل</th></tr>" +
+    j.access.map(a => `<tr><td>${dstr(a.at)}</td><td>${esc(a.who)}</td><td>${esc(a.action)}</td></tr>`).join("");
+  $("#viewer").scrollIntoView({ behavior:"smooth" });
+};
+
+window.delDoc = async (id) => {
+  if (!confirm("تحذف الوثيقة نهائياً؟")) return;
+  try { await api("/files/" + id, { method:"DELETE" }); loadFiles(); }
+  catch (e) { alert(e.message); }
+};
+
+// ══════════ الرفع ══════════
+let PICKED = null;
+$("#drop").onclick = () => $("#file").click();
+["dragover","dragleave","drop"].forEach(ev => $("#drop").addEventListener(ev, (e) => {
+  e.preventDefault();
+  $("#drop").classList.toggle("on", ev === "dragover");
+  if (ev === "drop" && e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]);
+}));
+$("#file").onchange = (e) => e.target.files[0] && pick(e.target.files[0]);
+
+function pick(f) {
+  clear($("#up-msg"));
+  if (f.size > 15 * 1024 * 1024)
+    return say($("#up-msg"), `الملف ${(f.size/1048576).toFixed(1)} ميجا — الحد الأقصى 15 ميجا.`, "err");
+  const rd = new FileReader();
+  rd.onload = () => {
+    PICKED = { name: f.name, b64: String(rd.result).split(",")[1], size: f.size };
+    $("#u-pick").textContent = `📎 ${f.name} — ${Math.round(f.size/1024)} ك.ب`;
+    if (!$("#u-title").value.trim()) $("#u-title").value = f.name.replace(/\.[^.]+$/, "");
+    $("#u-go").disabled = false;
+  };
+  rd.readAsDataURL(f);
+}
+
+$("#u-go").onclick = async () => {
+  clear($("#up-msg"));
+  if (!PICKED) return say($("#up-msg"), "اختر ملف أول", "err");
+  $("#u-go").disabled = true;
+  try {
+    const j = await api("/files", jpost({
+      title: $("#u-title").value, doc_type: $("#u-type").value, folder: $("#u-folder").value,
+      tags: $("#u-tags").value, doc_date: $("#u-date").value, who: $("#u-who").value,
+      filename: PICKED.name, base64: PICKED.b64
+    }));
+    say($("#up-msg"), j.extracted
+      ? `انحفظت الوثيقة واستخرجنا ${j.chars} حرف من محتواها — البحث بيلاقيها بمحتواها.`
+      : `انحفظت الوثيقة، بس ${j.warning}`, j.extracted ? "ok" : "warn");
+    PICKED = null; $("#file").value = ""; $("#u-pick").textContent = ""; $("#u-title").value = "";
+    loadFiles();
+  } catch (e) { say($("#up-msg"), e.message, "err"); }
+  $("#u-go").disabled = !PICKED;
+};
+
+// ══════════ التراخيص ══════════
+async function loadLicenses() {
+  if (!FILES.length) await loadFiles();
+  const j = await api("/licenses?warn=" + (Number($("#l-warn").value) || 30)).catch(() => null);
+  if (!j) return;
+  $("#l-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في تراخيص مسجّلة بعد</td></tr>'
+    : "<tr><th>الاسم</th><th>النوع</th><th>الجهة</th><th>الرقم</th><th>الإصدار</th><th>الانتهاء</th><th>العدّاد</th><th>الحالة</th><th></th></tr>" +
+      j.rows.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.kind)}</td><td>${esc(r.issuer||"—")}</td>
+        <td>${esc(r.number||"—")}</td><td>${esc(r.issued_at||"—")}</td><td>${esc(r.expires_at)}</td>
+        <td><b>${esc(leftTxt(r.days_left))}</b></td><td>${statePill(r.state)}</td>
+        <td>${r.file_id ? `<button class="btn gray sm" onclick="location.href=API+'/files/${r.file_id}/download'">⬇️</button>` : ""}
+            <button class="btn gray sm" onclick="renewLic(${r.id})">تجديد</button>
+            <button class="btn red sm" onclick="delLic(${r.id})">حذف</button></td></tr>`).join("");
+  const d = $("#lic-dot"), n = j.counts.expired + j.counts.soon;
+  d.style.display = n ? "" : "none"; d.textContent = n;
+}
+$("#l-warn").onchange = loadLicenses;
+
+$("#l-add").onclick = async () => {
+  clear($("#l-msg"));
+  try {
+    await api("/licenses", jpost({
+      name: $("#l-name").value, kind: $("#l-kind").value, issuer: $("#l-issuer").value,
+      number: $("#l-num").value, issued_at: $("#l-from").value, expires_at: $("#l-to").value,
+      file_id: $("#l-file").value
+    }));
+    say($("#l-msg"), "انحفظ الترخيص.", "ok");
+    $("#l-name").value = $("#l-num").value = "";
+    loadLicenses();
+  } catch (e) { say($("#l-msg"), e.message, "err"); }
+};
+
+window.renewLic = async (id) => {
+  const d = prompt("تاريخ الانتهاء الجديد (YYYY-MM-DD):");
+  if (!d) return;
+  try { await api(`/licenses/${id}/renew`, jpost({ expires_at: d.trim() })); loadLicenses(); }
+  catch (e) { alert(e.message); }
+};
+window.delLic = async (id) => {
+  if (!confirm("تحذف الترخيص؟")) return;
+  await api("/licenses/" + id, { method:"DELETE" }); loadLicenses();
+};
+
+// ══════════ العقود ══════════
+async function loadContracts() {
+  if (!FILES.length) await loadFiles();
+  const j = await api("/contracts").catch(() => null);
+  if (!j) return;
+  $("#c-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في عقود مسجّلة بعد</td></tr>'
+    : "<tr><th>العقد</th><th>الطرف</th><th>النوع</th><th>من</th><th>لـ</th><th>العدّاد</th><th>الحالة</th><th>القيمة</th><th>البنود</th><th></th></tr>" +
+      j.rows.map(r => `<tr><td><b>${esc(r.title)}</b></td><td>${esc(r.party||"—")}</td><td>${esc(r.kind)}</td>
+        <td>${esc(r.starts_at||"—")}</td><td>${esc(r.ends_at)}</td><td><b>${esc(leftTxt(r.days_left))}</b></td>
+        <td>${statePill(r.state)}</td><td>${r.value == null ? "—" : r.value}</td>
+        <td><span class="snip">${esc(r.terms||"—")}</span></td>
+        <td>${r.file_id ? `<button class="btn gray sm" onclick="location.href=API+'/files/${r.file_id}/download'">⬇️</button>` : ""}
+            <button class="btn red sm" onclick="delCon(${r.id})">حذف</button></td></tr>`).join("");
+}
+
+$("#c-add").onclick = async () => {
+  clear($("#c-msg"));
+  try {
+    await api("/contracts", jpost({
+      title: $("#c-title").value, party: $("#c-party").value, kind: $("#c-kind").value,
+      starts_at: $("#c-from").value, ends_at: $("#c-to").value, notice_days: $("#c-notice").value,
+      value: $("#c-value").value, terms: $("#c-terms").value, file_id: $("#c-file").value
+    }));
+    say($("#c-msg"), "انحفظ العقد.", "ok");
+    $("#c-title").value = $("#c-terms").value = "";
+    loadContracts();
+  } catch (e) { say($("#c-msg"), e.message, "err"); }
+};
+window.delCon = async (id) => {
+  if (!confirm("تحذف العقد؟")) return;
+  await api("/contracts/" + id, { method:"DELETE" }); loadContracts();
+};
+
+// ══════════ الامتثال ══════════
+async function loadCompliance() {
+  const j = await api("/compliance").catch(() => null);
+  if (!j) return;
+  scorecards($("#cm-sum"), [
+    { n: j.counts.docs, l: "وثيقة بالأرشيف" },
+    { n: j.counts.expired, l: "منتهي", bad: j.counts.expired > 0 },
+    { n: j.counts.soon, l: "بينتهي خلال 30 يوم", warn: j.counts.soon > 0 },
+    { n: j.counts.missing, l: "مطلوب وناقص", warn: j.counts.missing > 0 },
+    { n: j.valid.length, l: "ساري" }
+  ]);
+  const rows = (arr, empty) => !arr.length ? `<tr><td class="empty">${empty}</td></tr>`
+    : "<tr><th>البند</th><th>الاسم</th><th>التاريخ</th><th>العدّاد</th></tr>" +
+      arr.map(r => `<tr><td>${esc(r.what)}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.date)}</td>
+        <td>${statePill(r.state)} ${esc(leftTxt(r.days_left))}</td></tr>`).join("");
+  $("#cm-exp").innerHTML = rows(j.expired, "ما في شي منتهي — تمام 👌");
+  $("#cm-soon").innerHTML = rows(j.soon, "ما في شي بينتهي هالشهر");
+  $("#cm-miss").innerHTML = !j.missing.length
+    ? '<tr><td class="empty">كل الأنواع المطلوبة عندك وثائق تحتها</td></tr>'
+    : "<tr><th>النوع المطلوب</th><th>ملاحظة</th><th></th></tr>" +
+      j.missing.map(r => `<tr><td><b>${esc(r.doc_type)}</b></td><td>${esc(r.note||"—")}</td>
+        <td><button class="btn red sm" onclick="delReq(${r.id})">شيله</button></td></tr>`).join("");
+}
+
+$("#rq-add").onclick = async () => {
+  clear($("#rq-msg"));
+  try {
+    await api("/required", jpost({ doc_type: $("#rq-type").value, note: $("#rq-note").value }));
+    $("#rq-type").value = $("#rq-note").value = "";
+    loadCompliance();
+  } catch (e) { say($("#rq-msg"), e.message, "err"); }
+};
+window.delReq = async (id) => { await api("/required/" + id, { method:"DELETE" }); loadCompliance(); };
+
+// ══════════ سجل الوصول ══════════
+async function loadAccess() {
+  const w = $("#a-who").value.trim();
+  const j = await api("/access" + (w ? "?who=" + encodeURIComponent(w) : "")).catch(() => null);
+  if (!j) return;
+  $("#a-tbl").innerHTML = !j.rows.length
+    ? '<tr><td class="empty">ما في حركات وصول مسجّلة</td></tr>'
+    : "<tr><th>الوقت</th><th>مين</th><th>شو عمل</th><th>الوثيقة</th></tr>" +
+      j.rows.map(r => `<tr><td>${dstr(r.at)}</td><td>${esc(r.who)}</td><td>${esc(r.action)}</td>
+        <td>${esc(r.title || "(وثيقة محذوفة)")}</td></tr>`).join("");
+}
+$("#a-go").onclick = loadAccess;
+
+loadFiles().then(loadLicenses);
+</script>
+</body>
+</html>

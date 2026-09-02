@@ -24,14 +24,68 @@ async function setting(key) {
   } catch { return ""; }
 }
 
-// الافتراضي جاهز لبوابة AIsa (تم التحقق منها فعلياً):
-//   العنوان: https://api.aisa.one/v1
-//   النموذج: qwen-flash — أسرع نموذج متاح بلا رصيد، وفهم عربي أردني ممتاز،
-//            ويدعم وضع JSON المطلوب لاستخراج الطلبات.
-// 🔴 المفتاح **ما بينكتب هون أبداً** — المستودع عام، ولو انكتب بالكود
-//    بترصده GitHub وبيتلغى فوراً. مصدره: صفحة /admin/ai أو متغيّر بيئة.
-const DEFAULT_BASE  = "https://api.aisa.one/v1";
-const DEFAULT_MODEL = "qwen-flash";
+// الافتراضي: OpenAI + gpt-4o-mini — بطلب صاحب المشروع (GPT فقط).
+//
+// انفحص على مهمة البوت الحقيقية (4 حالات × 3 جولات):
+//   gpt-4o-mini   8/8 ×3 ✅  1045ms  $0.15/م إدخال · $0.60/م إخراج  ← المختار
+//   gpt-5-mini    8/8 ×3 ✅  1196ms  $0.25/م إدخال · $2.00/م إخراج
+//   gpt-5-nano    4/6 ×3 ⚠️  1120ms  — بيبتر العنوان وبيغلط بالكمية
+//
+// ليش 4o-mini: نفس دقة 5-mini بالضبط، وأرخص 3 أضعاف بالإخراج،
+// وما في تاريخ إيقاف معلن إلو (بينما 5-mini معلن إيقافه 11/12/2026).
+// ومسار الرد على الزبون انفحص فعلياً وطلع رد أردني سليم بأسعار
+// الصفحة الحقيقية.
+const DEFAULT_BASE  = "https://api.openai.com/v1";
+const DEFAULT_MODEL = "gpt-4o-mini";
+
+// ═══════════════════════════════════════════════════════════
+// 🧠 نماذج التفكير (gpt-5 وأخواتها) — قيود مختلفة تماماً
+//
+// اكتُشفت بالفحص الفعلي على المفتاح، مش من التوثيق:
+//   1) بترفض max_tokens وبتطلب max_completion_tokens بدلها.
+//      بلا هالتعديل كل نداء بيفشل من أساسه.
+//   2) بترفض أي temperature غير 1. فمنشيلها بدل ما نبعتها.
+//   3) 🔴 الأخطر: بتاكل الرصيد كله بالتفكير وبترجع نص **فاضي**.
+//      جرّبنا رصيد 50 → رجع "" و50 توكن راحوا تفكير. فمنجبر
+//      reasoning_effort=minimal ومنرفع سقف الرصيد.
+// ═══════════════════════════════════════════════════════════
+const REASONING_RE = /^(gpt-5|o1|o3|o4)/i;
+export const isReasoningModel = (m) => REASONING_RE.test(String(m || "").trim());
+
+/** يبني جسم النداء الصحيح حسب نوع النموذج */
+export function buildBody({ model, prompt, json, temperature, maxTokens }) {
+  const base = {
+    model,
+    messages: [{ role: "user", content: prompt }],
+    ...(json ? { response_format: { type: "json_object" } } : {})
+  };
+  if (!isReasoningModel(model))
+    return { ...base, temperature, max_tokens: maxTokens };
+
+  // نموذج تفكير: الرصيد بينقسم بين التفكير والرد، فمنضاعفه
+  // ومنخلّي التفكير أدنى شي — شغلنا استخراج مش رياضيات.
+  return {
+    ...base,
+    max_completion_tokens: Math.max(600, maxTokens * 2),
+    reasoning_effort: "minimal"
+  };
+}
+
+// بوابات جاهزة للاختيار من صفحة الإعدادات — بلا حفظ مفاتيح
+export const PRESETS = [
+  { id: "gpt4omini", name: "GPT-4o mini (الأفضل والأوفر)",
+    base: "https://api.openai.com/v1", model: "gpt-4o-mini",
+    models: ["gpt-4o-mini", "gpt-5-mini", "gpt-4o"],
+    hint: "دقة كاملة بالفحص وأرخص خيار — المفتاح من platform.openai.com" },
+  { id: "gpt5mini", name: "GPT-5 mini (دقيق — بس معلن إيقافه 11/12/2026)",
+    base: "https://api.openai.com/v1", model: "gpt-5-mini",
+    models: ["gpt-5-mini", "gpt-5"],
+    hint: "نموذج تفكير — النظام بيضبط إعداداته لحاله" },
+  { id: "gpt5nano", name: "GPT-5 nano (⚠️ الأرخص بس دقته 4/6 بالفحص)",
+    base: "https://api.openai.com/v1", model: "gpt-5-nano",
+    models: ["gpt-5-nano"],
+    hint: "⚠️ بيبتر العنوان وبيغلط بالكمية — ما بنوصي فيه للطلبات" }
+];
 
 // ── الإعداد الفعّال: متغيّر البيئة أولاً، وإلا إعدادات الموقع ──
 export async function aiConfig() {
@@ -78,17 +132,21 @@ export async function aiComplete(prompt, opts = {}) {
       const r = await fetch(`${c.base}/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${c.key}` },
-        body: JSON.stringify({
-          model: opts.model || c.model,
-          messages: [{ role: "user", content: prompt }],
-          temperature, max_tokens: maxTokens,
-          ...(json ? { response_format: { type: "json_object" } } : {})
-        }),
+        body: JSON.stringify(buildBody({
+          model: opts.model || c.model, prompt, json, temperature, maxTokens
+        })),
         signal: AbortSignal.timeout(timeoutMs)
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) return { ok: false, text: "", error: d?.error?.message || `HTTP ${r.status}` };
-      return { ok: true, text: d?.choices?.[0]?.message?.content || "" };
+      const out = d?.choices?.[0]?.message?.content || "";
+      // نموذج تفكير خلص رصيده قبل ما يكتب الرد → نص فاضي.
+      // بنعتبرها فشل صريح، لأنّ الرد الفاضي بيمشي بصمت وبيوقف
+      // البوت عن الرد بلا ما تعرف السبب.
+      if (!out.trim() && d?.choices?.[0]?.finish_reason === "length")
+        return { ok: false, text: "",
+                 error: "النموذج خلّص رصيد التوكنات بالتفكير قبل ما يكتب الرد — كبّر الحد أو استعمل نموذج أخف" };
+      return { ok: true, text: out };
     } catch (e) { return { ok: false, text: "", error: e && e.message }; }
   }
 
@@ -132,4 +190,77 @@ export async function aiTest() {
   const r = await aiComplete("اكتب كلمة: جاهز", { maxTokens: 20, timeoutMs: 20000 });
   const st = await aiStatus();
   return { ...st, ok: r.ok, ms: Date.now() - t0, sample: (r.text || "").trim().slice(0, 60), error: r.error || null };
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🩺 تشخيص «ليش ما بيوصل رد للزبون؟»
+//
+// الرد بيمر بسلسلة حلقات، وأي حلقة مكسورة بتوقف كل شي بصمت.
+// بدل ما تحزر، هون منفحصهم كلهم بالترتيب ومنقول أول حلقة
+// مكسورة وشو الحل — بلا تخمين، كل فحص بيرجع الدليل معه.
+// ═══════════════════════════════════════════════════════════
+export async function botDiagnose() {
+  const checks = [];
+  const add = (name, ok, detail, fix = "") => checks.push({ name, ok, detail, fix });
+
+  // 1) الإيقاف العام
+  const paused = CONFIG.GLOBAL_PAUSE;
+  add("البوت مش موقوف عام", !paused,
+      paused ? "BOT_PAUSED=true — البوت بيأرشف بس وما بيرد" : "شغّال",
+      "شيل متغيّر BOT_PAUSED أو خلّيه false");
+
+  // 2) التسليم لذكاء ميتا (بيخرس بوتنا عمداً)
+  let handed = false;
+  try { ({ handedOverToMeta: handed } = await import("./capture.js"), handed = (await import("./capture.js")).handedOverToMeta()); }
+  catch { /* الوحدة مش محمّلة */ }
+  add("مش مسلّم لذكاء ميتا", !handed,
+      handed ? "التسليم شغّال — بوتنا صامت بالكامل عمداً" : "بوتنا هو اللي بيرد",
+      "من /admin/ai غيّر «مين بيرد على الزبائن» لـ«بوتنا»");
+
+  // 3) مفتاح الذكاء
+  const c = await aiConfig();
+  const hasKey = c.useOpenAI ? !!c.key : !!c.gKey;
+  add("مفتاح الذكاء مضبوط", hasKey,
+      hasKey ? `${c.useOpenAI ? c.base : "Gemini"} · ${c.useOpenAI ? c.model : c.gModel}` : "ما في مفتاح",
+      "احفظ المفتاح من /admin/ai");
+
+  // 4) الذكاء بيرد فعلاً (نداء حقيقي)
+  let aiOk = false, aiDetail = "ما انفحص — ما في مفتاح";
+  if (hasKey) {
+    const t = await aiComplete("اكتب كلمة: جاهز", { maxTokens: 20, timeoutMs: 20000 });
+    aiOk = t.ok && !!String(t.text || "").trim();
+    aiDetail = aiOk ? `رد: «${String(t.text).trim().slice(0, 40)}»` : (t.error || "رد فاضي");
+  }
+  add("الذكاء بيرد", aiOk, aiDetail, "افحص المفتاح والرصيد عند المزوّد");
+
+  // 5) توكنات الصفحات — بلا توكن الرسالة بتنبنى وما بتنبعت
+  let pages = [];
+  try {
+    const { PAGES } = await import("./brain.js");
+    pages = Object.entries(PAGES).map(([id, p]) => ({
+      id, name: p.name, token: !!p.PAGE_TOKEN, source: p._tokenSource || "الكود"
+    }));
+  } catch { /* لا شيء */ }
+  const noTok = pages.filter((p) => !p.token);
+  add("كل الصفحات إلها توكن", pages.length > 0 && noTok.length === 0,
+      pages.length ? (noTok.length ? `بلا توكن: ${noTok.map((p) => p.name).join("، ")}`
+                                   : `${pages.length} صفحة — كلها مربوطة`)
+                   : "ما في صفحات معرّفة",
+      "ضيف PAGE_TOKEN_<معرّف الصفحة> بمتغيّرات البيئة");
+
+  // 6) توقيع الويبهوك — بلا سر أي حدا بيقدر يزوّر أحداث
+  const sig = !!process.env.FB_APP_SECRET;
+  add("سر التطبيق مضبوط", sig,
+      sig ? "الأحداث بتتحقق" : "⚠️ الويبهوك بيقبل أي حدث بلا تحقق",
+      "ضيف FB_APP_SECRET بمتغيّرات البيئة");
+
+  const firstBroken = checks.find((x) => !x.ok);
+  return {
+    ok: !firstBroken,
+    verdict: firstBroken
+      ? `أول حلقة مكسورة: ${firstBroken.name} — ${firstBroken.detail}`
+      : "كل الحلقات سليمة — البوت المفروض يرد",
+    checks,
+    pages
+  };
 }

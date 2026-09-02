@@ -1,11 +1,16 @@
 // ═══════════════════════════════════════════════════════════
 // إعدادات المنصة والبوت
-// ملاحظة: القيم الأصلية للمفاتيح محفوظة كما هي (بدون حذف).
-// يمكن تجاوزها عبر متغيرات البيئة (.env) لو رغبت لاحقاً بذلك.
+//
+// 🔴 ممنوع منعاً باتاً كتابة أي مفتاح هون. المستودع **عام**،
+//    وجوجل وجروك وميتا بيفحصوا GitHub وبيلغوا أي مفتاح
+//    بينكتب بالكود — خلال دقائق.
+//    وهاد بالضبط اللي صار: كان في مفتاح Gemini مكتوب هون،
+//    انرصد وانلغى، فوقف البوت عن الرد.
+//    مصدر المفاتيح: متغيّرات البيئة، أو صفحة /admin/ai.
 // ═══════════════════════════════════════════════════════════
 
 export const CONFIG = {
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY || "AIzaSyA1hzKsNzQHEZatQ4OQqYyPquT0fBJUghc",
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
   MODEL_NAME: process.env.MODEL_NAME || "gemini-flash-latest",
 
   // ── اختيار مزوّد الذكاء: "gemini" أو "openai" ──
@@ -15,6 +20,9 @@ export const CONFIG = {
   OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o-mini",
   OPENAI_TRANSCRIBE_MODEL: process.env.OPENAI_TRANSCRIBE_MODEL || "whisper-1",
   VERIFY_TOKEN: process.env.VERIFY_TOKEN || "talebbot",
+  // معرّف تطبيقنا على ميتا — بنميّز فيه ردودنا نحنا عن ردود
+  // ذكاء ميتا أو الموظف، حتى ما نأرشف ردنا مرتين.
+  FB_APP_ID: process.env.FB_APP_ID || "",
 
   // 🛑 إيقاف البوت بالكامل (بطلب المالك): لا يرد على أي زبون ولا يبعت متابعات — الرسائل الواردة تُؤرشف فقط.
   // لإعادة التشغيل: غيّر القيمة الافتراضية إلى false، أو اضبط متغيّر البيئة BOT_PAUSED=false.
