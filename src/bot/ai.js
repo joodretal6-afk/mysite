@@ -12,7 +12,7 @@ import { buildNextTask, askGemini } from "./gemini.js";
 //    صفحة /admin/ai كان **البوت يضل ينادي البوابة القديمة**
 //    والمفتاح الجديد بيروح على عنوان غلط. صار بينقرأ لحظياً
 //    من نفس مصدر الطبقة الموحّدة.
-const DEFAULT_BASE = "https://api.groq.com/openai/v1";
+const DEFAULT_BASE = "https://api.openai.com/v1";
 function oaiBase() {
   const b = process.env.OPENAI_BASE_URL || siteSetting("ai_base") || DEFAULT_BASE;
   return String(b).replace(/\/+$/, "");
@@ -27,7 +27,7 @@ function siteSetting(key) {
   } catch { return ""; }
 }
 export function oaiKey()   { return process.env.OPENAI_API_KEY || siteSetting("ai_key") || ""; }
-export function oaiModel() { return process.env.OPENAI_MODEL || siteSetting("ai_model") || "qwen/qwen3.8-27b"; }
+export function oaiModel() { return process.env.OPENAI_MODEL || siteSetting("ai_model") || "gpt-4o-mini"; }
 
 // نماذج التفكير (gpt-5 وأخواتها) بترفض max_tokens و temperature،
 // وبتاكل الرصيد بالتفكير فبترجع فاضي لو الحد ضيّق. الطبقة

@@ -88,6 +88,16 @@
     </div>
 
     <div class="card">
+      <h2>🩺 ليش ما بيوصل رد للزبون؟</h2>
+      <p style="font-size:13px;color:#666;line-height:1.8;margin-bottom:10px">
+        الرد بيمرّ بسلسلة حلقات، وأي حلقة مكسورة بتوقف كل شي بصمت.
+        اضغط الزر وبيفحصهم كلهم بالترتيب وبيقلّك أول حلقة مكسورة وشو الحل.
+      </p>
+      <div class="btns"><button class="btn p" onclick="diagnose()">🩺 افحص الآن</button></div>
+      <div id="diag-out"></div>
+    </div>
+
+    <div class="card">
       <h2>🎣 التقاط الطلبات من ذكاء فيسبوك والردود اليدوية</h2>
       <p style="font-size:13px;line-height:1.9;color:#666;margin-bottom:12px">
         لمّا يرد <b>ذكاء ميتا</b> على زبونك، أو ترد إنت من الموبايل، الطلب ما بيوصل الموقع —
@@ -196,6 +206,26 @@
                  : body.enabled ? 'وضع الالتقاط شغّال. الطلبات الملتقطة بتظهر بحالة «بحاجة مراجعة».'
                                 : 'وضع الالتقاط مطفأ.')
              : (j.error || 'صار خطأ');
+    };
+
+    window.diagnose = async function(){
+      const out = document.getElementById('diag-out');
+      out.innerHTML = '<div class="res">⏳ عم نفحص…</div>';
+      try {
+        const j = await (await fetch('/admin/api/ai/diagnose')).json();
+        const esc2 = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+        out.innerHTML =
+          `<div class="msg ${j.ok?'ok':'err'}" style="display:block;margin-top:10px"><b>${esc2(j.verdict)}</b></div>` +
+          '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px">' +
+          (j.checks||[]).map(c => `<tr style="border-bottom:1px solid #eee">
+            <td style="padding:8px;width:26px">${c.ok?'✅':'🔴'}</td>
+            <td style="padding:8px"><b>${esc2(c.name)}</b><br>
+              <span style="color:#777">${esc2(c.detail)}</span>
+              ${c.ok?'':`<br><span style="color:#c62828">الحل: ${esc2(c.fix)}</span>`}</td></tr>`).join('') +
+          '</table>' +
+          ((j.pages||[]).length ? '<div style="font-size:12.5px;color:#777;margin-top:10px">الصفحات: ' +
+            j.pages.map(p=>`${esc2(p.name)} ${p.token?'✅':'🔴'} <small>(${esc2(p.source)})</small>`).join(' · ') + '</div>' : '');
+      } catch(e){ out.innerHTML = '<div class="msg err" style="display:block">'+e.message+'</div>'; }
     };
 
     async function save(){

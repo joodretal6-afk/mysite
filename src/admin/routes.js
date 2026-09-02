@@ -472,6 +472,12 @@ adminRouter.post("/api/capture", requireAuth, requireAdmin, (req, res) => {
   } catch (e) { res.status(500).json({ error: e && e.message }); }
 });
 
+// 🩺 تشخيص شامل: ليش ما بيوصل رد للزبون
+adminRouter.get("/api/ai/diagnose", requireAuth, async (req, res) => {
+  try { const { botDiagnose } = await import("../bot/aiCore.js"); res.json(await botDiagnose()); }
+  catch (e) { res.status(500).json({ ok: false, error: e && e.message }); }
+});
+
 // البوابات الجاهزة — مصدرها الكود مش الواجهة، فما بينختلفوا
 adminRouter.get("/api/ai/presets", requireAuth, async (req, res) => {
   try { const { PRESETS } = await import("../bot/aiCore.js"); res.json({ presets: PRESETS }); }

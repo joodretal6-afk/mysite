@@ -85,7 +85,7 @@ ok(isReasoningModel("gpt-5-nano") === true, "gpt-5-nano بينتعرف كنمو�
 ok(isReasoningModel("gpt-5-mini") === true, "gpt-5-mini كمان");
 ok(isReasoningModel("o3-mini") === true, "عائلة o بينتعرفوا");
 ok(isReasoningModel("gpt-4o-mini") === false, "gpt-4o-mini نموذج عادي");
-ok(isReasoningModel("qwen/qwen3.8-27b") === false, "نماذج جروك عادية");
+ok(isReasoningModel("gpt-4o-mini") === false, "نماذج GPT-4 عادية مش تفكير");
 ok(isReasoningModel("") === false && isReasoningModel(null) === false, "قيمة فاضية ما بتنكسر");
 
 const classic = buildBody({ model: "gpt-4o-mini", prompt: "x", json: false,
@@ -110,9 +110,10 @@ ok(buildBody({ model: "gpt-5-nano", prompt: "x", maxTokens: 50 }).max_completion
 
 // ═══════ البوابات الجاهزة: المختار أول والتحذيرات ظاهرة ═══════
 const { PRESETS } = await import("../src/bot/aiCore.js");
-ok(PRESETS[0].model === "openai/gpt-oss-20b",
-   "المختار بالفحص (gpt-oss-20b) أول خيار بالقائمة");
+ok(PRESETS[0].model === "gpt-4o-mini", "المختار بالفحص (gpt-4o-mini) أول خيار");
 ok(/الأوفر/.test(PRESETS[0].name), "ومعلّم إنه الأوفر");
+ok(PRESETS.every(p => p.base.includes("openai.com")),
+   "🔴 كل البوابات على GPT — جروك انشال زي ما طلب صاحب المشروع");
 const nano = PRESETS.find(p => p.model === "gpt-5-nano");
 ok(nano && /دقة أقل|4\/6/.test(nano.name),
    "🔴 النموذج اللي فشل بالفحص موجود كخيار بس بتحذيره مكتوب");
@@ -127,6 +128,27 @@ const KEYLIKE = /(gsk_|sk-proj-|sk-ant-)[A-Za-z0-9_-]{20,}|AIza[A-Za-z0-9_-]{30,
 ok(!KEYLIKE.test(JSON.stringify(PRESETS)),
    "🔴 ولا مفتاح محفوظ بالبوابات الجاهزة");
 ok(KEYLIKE.test("gsk_" + "a".repeat(25)), "نمط كشف المفاتيح شغّال فعلاً (فحص ذاتي)");
+
+// ═══════════ 🩺 تشخيص «ليش ما بيوصل رد» ═══════════
+const { botDiagnose } = await import("../src/bot/aiCore.js");
+const d = await botDiagnose();
+ok(Array.isArray(d.checks) && d.checks.length >= 6, "التشخيص بيفحص كل حلقات السلسلة");
+ok(d.checks.every(c => c.name && typeof c.ok === "boolean" && c.detail),
+   "كل فحص بيرجع اسمه ونتيجته والدليل");
+ok(d.checks.filter(c => !c.ok).every(c => c.fix),
+   "🔴 كل حلقة مكسورة بيجي معها الحل — مش بس «في مشكلة»");
+ok(/أول حلقة مكسورة|كل الحلقات سليمة/.test(d.verdict),
+   "الخلاصة بتسمّي أول حلقة مكسورة بالاسم");
+ok(d.checks.some(c => /موقوف عام/.test(c.name)), "بيفحص الإيقاف العام");
+ok(d.checks.some(c => /ذكاء ميتا/.test(c.name)), "بيفحص التسليم لميتا");
+ok(d.checks.some(c => /توكن/.test(c.name)), "بيفحص توكنات الصفحات");
+ok(d.checks.some(c => /الذكاء بيرد/.test(c.name)), "بيجرّب نداء حقيقي للذكاء");
+const noKey = d.checks.find(c => /مفتاح الذكاء/.test(c.name));
+ok(noKey && !noKey.ok && /ما في مفتاح/.test(noKey.detail),
+   "بلا مفتاح بيوقف عند المفتاح ويقول السبب صراحةً");
+
+const uiSrc = fs.readFileSync("public/ai.html", "utf8");
+ok(/diagnose\(\)/.test(uiSrc), "زر التشخيص موجود بالصفحة");
 
 // 🔴 مسار البوت ما عاد مثبّت على بوابة وحدة
 const aiSrc = fs.readFileSync("src/bot/ai.js", "utf8");
