@@ -77,6 +77,44 @@ ok(/reply == null/.test(handler) || /reply === null/.test(handler),
 ok(/String\(reply \|\| ""\)\.split/.test(handler),
    "مسار الإرسال محمي من القيمة الفاضية فما بينهار");
 
+// ═══════════ 🧠 نماذج التفكير (gpt-5) — قيود مختلفة ═══════════
+// مكتشفة بالفحص الفعلي على المفتاح، مش من التوثيق.
+const { isReasoningModel, buildBody } = await import("../src/bot/aiCore.js");
+
+ok(isReasoningModel("gpt-5-nano") === true, "gpt-5-nano بينتعرف كنموذج تفكير");
+ok(isReasoningModel("gpt-5-mini") === true, "gpt-5-mini كمان");
+ok(isReasoningModel("o3-mini") === true, "عائلة o بينتعرفوا");
+ok(isReasoningModel("gpt-4o-mini") === false, "gpt-4o-mini نموذج عادي");
+ok(isReasoningModel("qwen/qwen3.8-27b") === false, "نماذج جروك عادية");
+ok(isReasoningModel("") === false && isReasoningModel(null) === false, "قيمة فاضية ما بتنكسر");
+
+const classic = buildBody({ model: "gpt-4o-mini", prompt: "x", json: false,
+                            temperature: 0.2, maxTokens: 400 });
+ok(classic.max_tokens === 400 && classic.temperature === 0.2,
+   "النموذج العادي بياخد max_tokens و temperature زي ما هي");
+ok(classic.max_completion_tokens === undefined, "وما بينبعتلو max_completion_tokens");
+
+const reasoning = buildBody({ model: "gpt-5-nano", prompt: "x", json: true,
+                              temperature: 0.2, maxTokens: 400 });
+ok(reasoning.max_tokens === undefined,
+   "🔴 نموذج التفكير ما بينبعتلو max_tokens — بيرفض النداء كلياً لو انبعت");
+ok(reasoning.temperature === undefined,
+   "🔴 وما بينبعتلو temperature — بيرفض أي قيمة غير 1");
+ok(reasoning.max_completion_tokens === 800,
+   "الرصيد بينضاعف لأنّ التفكير بياكل منه قبل ما يكتب الرد");
+ok(reasoning.reasoning_effort === "minimal",
+   "🔴 التفكير على الأدنى — شغلنا استخراج طلبات مش رياضيات");
+ok(reasoning.response_format?.type === "json_object", "وضع الـJSON بيضل شغّال");
+ok(buildBody({ model: "gpt-5-nano", prompt: "x", maxTokens: 50 }).max_completion_tokens === 600,
+   "في حد أدنى للرصيد — رصيد ضيّق بيخلي النموذج يرجع فاضي");
+
+// 🔴 مسار البوت ما عاد مثبّت على بوابة وحدة
+const aiSrc = fs.readFileSync("src/bot/ai.js", "utf8");
+ok(!/const OAI_BASE\s*=/.test(aiSrc),
+   "🔴 الثابت المثبّت على بوابة وحدة انشال — كان بيخلي تغيير المزوّد ما يوصل البوت");
+ok(/siteSetting\("ai_base"\)/.test(aiSrc), "مسار البوت بيقرأ عنوان البوابة من الإعدادات");
+ok(/oaiBody\(/.test(aiSrc), "مسار البوت بيبني الجسم حسب نوع النموذج");
+
 // ═══════════ الأرشفة ═══════════
 const PAGE = "111", USER = "222";
 ok(cap.archiveExternal({ pageId: PAGE, pageName: "غزة", senderId: USER,

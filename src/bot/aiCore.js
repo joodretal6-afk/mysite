@@ -40,16 +40,60 @@ async function setting(key) {
 const DEFAULT_BASE  = "https://api.groq.com/openai/v1";
 const DEFAULT_MODEL = "qwen/qwen3.8-27b";
 
+// ═══════════════════════════════════════════════════════════
+// 🧠 نماذج التفكير (gpt-5 وأخواتها) — قيود مختلفة تماماً
+//
+// اكتُشفت بالفحص الفعلي على المفتاح، مش من التوثيق:
+//   1) بترفض max_tokens وبتطلب max_completion_tokens بدلها.
+//      بلا هالتعديل كل نداء بيفشل من أساسه.
+//   2) بترفض أي temperature غير 1. فمنشيلها بدل ما نبعتها.
+//   3) 🔴 الأخطر: بتاكل الرصيد كله بالتفكير وبترجع نص **فاضي**.
+//      جرّبنا رصيد 50 → رجع "" و50 توكن راحوا تفكير. فمنجبر
+//      reasoning_effort=minimal ومنرفع سقف الرصيد.
+// ═══════════════════════════════════════════════════════════
+const REASONING_RE = /^(gpt-5|o1|o3|o4)/i;
+export const isReasoningModel = (m) => REASONING_RE.test(String(m || "").trim());
+
+/** يبني جسم النداء الصحيح حسب نوع النموذج */
+export function buildBody({ model, prompt, json, temperature, maxTokens }) {
+  const base = {
+    model,
+    messages: [{ role: "user", content: prompt }],
+    ...(json ? { response_format: { type: "json_object" } } : {})
+  };
+  if (!isReasoningModel(model))
+    return { ...base, temperature, max_tokens: maxTokens };
+
+  // نموذج تفكير: الرصيد بينقسم بين التفكير والرد، فمنضاعفه
+  // ومنخلّي التفكير أدنى شي — شغلنا استخراج مش رياضيات.
+  return {
+    ...base,
+    max_completion_tokens: Math.max(600, maxTokens * 2),
+    reasoning_effort: "minimal"
+  };
+}
+
 // بوابات جاهزة للاختيار من صفحة الإعدادات — بلا حفظ مفاتيح
 export const PRESETS = [
-  { id: "groq", name: "Groq (موصى به — الأسرع)", base: "https://api.groq.com/openai/v1",
+  // ⚠️ الترتيب مقصود: gpt-5-mini أول لأنه انفحص وطلع 6/6 بكل
+  //    جولة، بينما nano ثبت على 4/6 — بيغلط بالكمية أو بيبتر
+  //    العنوان ("كفر اسد" صارت "الكفر"). نفس المفتاح ونفس الحساب.
+  { id: "openai5mini", name: "OpenAI GPT-5 mini (موصى به)", base: "https://api.openai.com/v1",
+    model: "gpt-5-mini",
+    models: ["gpt-5-mini", "gpt-5", "gpt-5-nano", "gpt-4o-mini"],
+    hint: "المفتاح بيبدأ بـsk-proj- أو sk- — من platform.openai.com" },
+  { id: "openai5nano", name: "OpenAI GPT-5 nano (أرخص — دقة أقل)", base: "https://api.openai.com/v1",
+    model: "gpt-5-nano",
+    models: ["gpt-5-nano", "gpt-5-mini", "gpt-4o-mini"],
+    hint: "⚠️ انفحص وطلع 4/6 — بيغلط بالكمية وبيبتر العنوان أحياناً" },
+  { id: "groq", name: "Groq (الأسرع)", base: "https://api.groq.com/openai/v1",
     model: "qwen/qwen3.8-27b",
     models: ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "groq/compound"],
     hint: "المفتاح بيبدأ بـgsk_ — من console.groq.com" },
   { id: "aisa", name: "AIsa", base: "https://api.aisa.one/v1", model: "qwen-flash",
     models: ["qwen-flash"], hint: "المفتاح بيبدأ بـsk-aisa-" },
-  { id: "openai", name: "OpenAI", base: "https://api.openai.com/v1", model: "gpt-4o-mini",
-    models: ["gpt-4o-mini", "gpt-4o"], hint: "المفتاح بيبدأ بـsk-" }
+  { id: "openai4", name: "OpenAI GPT-4o mini", base: "https://api.openai.com/v1",
+    model: "gpt-4o-mini", models: ["gpt-4o-mini", "gpt-4o"], hint: "المفتاح بيبدأ بـsk-" }
 ];
 
 // ── الإعداد الفعّال: متغيّر البيئة أولاً، وإلا إعدادات الموقع ──
@@ -97,17 +141,21 @@ export async function aiComplete(prompt, opts = {}) {
       const r = await fetch(`${c.base}/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${c.key}` },
-        body: JSON.stringify({
-          model: opts.model || c.model,
-          messages: [{ role: "user", content: prompt }],
-          temperature, max_tokens: maxTokens,
-          ...(json ? { response_format: { type: "json_object" } } : {})
-        }),
+        body: JSON.stringify(buildBody({
+          model: opts.model || c.model, prompt, json, temperature, maxTokens
+        })),
         signal: AbortSignal.timeout(timeoutMs)
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) return { ok: false, text: "", error: d?.error?.message || `HTTP ${r.status}` };
-      return { ok: true, text: d?.choices?.[0]?.message?.content || "" };
+      const out = d?.choices?.[0]?.message?.content || "";
+      // نموذج تفكير خلص رصيده قبل ما يكتب الرد → نص فاضي.
+      // بنعتبرها فشل صريح، لأنّ الرد الفاضي بيمشي بصمت وبيوقف
+      // البوت عن الرد بلا ما تعرف السبب.
+      if (!out.trim() && d?.choices?.[0]?.finish_reason === "length")
+        return { ok: false, text: "",
+                 error: "النموذج خلّص رصيد التوكنات بالتفكير قبل ما يكتب الرد — كبّر الحد أو استعمل نموذج أخف" };
+      return { ok: true, text: out };
     } catch (e) { return { ok: false, text: "", error: e && e.message }; }
   }
 
