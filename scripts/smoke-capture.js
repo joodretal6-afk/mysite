@@ -108,6 +108,26 @@ ok(reasoning.response_format?.type === "json_object", "وضع الـJSON بيض�
 ok(buildBody({ model: "gpt-5-nano", prompt: "x", maxTokens: 50 }).max_completion_tokens === 600,
    "في حد أدنى للرصيد — رصيد ضيّق بيخلي النموذج يرجع فاضي");
 
+// ═══════ البوابات الجاهزة: المختار أول والتحذيرات ظاهرة ═══════
+const { PRESETS } = await import("../src/bot/aiCore.js");
+ok(PRESETS[0].model === "openai/gpt-oss-20b",
+   "المختار بالفحص (gpt-oss-20b) أول خيار بالقائمة");
+ok(/الأوفر/.test(PRESETS[0].name), "ومعلّم إنه الأوفر");
+const nano = PRESETS.find(p => p.model === "gpt-5-nano");
+ok(nano && /دقة أقل|4\/6/.test(nano.name),
+   "🔴 النموذج اللي فشل بالفحص موجود كخيار بس بتحذيره مكتوب");
+const mini = PRESETS.find(p => p.model === "gpt-5-mini");
+ok(mini && /إيقافه/.test(mini.name),
+   "🔴 النموذج المعلن إيقافه مكتوب عليه تاريخه — حتى ما نبني عليه");
+ok(PRESETS.every(p => p.base && p.model && Array.isArray(p.models)),
+   "كل بوابة إلها عنوان ونموذج وقائمة نماذج");
+// النمط بيمسك المفتاح الحقيقي (بادئة + 20 محرف على الأقل)، مش
+// نص الإرشاد اللي بيقول للمستخدم "المفتاح بيبدأ بـgsk_"
+const KEYLIKE = /(gsk_|sk-proj-|sk-ant-)[A-Za-z0-9_-]{20,}|AIza[A-Za-z0-9_-]{30,}/;
+ok(!KEYLIKE.test(JSON.stringify(PRESETS)),
+   "🔴 ولا مفتاح محفوظ بالبوابات الجاهزة");
+ok(KEYLIKE.test("gsk_" + "a".repeat(25)), "نمط كشف المفاتيح شغّال فعلاً (فحص ذاتي)");
+
 // 🔴 مسار البوت ما عاد مثبّت على بوابة وحدة
 const aiSrc = fs.readFileSync("src/bot/ai.js", "utf8");
 ok(!/const OAI_BASE\s*=/.test(aiSrc),

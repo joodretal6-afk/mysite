@@ -24,21 +24,32 @@ async function setting(key) {
   } catch { return ""; }
 }
 
-// الافتراضي جاهز لبوابة Groq (تم فحصها فعلياً على الجهاز):
-//   العنوان: https://api.groq.com/openai/v1
-//   النموذج: qwen/qwen3.8-27b — انفحص مقابل باقي نماذج Groq على
-//   نفس مهمة البوت (استخراج طلب أردني كـJSON) وطلع الأفضل:
-//     • أسرع رد (~450ms مقابل 1000-1400 للباقي)
-//     • الوحيد اللي رجّع الكمية **رقم** (حبتين ⇒ 2) — الباقي رجّعها
-//       نص فبتكسر حساب السعر عنا
-//     • احترم قاعدة عدم الاختراع: العنوان والهاتف الناقصين رجعوا null
-//     • بيدعم وضع JSON المطلوب للاستخراج
+// الافتراضي: Groq + openai/gpt-oss-20b — انختار بالفحص مش بالحدس.
+//
+// الفحص: مهمة البوت الحقيقية (استخراج طلب أردني)، 4 حالات × 3
+// جولات، + 6 حالات عدائية لقاعدة عدم الاختراع.
+//
+//   النموذج            الدقة        السرعة   إدخال$/م  إخراج$/م
+//   gpt-oss-20b        8/8 ×3 ✅     605ms    0.07      0.30   ← المختار
+//   qwen3.8-27b        8/8 ×3 ✅     516ms    0.80      4.00
+//   gpt-5-mini         8/8 ×3 ✅    1097ms    0.25      2.00
+//   gpt-oss-120b       7/8 ⚠️        948ms    0.15      0.60
+//   gpt-5-nano         4/6 ⚠️       1120ms    0.05      0.40
+//
+// ليش gpt-oss-20b: دقة كاملة زي الأغلى منه، وأرخص بـ13 ضعف
+// بالإخراج من qwen3.8 وبـ7 أضعاف من gpt-5-mini. والفرق بالسرعة
+// عنه وعن الأسرع 90 ملّي ثانية — ما بيحسها زبون.
+// ونجح 6/6 بالحالات العدائية: ما كمّل رقم ناقص، ما حوّل "المفرق"
+// لعنوان كامل، ما اخترع صنف مش بالقائمة، وحفظ العنوان الطويل حرفياً.
+//
+// 🔴 وتجنّبنا gpt-5-mini عمداً رغم دقته: معلن إيقافه بـ11/12/2026،
+//    فبناء البوت عليه يعني كسر مؤكد بعد شهور.
 // 🔴 المفتاح **ما بينكتب هون أبداً** — المستودع عام، ولو انكتب بالكود
 //    بترصده المنصات وبيتلغى خلال دقائق. مصدره: صفحة /admin/ai أو
 //    متغيّر بيئة. (صار معنا فعلياً: مفتاح Gemini كان مكتوب بالكود،
 //    انلغى، ووقف البوت.)
 const DEFAULT_BASE  = "https://api.groq.com/openai/v1";
-const DEFAULT_MODEL = "qwen/qwen3.8-27b";
+const DEFAULT_MODEL = "openai/gpt-oss-20b";
 
 // ═══════════════════════════════════════════════════════════
 // 🧠 نماذج التفكير (gpt-5 وأخواتها) — قيود مختلفة تماماً
@@ -75,25 +86,25 @@ export function buildBody({ model, prompt, json, temperature, maxTokens }) {
 
 // بوابات جاهزة للاختيار من صفحة الإعدادات — بلا حفظ مفاتيح
 export const PRESETS = [
-  // ⚠️ الترتيب مقصود: gpt-5-mini أول لأنه انفحص وطلع 6/6 بكل
-  //    جولة، بينما nano ثبت على 4/6 — بيغلط بالكمية أو بيبتر
-  //    العنوان ("كفر اسد" صارت "الكفر"). نفس المفتاح ونفس الحساب.
-  { id: "openai5mini", name: "OpenAI GPT-5 mini (موصى به)", base: "https://api.openai.com/v1",
+  { id: "groq", name: "Groq — gpt-oss-20b (الأفضل والأوفر)",
+    base: "https://api.groq.com/openai/v1", model: "openai/gpt-oss-20b",
+    models: ["openai/gpt-oss-20b", "qwen/qwen3.8-27b", "openai/gpt-oss-120b"],
+    hint: "دقة كاملة بالفحص وأرخص خيار — المفتاح بيبدأ بـgsk_ من console.groq.com" },
+  { id: "openai5mini", name: "OpenAI GPT-5 mini (دقيق — بس معلن إيقافه 11/12/2026)", base: "https://api.openai.com/v1",
     model: "gpt-5-mini",
     models: ["gpt-5-mini", "gpt-5", "gpt-5-nano", "gpt-4o-mini"],
     hint: "المفتاح بيبدأ بـsk-proj- أو sk- — من platform.openai.com" },
-  { id: "openai5nano", name: "OpenAI GPT-5 nano (أرخص — دقة أقل)", base: "https://api.openai.com/v1",
+  { id: "openai4", name: "OpenAI GPT-4o mini", base: "https://api.openai.com/v1",
+    model: "gpt-4o-mini", models: ["gpt-4o-mini", "gpt-4o"], hint: "المفتاح بيبدأ بـsk-" },
+  { id: "openai5nano", name: "OpenAI GPT-5 nano (⚠️ دقة أقل — 4/6 بالفحص)", base: "https://api.openai.com/v1",
     model: "gpt-5-nano",
     models: ["gpt-5-nano", "gpt-5-mini", "gpt-4o-mini"],
     hint: "⚠️ انفحص وطلع 4/6 — بيغلط بالكمية وبيبتر العنوان أحياناً" },
-  { id: "groq", name: "Groq (الأسرع)", base: "https://api.groq.com/openai/v1",
-    model: "qwen/qwen3.8-27b",
-    models: ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "groq/compound"],
-    hint: "المفتاح بيبدأ بـgsk_ — من console.groq.com" },
   { id: "aisa", name: "AIsa", base: "https://api.aisa.one/v1", model: "qwen-flash",
     models: ["qwen-flash"], hint: "المفتاح بيبدأ بـsk-aisa-" },
-  { id: "openai4", name: "OpenAI GPT-4o mini", base: "https://api.openai.com/v1",
-    model: "gpt-4o-mini", models: ["gpt-4o-mini", "gpt-4o"], hint: "المفتاح بيبدأ بـsk-" }
+  // ⚠️ الترتيب مقصود: gpt-5-mini أول لأنه انفحص وطلع 6/6 بكل,
+  //    جولة، بينما nano ثبت على 4/6 — بيغلط بالكمية أو بيبتر,
+  //    العنوان ("كفر اسد" صارت "الكفر"). نفس المفتاح ونفس الحساب.
 ];
 
 // ── الإعداد الفعّال: متغيّر البيئة أولاً، وإلا إعدادات الموقع ──
