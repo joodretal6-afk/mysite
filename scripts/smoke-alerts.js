@@ -37,11 +37,17 @@ const mkMsg = (at, dir = "in", page = "P1", sender = "u1") =>
   db.prepare("INSERT INTO messages (page_id,page_name,sender_id,direction,body,created_at) VALUES (?,?,?,?,?,?)")
     .run(page, "صفحة " + page, sender, dir, "مرحبا", at);
 
+// 🔴 أوقات مضمونة إنها "اليوم" وبالماضي مهما كانت الساعة.
+//    كان الزرع على today0 + 3 ساعات، فلو شغّلت الاختبار قبل الساعة
+//    3 صباحاً بعمّان بيصير الطلب بالمستقبل ويطلع برّا نافذة اليوم
+//    فيفشل — والنافذة [today0, now]. هلأ منزرع لحظات قبل "now".
+const todayPast = (sec) => Math.max(today0, now - sec * 1000);
+
 // 3 طلبات اليوم بقيمة 45 د إجمالاً
-mkOrder(today0 + HOUR, 15);
-mkOrder(today0 + 2 * HOUR, 15);
-mkOrder(today0 + 3 * HOUR, 15, "ناقص");
-mkMsg(today0 + HOUR); mkMsg(today0 + HOUR, "out");
+mkOrder(todayPast(3), 15);
+mkOrder(todayPast(2), 15);
+mkOrder(todayPast(1), 15, "ناقص");
+mkMsg(todayPast(3)); mkMsg(todayPast(3), "out");
 
 // ═══════════ المقاييس ═══════════
 const w = al.windowRange(1, now);
