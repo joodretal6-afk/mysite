@@ -171,14 +171,16 @@ async function _handleEvent(event, env, ctx) {
     if (seen) return;
     await env.SESSIONS_KV.put("MID_" + mid, "1", { expirationTtl: 600 });
   }
-  // مصدر البيانات: نستخدم معرّف رسالة فيسبوك لو موجود، وإلا معرّف
-  // محلّي — المهم إثبات إنه من رسالة بهالجلسة (مش قيمة مفترَضة). بلا
-  // هيك رسالة بلا mid كانت رح تخلّي كل الحقول "بلا مصدر" فما يكمل طلب.
-  const srcId = mid || `local:${sessionKey}:${Date.now()}`;
-
   ctx.waitUntil(sendTyping(token, senderId));
 
   const sessionKey = `${recipientId}_${senderId}`;
+
+  // مصدر البيانات: نستخدم معرّف رسالة فيسبوك لو موجود، وإلا معرّف
+  // محلّي — المهم إثبات إنه من رسالة بهالجلسة (مش قيمة مفترَضة). بلا
+  // هيك رسالة بلا mid كانت رح تخلّي كل الحقول "بلا مصدر" فما يكمل طلب.
+  // 🔴 كان معرّف فوق **قبل** تعريف sessionKey — TDZ بيرمي ReferenceError
+  //    وبيوقف المعالج كلياً لأي رسالة بلا mid. نقلناه تحت التعريف.
+  const srcId = mid || `local:${sessionKey}:${Date.now()}`;
   const crmKey = `CRM_${senderId}`;
 
   let memory = await env.SESSIONS_KV.get(sessionKey, "json");
