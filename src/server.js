@@ -505,6 +505,15 @@ try {
   console.error("⚠️ تعذّر تركيب قسم شيخ الجبنة (لا يؤثر على البوت الأساسي):", e && e.message);
 }
 
+// 🎬 فيديوهات المنتجات — تُخدَم عامة (بلا مصادقة) حتى يقدر فيسبوك
+// يجيب الفيديو لما البوت يرسله كمرفق للزبون.
+try {
+  const { VIDEOS_DIR, ensureVideosDir, PUBLIC_VIDEOS_PATH } = await import("./media.js");
+  ensureVideosDir();
+  app.use(PUBLIC_VIDEOS_PATH, express.static(VIDEOS_DIR, { maxAge: "7d", fallthrough: false }));
+  console.log(`🎬 فيديوهات المنتجات تُخدَم من ${PUBLIC_VIDEOS_PATH}`);
+} catch (e) { console.error("⚠️ تعذّر تركيب خدمة فيديوهات المنتجات:", e && e.message); }
+
 // ملفات PWA (تُخدَم من الجذر حتى يعمل Service Worker على كامل الموقع)
 const pwaDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
 app.get("/sw.js", (req, res) => res.sendFile(path.join(pwaDir, "sw.js")));

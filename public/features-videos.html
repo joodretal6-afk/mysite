@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🎬 فيديوهات المنتجات — منصة الأجبان</title>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"violet")}catch(e){}</script>
+  <link rel="stylesheet" href="/premium.css">
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; --amber:#ef6c00; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:linear-gradient(120deg,var(--green2),var(--green)); color:#fff; padding:16px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:20px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1100px; margin:0 auto; padding:18px; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .card h2 { font-size:16px; color:var(--green2); margin-bottom:10px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:12px; line-height:1.9; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:12.5px; color:var(--mut); font-weight:600; }
+    input, select { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:14px; font-family:inherit; background:#fff; min-width:150px; }
+    input:focus, select:focus { outline:none; border-color:var(--green); }
+    .btn { padding:10px 18px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .btn:disabled { opacity:.55; cursor:default; }
+    .btn.gray { background:#eceff1; color:#37474f; } .btn.red { background:var(--red); }
+    .btn.sm { padding:5px 11px; font-size:12px; border-radius:8px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:9px 11px; text-align:right; border-bottom:1px solid var(--line); vertical-align:middle; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; white-space:nowrap; }
+    tr:hover { background:#fafcfa; }
+    video { width:180px; max-width:100%; border-radius:8px; background:#000; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:9px; font-size:11.5px; font-weight:700; }
+    .pill.on { background:#e8f5e9; color:var(--green2); } .pill.off { background:#eceff1; color:var(--mut); }
+    .msg { margin-top:10px; font-size:13.5px; border-radius:9px; padding:0; }
+    .msg.ok { padding:9px 12px; background:#e8f5e9; color:var(--green2); }
+    .msg.err { padding:9px 12px; background:#ffebee; color:var(--red); }
+    .empty { text-align:center; padding:34px 14px; color:var(--mut); font-size:14px; }
+    .seg { display:flex; gap:6px; margin-bottom:12px; }
+    .seg button { flex:1; padding:9px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-weight:600; font-size:13.5px; color:#37474f; }
+    .seg button.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .grow { flex:1 1 240px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎬 فيديوهات المنتجات</h1>
+    <a href="/admin/features">← رجوع للميزات</a>
+  </header>
+  <div class="wrap">
+
+    <div class="card">
+      <h2>الصفحة</h2>
+      <div class="hint">
+        ارفع فيديوهات منتجاتك لكل صفحة. لما يسأل الزبون عن «المنتجات الثانية» بالماسنجر،
+        البوت بيبعتلو الفيديوهات المفعّلة لهاي الصفحة — مرة وحدة بالمحادثة حتى ما يزعّجه.
+        الحد الأقصى لكل فيديو <b>25 ميغا</b> (سقف فيسبوك للمرفق).
+      </div>
+      <div class="row">
+        <div class="field grow"><label>اختر الصفحة</label><select id="page"></select></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>إضافة فيديو</h2>
+      <div class="seg">
+        <button id="tab-file" class="active">📤 رفع ملف</button>
+        <button id="tab-url">🔗 رابط مباشر</button>
+      </div>
+
+      <div id="pane-file">
+        <div class="row">
+          <div class="field grow"><label>اسم المنتج / وصف قصير (اختياري)</label><input id="f-label" placeholder="مثال: جل غسيل فاتي"></div>
+          <div class="field grow"><label>ملف الفيديو (mp4/mov/webm)</label><input id="f-file" type="file" accept="video/*"></div>
+          <button class="btn" id="f-up">رفع</button>
+        </div>
+      </div>
+
+      <div id="pane-url" hidden>
+        <div class="hint">استعمل رابط فيديو مباشر (بينتهي بـ .mp4 غالباً) يقدر فيسبوك يجيبه. روابط يوتيوب أو صفحات ما بتشتغل كمرفق.</div>
+        <div class="row">
+          <div class="field grow"><label>اسم المنتج / وصف (اختياري)</label><input id="u-label" placeholder="مثال: منظّف أرضيات"></div>
+          <div class="field grow"><label>رابط الفيديو (https)</label><input id="u-url" placeholder="https://.../video.mp4"></div>
+          <button class="btn" id="u-add">إضافة</button>
+        </div>
+      </div>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>الفيديوهات المرفوعة</h2>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>معاينة</th><th>الاسم/الوصف</th><th>النوع</th><th>الحجم</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty" hidden>ما في فيديوهات لهاي الصفحة بعد.</div>
+    </div>
+  </div>
+
+<script src="/theme.js"></script>
+<script>
+const API = "/admin/f-api/videos";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const mb = (b) => b ? (Number(b)/1048576).toFixed(1) + " م.ب" : "—";
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  const j = await r.json().catch(() => ({ ok:false, error:"رد غير مفهوم من الخادم" }));
+  if (!j.ok) throw new Error(j.error || "خطأ");
+  return j;
+}
+const jpost = (body) => ({ method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
+const say = (t, kind) => { const el = $("#msg"); el.className = "msg " + kind; el.innerHTML = t; };
+const clearMsg = () => { const el = $("#msg"); el.className = "msg"; el.textContent = ""; };
+
+let PAGES = [];
+
+async function boot() {
+  const m = await api("/meta");
+  PAGES = m.pages || [];
+  $("#page").innerHTML = PAGES.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
+  $("#page").onchange = load;
+  await load();
+}
+
+async function load() {
+  clearMsg();
+  const pid = $("#page").value;
+  const j = await api("/?page_id=" + encodeURIComponent(pid));
+  const rows = j.rows || [];
+  $("#empty").hidden = rows.length > 0;
+  $("#rows").innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.kind==="file"
+            ? `<video src="${esc(r.url)}" controls preload="metadata"></video>`
+            : `<a href="${esc(r.url)}" target="_blank" rel="noopener">فتح الرابط ↗</a>`}</td>
+      <td>${esc(r.label) || '<span style="color:#90a4ae">—</span>'}</td>
+      <td>${r.kind==="file" ? "ملف" : "رابط"}</td>
+      <td>${mb(r.size)}</td>
+      <td><span class="pill ${r.active?"on":"off"}">${r.active?"مُفعّل":"موقوف"}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn sm gray" onclick="toggle(${r.id})">${r.active?"إيقاف":"تفعيل"}</button>
+        <button class="btn sm red" onclick="del(${r.id})">حذف</button>
+      </td>
+    </tr>`).join("");
+}
+
+window.toggle = async (id) => { try { await api("/"+id+"/toggle", jpost({})); await load(); } catch(e){ say(esc(e.message),"err"); } };
+window.del = async (id) => {
+  if (!confirm("متأكد من حذف الفيديو؟")) return;
+  try { await api("/"+id, { method:"DELETE" }); await load(); } catch(e){ say(esc(e.message),"err"); }
+};
+
+// تبديل بين رفع ملف / رابط
+$("#tab-file").onclick = () => { $("#tab-file").classList.add("active"); $("#tab-url").classList.remove("active"); $("#pane-file").hidden=false; $("#pane-url").hidden=true; clearMsg(); };
+$("#tab-url").onclick  = () => { $("#tab-url").classList.add("active"); $("#tab-file").classList.remove("active"); $("#pane-url").hidden=false; $("#pane-file").hidden=true; clearMsg(); };
+
+// رفع ملف
+$("#f-up").onclick = async () => {
+  clearMsg();
+  const file = $("#f-file").files[0];
+  if (!file) return say("اختر ملف فيديو أول","err");
+  if (file.size > 25*1048576) return say(`حجم الفيديو ${(file.size/1048576).toFixed(1)} م.ب — الحد 25 م.ب. صغّره وحاول.`,"err");
+  const btn = $("#f-up"); btn.disabled = true; btn.textContent = "جاري الرفع...";
+  try {
+    const b64 = await new Promise((res,rej) => { const fr = new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); });
+    await api("/upload", jpost({ page_id: $("#page").value, label: $("#f-label").value, filename: file.name, base64: b64 }));
+    $("#f-label").value = ""; $("#f-file").value = "";
+    say("✅ انرفع الفيديو","ok"); await load();
+  } catch(e){ say(esc(e.message),"err"); }
+  finally { btn.disabled=false; btn.textContent="رفع"; }
+};
+
+// إضافة برابط
+$("#u-add").onclick = async () => {
+  clearMsg();
+  const url = $("#u-url").value.trim();
+  if (!/^https:\/\/.+/i.test(url)) return say("الرابط لازم يبدأ بـ https://","err");
+  try {
+    await api("/url", jpost({ page_id: $("#page").value, label: $("#u-label").value, url }));
+    $("#u-label").value=""; $("#u-url").value="";
+    say("✅ انضاف الرابط","ok"); await load();
+  } catch(e){ say(esc(e.message),"err"); }
+};
+
+boot().catch(e => say(esc(e.message),"err"));
+</script>
+</body>
+</html>

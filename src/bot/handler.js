@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 import { CONFIG } from "../config.js";
 import { PAGES } from "./brain.js";
-import { sendText, sendTyping, graphSend, notifyTelegram, fetchAudioAsBase64, openReplyWindow, closeReplyWindow } from "./messenger.js";
+import { sendText, sendTyping, graphSend, sendAttachment, notifyTelegram, fetchAudioAsBase64, openReplyWindow, closeReplyWindow } from "./messenger.js";
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
 import { parseAddress, groundAddress } from "./address.js";
@@ -264,6 +264,28 @@ async function _handleEvent(event, env, ctx) {
 
   // 👩 كشف جنس الزبون (مرة تُثبَّت) — مبكراً حتى قبل أي تحويل بشري
   try { if (!memory.gender) { const g = detectGender(userMsg); if (g) memory.gender = g; } } catch {}
+
+  // 🎬 فيديوهات المنتجات: لو الزبون سأل عن المنتجات (الثانية) وعندنا
+  //    فيديوهات مرفوعة لهالصفحة، نبعتها مرة وحدة بالجلسة. بينضاف فوق
+  //    رد البوت العادي، وما بيشتغل وإحنا بنكمّل طلب (رقم/منطقة).
+  try {
+    const asksProducts = /منتجات|المنتج|منتجاتك|اصناف|أصناف|بضاعة|بضائع|بتبيعو|شو عندك|شو في عندك|ايش عندك|وش عندك|شو المتوفر|شو متوفر/i.test(userMsg);
+    if (asksProducts && !memory.videosSent && !cartAddedThisTurn(userMsg, pageConfig)) {
+      const { videosForPage } = await import("../features/videos.js");
+      const vids = videosForPage(recipientId);
+      if (vids && vids.length) {
+        for (const v of vids.slice(0, 10)) {
+          await sendAttachment(token, senderId, v.url, "video");
+          if (v.label) await sendText(token, senderId, v.label);
+        }
+        memory.videosSent = true;
+        logMessage({
+          page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
+          direction: "out", body: `🎬 أرسل ${vids.length} فيديو منتجات`, created_at: Date.now()
+        });
+      }
+    }
+  } catch (e) { console.error("product videos:", e && e.message); }
 
   // أمر التصفير
   if (/^(مسح|امسح|reset)$/i.test(userMsg)) {
