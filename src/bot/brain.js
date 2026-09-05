@@ -362,28 +362,29 @@ export const PAGES = {
 //    الأأمن نقله لمتغيّر بيئة PAGE_TOKEN_514074765127663 على Render.
 // ═══════════════════════════════════════════════════════════
 function rebrandPage(cfg, fromName, toName, extra = {}) {
-  const swap = (s) => typeof s === "string" ? s.split(fromName).join(toName) : s;
-  const swapKeys = (obj) => obj
-    ? Object.fromEntries(Object.entries(obj).map(([k, v]) => [swap(k), v]))
-    : obj;
-  const origInvoice = cfg.INVOICE_TEMPLATE;
+  const s1 = (s) => typeof s === "string" ? s.split(fromName).join(toName) : s;
+  // بدّل الاسم بأي قيمة مهما كانت متداخلة: نصوص، مفاتيح كائنات،
+  // عناصر مصفوفات، مصدر التعابير النمطية (regex)، ومخرجات الدوال —
+  // حتى ما تضل ولا كلمة "ريفان" بأي رد أو تطابق لصفحة فاتي.
+  const deep = (v) => {
+    if (typeof v === "string") return s1(v);
+    if (v instanceof RegExp) return new RegExp(s1(v.source), v.flags);
+    if (Array.isArray(v)) return v.map(deep);
+    if (typeof v === "function") return (...args) => deep(v(...args));
+    if (v && typeof v === "object")
+      return Object.fromEntries(Object.entries(v).map(([k, val]) => [s1(k), deep(val)]));
+    return v;
+  };
   // نص إضافي بيتلزق بآخر رسالة النظام (معلومات خاصة بالصفحة الجديدة
   // زي رقم التلفون والموقع) — منشيله من extra حتى ما ينحط كخاصية.
   const { appendSystem, ...rest } = extra;
-  const baseSystem = swap(cfg.SYSTEM);
-  return {
-    ...cfg,
-    SYSTEM: appendSystem ? baseSystem + "\n\n" + appendSystem : baseSystem,
-    INFO: swap(cfg.INFO),
-    PRICES: swapKeys(cfg.PRICES),
-    OFFERS: swapKeys(cfg.OFFERS),
-    PRODUCT_KEYWORDS: swapKeys(cfg.PRODUCT_KEYWORDS),
-    // الفاتورة دالة — منغلّفها ومنبدّل الاسم بمخرجها
-    INVOICE_TEMPLATE: typeof origInvoice === "function"
-      ? (...args) => swap(origInvoice(...args))
-      : origInvoice,
-    ...rest
-  };
+  const out = deep(cfg);   // نسخة كاملة مبدّلة بالعمق
+  // قاعدة صارمة فوق رسالة النظام: ممنوع منعاً باتاً ذكر الاسم القديم.
+  const hardRule =
+    `⛔ اسمك واسم صفحتك ومنتجك «${toName}» فقط. ممنوع منعاً باتاً تذكر كلمة «${fromName}» ` +
+    `في أي رد أو فاتورة أو تعريف — لا للمنتج ولا للصفحة. لو انكتبت بأي مكان بدّلها لـ«${toName}».`;
+  out.SYSTEM = hardRule + "\n\n" + (out.SYSTEM || "") + (appendSystem ? "\n\n" + appendSystem : "");
+  return { ...out, ...rest };
 }
 
 PAGES["514074765127663"] = rebrandPage(PAGES["618622274665182"], "ريفان", "فاتي", {
