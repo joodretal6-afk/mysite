@@ -26,6 +26,9 @@ const { db } = await import("../src/db/database.js");
 const DAY = 86400000;
 const TZ_MS = 10800 * 1000;
 const dayStr = (ts) => new Date(ts + TZ_MS).toISOString().slice(0, 10);
+// بداية اليوم (منتصف الليل بتوقيت عمّان) — حتى متوسط أيام التوصيل يطلع
+// رقم صحيح مهما كانت ساعة تشغيل الاختبار، مش يتأثر بوقت اليوم
+const dayStartT = (ts) => { const [y, m, d] = dayStr(ts).split("-").map(Number); return Date.UTC(y, m - 1, d) - TZ_MS; };
 
 // ═══════════ (1) الشركات ═══════════
 // أول شي: قبل ما ينوجد ولا شركة — لازم النظام يقول «ما في بيانات»
@@ -105,7 +108,7 @@ ok(db.prepare("SELECT COUNT(*) c FROM delivery_waybills").get().c === 2,
 ok(dv.waybillEvents(w1).length === 1 && dv.waybillEvents(w1)[0].to_status === "قيد التجهيز",
    "التسجيل نفسه انكتب كأول حدث بالسجل");
 dv.setStatus(w1, "بالطريق", "أحمد", "", Date.now() - 5 * DAY);
-dv.setStatus(w1, "تم التسليم", "أحمد", "استلمها الزبون", Date.now() - 2 * DAY);
+dv.setStatus(w1, "تم التسليم", "أحمد", "استلمها الزبون", dayStartT(Date.now() - 2 * DAY));
 const ev = dv.waybillEvents(w1);
 ok(ev.length === 3 && ev[2].from_status === "بالطريق" && ev[2].actor === "أحمد",
    "السجل الزمني بيحفظ من وين لوين ومين غيّر");
@@ -117,7 +120,7 @@ ok(threw(() => dv.setStatus(99999, "بالطريق")), "بوليصة مش موج
 dv.setStatus(w1, "بالطريق", "أحمد");
 ok(db.prepare("SELECT closed_at FROM delivery_waybills WHERE id=?").get(w1).closed_at === null,
    "الرجوع لحالة سير بيمسح تاريخ الإغلاق حتى ما يتلوّث متوسط الأيام");
-dv.setStatus(w1, "تم التسليم", "أحمد", "", Date.now() - 2 * DAY);
+dv.setStatus(w1, "تم التسليم", "أحمد", "", dayStartT(Date.now() - 2 * DAY));
 
 // ═══════════ (5) الأداء ═══════════
 const stNo = dv.courierStats(noPrice);
