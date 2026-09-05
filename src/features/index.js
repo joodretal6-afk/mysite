@@ -22,7 +22,9 @@ const SLUGS = [
   // ── الطبقة التاسعة: التشغيل الكامل للتاجر (70 وظيفة) ──
   // كل وحدة مستقلة تماماً: جداولها ببادئتها، وصفحتها لحالها.
   // لو وحدة فيها خطأ بتُتخطّى بصمت وباقي المنصة بتضل شغّالة.
-  "delivery", "cash", "procure", "service", "ops", "alerts", "docs"
+  "delivery", "cash", "procure", "service", "ops", "alerts", "docs",
+  // ── الطبقة العاشرة: فيديوهات المنتجات (يرسلها البوت عند السؤال) ──
+  "videos"
 ];
 
 export async function loadFeatures() {

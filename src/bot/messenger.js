@@ -57,6 +57,30 @@ export async function sendTyping(pageToken, senderId) {
   await graphSend(pageToken, { recipient: { id: senderId }, sender_action: "typing_on" });
 }
 
+// إرسال مرفق (فيديو/صورة) للزبون برابط عام. نفس حارس نافذة الرد:
+// ممنوع أي إرسال خارج الرد على رسالة واردة. الرابط لازم يكون https
+// عام حتى يقدر فيسبوك يجيب الملف.
+export async function sendAttachment(pageToken, senderId, url, type = "video") {
+  if (typeof pageToken !== "string" || !pageToken) {
+    console.error("🔴 sendAttachment: توكن الصفحة ناقص");
+    return false;
+  }
+  if (typeof url !== "string" || !/^https?:\/\//i.test(url)) {
+    console.error("🔴 sendAttachment: الرابط لازم يكون http(s) مطلق:", url);
+    return false;
+  }
+  if (_replyDepth <= 0) {
+    console.warn("🛑 إرسال مرفق استباقي مرفوض (خارج نافذة الرد).");
+    return false;
+  }
+  await graphSend(pageToken, {
+    recipient: { id: senderId },
+    messaging_type: "RESPONSE",
+    message: { attachment: { type, payload: { url, is_reusable: true } } }
+  });
+  return true;
+}
+
 // إرسال إشعار تيليجرام
 export async function notifyTelegram(message) {
   if (!CONFIG.TELEGRAM_BOT_TOKEN || CONFIG.TELEGRAM_BOT_TOKEN.includes("YOUR")) return;
