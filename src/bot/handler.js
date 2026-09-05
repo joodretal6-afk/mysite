@@ -279,6 +279,9 @@ async function _handleEvent(event, env, ctx) {
           if (v.label) await sendText(token, senderId, v.label);
         }
         memory.videosSent = true;
+        // نثبّت العلامة فوراً بالجلسة — حتى لو البوت سكت بعدها (بلا رد
+        // من الذكاء) وما وصل لحفظ الذاكرة بالآخر، ما بتنبعت الفيديوهات مرتين.
+        try { await env.SESSIONS_KV.put(sessionKey, JSON.stringify(memory), { expirationTtl: CONFIG.SESSION_TTL }); } catch {}
         logMessage({
           page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
           direction: "out", body: `🎬 أرسل ${vids.length} فيديو منتجات`, created_at: Date.now()
