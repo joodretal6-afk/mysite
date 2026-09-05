@@ -367,9 +367,13 @@ function rebrandPage(cfg, fromName, toName, extra = {}) {
     ? Object.fromEntries(Object.entries(obj).map(([k, v]) => [swap(k), v]))
     : obj;
   const origInvoice = cfg.INVOICE_TEMPLATE;
+  // نص إضافي بيتلزق بآخر رسالة النظام (معلومات خاصة بالصفحة الجديدة
+  // زي رقم التلفون والموقع) — منشيله من extra حتى ما ينحط كخاصية.
+  const { appendSystem, ...rest } = extra;
+  const baseSystem = swap(cfg.SYSTEM);
   return {
     ...cfg,
-    SYSTEM: swap(cfg.SYSTEM),
+    SYSTEM: appendSystem ? baseSystem + "\n\n" + appendSystem : baseSystem,
     INFO: swap(cfg.INFO),
     PRICES: swapKeys(cfg.PRICES),
     OFFERS: swapKeys(cfg.OFFERS),
@@ -378,11 +382,18 @@ function rebrandPage(cfg, fromName, toName, extra = {}) {
     INVOICE_TEMPLATE: typeof origInvoice === "function"
       ? (...args) => swap(origInvoice(...args))
       : origInvoice,
-    ...extra
+    ...rest
   };
 }
 
 PAGES["514074765127663"] = rebrandPage(PAGES["618622274665182"], "ريفان", "فاتي", {
   name: "فاتي",
-  PAGE_TOKEN: "EAARu8DdiVZAwBSQHIZBjeiwwck91CfCy4OsQB8pk9dRNcZBYbrptM6069IhQcMwsdZCaQUV6LkZCzgKEhdxe6YOknJAoBaKVfwgEZCCPFLvCi04p3FXkGxTflTEkQLk3ZCdxZAc2fvtANTCrvShuZA2ZARnmFIMyPYLKQjJEpzurHZCK01cA3WHhkwzrU5fDO6WBehlpiwlIQZDZD"
+  PAGE_TOKEN: "EAARu8DdiVZAwBSQHIZBjeiwwck91CfCy4OsQB8pk9dRNcZBYbrptM6069IhQcMwsdZCaQUV6LkZCzgKEhdxe6YOknJAoBaKVfwgEZCCPFLvCi04p3FXkGxTflTEkQLk3ZCdxZAc2fvtANTCrvShuZA2ZARnmFIMyPYLKQjJEpzurHZCK01cA3WHhkwzrU5fDO6WBehlpiwlIQZDZD",
+  // معلومات التواصل والموقع الخاصة بفاتي — إذا سأل أي زبون عن الرقم
+  // أعطه الرقم الأرضي، ووين المحل قله بالأردن على «الموقع الأزرق».
+  appendSystem:
+    "معلومات التواصل والموقع (خاصة بفاتي):\n" +
+    "- إذا سأل الزبون عن رقم فاتي أو رقم التلفون، أعطه الرقم الأرضي: 026231774 (رقم أرضي).\n" +
+    "- إذا سأل وين موقعكم أو وين المحل، قله: احنا في الأردن، على «الموقع الأزرق».\n" +
+    "لا تخترع أي رقم أو عنوان غير هدول."
 });
