@@ -173,10 +173,17 @@ ok(an1.result.enough_data === false && /ما في بيانات كافية/.test(
    "🔴 بلا تاريخ كافي الشذوذ بيقول «ما في بيانات كافية» وما بيطلّع رقم");
 ok(an1.result.z === undefined || an1.result.z == null, "بلا بيانات كافية ما في z مخترع");
 
-// منعبّي نفس اليوم من 3 أسابيع سابقة
+// منعبّي نفس اليوم من 3 أسابيع سابقة.
+// 🔴 الشذوذ بيقارن كل أسبوع لنفس «الوقت المنقضي من اليوم» فقط
+//    (من بداية اليوم لـ now). فلازم نزرع الطلبات جوّا هالنافذة، مش
+//    بعدها — وإلا لو شغّلنا الاختبار بعد منتصف الليل بعمّان بشوي،
+//    النافذة صغيرة والطلب المزروع على +ساعة بيطلع برّاها فتفشل
+//    المقارنة. منزرع على offset أصغر من المنقضي بهامش بسيط.
+const elapsed = now - al.dayStartMs(0, now);
+const off = Math.min(HOUR, Math.max(0, elapsed - 1000));
 for (const wk of [1, 2, 3]) {
   const base = al.dayStartMs(-7 * wk, now);
-  for (let i = 0; i < 10; i++) mkOrder(base + HOUR, 15);
+  for (let i = 0; i < 10; i++) mkOrder(base + off, 15);
 }
 const an2 = await call("GET", "/anomaly?metric=orders_count&weeks=4&min_weeks=3");
 ok(an2.result.enough_data === true, "بعد ما توفّر 3 أسابيع صار في مقارنة");

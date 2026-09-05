@@ -269,7 +269,7 @@ async function _handleEvent(event, env, ctx) {
   //    فيديوهات مرفوعة لهالصفحة، نبعتها مرة وحدة بالجلسة. بينضاف فوق
   //    رد البوت العادي، وما بيشتغل وإحنا بنكمّل طلب (رقم/منطقة).
   try {
-    const asksProducts = /منتجات|المنتج|منتجاتك|اصناف|أصناف|بضاعة|بضائع|بتبيعو|شو عندك|شو في عندك|ايش عندك|وش عندك|شو المتوفر|شو متوفر/i.test(userMsg);
+    const asksProducts = /منتجات|المنتج|منتجاتك|اصناف|أصناف|بضاعة|بضائع|بتبيعو|شو عندك|شو في عندك|ايش عندك|وش عندك|شو المتوفر|شو متوفر|معاين|أعاين|اعاين|أشوف|اشوف|فرجيني|فيديو|صور/i.test(userMsg);
     if (asksProducts && !memory.videosSent && !cartAddedThisTurn(userMsg, pageConfig)) {
       const { videosForPage } = await import("../features/videos.js");
       const vids = videosForPage(recipientId);
