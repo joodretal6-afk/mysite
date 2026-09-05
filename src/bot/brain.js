@@ -347,19 +347,42 @@ export const PAGES = {
 };
 
 // ═══════════════════════════════════════════════════════════
-// 🧼 صفحة "فاتي" — نسخة طبق الأصل من ريفان
+// 🧼 صفحة "فاتي" — نفس نظام ريفان بس بهويّتها هي
 //
-// بطلب صاحب المشروع: نفس نظام ريفان، نفس الأسعار بالضبط، نفس
-// الردود. فبدل ما ننسخ الإعداد الضخم (وينحرف عن ريفان مع الوقت)،
-// منعمل spread من ريفان ومنغيّر بس المعرّف والاسم والتوكن. هيك أي
-// تعديل مستقبلي على ريفان بينطبق على فاتي تلقائياً — يضلّوا متطابقين.
+// بطلب صاحب المشروع: نفس أسعار ريفان ونفس أسلوب الردود، بس
+// البوت لازم يعرّف عن حاله **فاتي** مش ريفان.
 //
-// ⚠️ التوكن مكتوب بالكود زي باقي الصفحات (المستودع عام أصلاً وفيه
-//    توكنات الصفحات). الأأمن نقله لمتغيّر بيئة PAGE_TOKEN_514074765127663
-//    على Render — والنظام بيقرأه من هناك ويدعس المكتوب بالكود.
+// فبدل ما ننسخ النظام الضخم يدوياً (وينحرف عن ريفان مع الوقت)،
+// منبني فاتي من ريفان ومنستبدل كلمة "ريفان" بـ"فاتي" بكل النصوص:
+// النظام، معلومات المنتج، اسم المنتج بالأسعار، ونص الفاتورة.
+// هيك أي تعديل مستقبلي على أسلوب ريفان بينعكس على فاتي، وبنفس
+// الوقت البوت بيحكي عن حاله فاتي.
+//
+// ⚠️ التوكن مكتوب بالكود زي باقي الصفحات (المستودع عام أصلاً).
+//    الأأمن نقله لمتغيّر بيئة PAGE_TOKEN_514074765127663 على Render.
 // ═══════════════════════════════════════════════════════════
-PAGES["514074765127663"] = {
-  ...PAGES["618622274665182"],
+function rebrandPage(cfg, fromName, toName, extra = {}) {
+  const swap = (s) => typeof s === "string" ? s.split(fromName).join(toName) : s;
+  const swapKeys = (obj) => obj
+    ? Object.fromEntries(Object.entries(obj).map(([k, v]) => [swap(k), v]))
+    : obj;
+  const origInvoice = cfg.INVOICE_TEMPLATE;
+  return {
+    ...cfg,
+    SYSTEM: swap(cfg.SYSTEM),
+    INFO: swap(cfg.INFO),
+    PRICES: swapKeys(cfg.PRICES),
+    OFFERS: swapKeys(cfg.OFFERS),
+    PRODUCT_KEYWORDS: swapKeys(cfg.PRODUCT_KEYWORDS),
+    // الفاتورة دالة — منغلّفها ومنبدّل الاسم بمخرجها
+    INVOICE_TEMPLATE: typeof origInvoice === "function"
+      ? (...args) => swap(origInvoice(...args))
+      : origInvoice,
+    ...extra
+  };
+}
+
+PAGES["514074765127663"] = rebrandPage(PAGES["618622274665182"], "ريفان", "فاتي", {
   name: "فاتي",
   PAGE_TOKEN: "EAARu8DdiVZAwBSQHIZBjeiwwck91CfCy4OsQB8pk9dRNcZBYbrptM6069IhQcMwsdZCaQUV6LkZCzgKEhdxe6YOknJAoBaKVfwgEZCCPFLvCi04p3FXkGxTflTEkQLk3ZCdxZAc2fvtANTCrvShuZA2ZARnmFIMyPYLKQjJEpzurHZCK01cA3WHhkwzrU5fDO6WBehlpiwlIQZDZD"
-};
+});
