@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 // ═══════════════════════════════════════════════════════════
 // 🎣 التقاط الطلبات من المحادثات اللي مش بوتنا اللي رد عليها
 //
@@ -21,7 +22,7 @@
 //   • ممنوع نرد على الزبون من هون إطلاقاً. هاي قناة استماع
 //     بحتة — الرد بيضاعف الرسائل على الزبون.
 // ═══════════════════════════════════════════════════════════
-import { logMessage, saveOrder, orderExists, getSetting } from "../db/database.js";
+import { logMessage, saveOrder, updateOrder, orderExists, getSetting, getRecentOpenOrderId, getLatestEditableOrderId, getOrderBySourceFingerprint } from "../db/database.js";
 import { extractOrderWithAI } from "./ai.js";
 import { withSessionLock } from "./lock.js";
 
@@ -35,10 +36,7 @@ export function captureEnabled() {
   try {
     // التسليم الكامل بيشغّل الالتقاط ضمناً — وإلا بتضيع كل الطلبات
     if (handedOverToMeta()) return true;
-    // الالتقاط مفعّل افتراضياً لضمان عدم ضياع أي طلب تلتقطه قنوات Meta/الموظفين؛
-    // يمكن إيقافه صراحةً من لوحة التحكم.
-    const v = String(getSetting("capture_external") || "");
-    return v === "off" ? false : true;
+    return String(getSetting("capture_external") || "") === "on";
   } catch { return false; }
 }
 
@@ -136,6 +134,30 @@ export function customerOnlyText(rows) {
  * @param {string} a.source وسم المصدر ("ذكاء ميتا" / "رد يدوي" / …)
  * @returns {Promise<{saved:boolean, reason:string, orderId?:number}>}
  */
+function captureFingerprint(pageId, senderId, rows) {
+  const cust = (rows || []).filter(r => r.direction === "in" && String(r.body || "").trim());
+  const last = cust[cust.length - 1];
+  const prior = cust.slice(-3).map(r => `${r.created_at || ""}:${String(r.body || "").trim()}`).join("\n");
+  const raw = `${pageId}|${senderId}|${last?.created_at || ""}|${last?.body || ""}|${prior}`;
+  // crypto hash متاح في Node 20+/22؛ fallback نصي لو تعذر.
+  try {
+    return createHash("sha256").update(raw).digest("hex");
+  } catch { return Buffer.from(raw).toString("base64url").slice(0, 200); }
+}
+
+function recentPurchaseSignal(pageConfig, rows) {
+  const lastText = (rows || []).filter(r => r.direction === "in").slice(-4).map(r => String(r.body || "")).join(" ");
+  const names = Object.keys(pageConfig?.PRICES || {}).filter(Boolean);
+  const productHit = names.some(n => lastText.includes(n)) || /(جل|كلور|فلاش|طلب|بدي|بدّي|اريد|أريد|هات|اعطيني|اعطني|نفس الطلب|عيد|كرر|كمان|اضف|أضف|بدل|عدل|غيّر|غير|شيل|احذف)/i.test(lastText);
+  const contactOrAddress = /(?:07\d{7,8}|\+962\d{8,9}|الاسم|اسمي|الهاتف|رقم الهاتف|العنوان|المنطقة|عمان|اربد|الزرقاء|السلط|تلاع|شارع|دوار|قريب|عمارة|بناية)/i.test(lastText);
+  return productHit || contactOrAddress;
+}
+
+function explicitRepeat(rows) {
+  const t = (rows || []).filter(r => r.direction === "in").slice(-3).map(r => String(r.body || "")).join(" ");
+  return /(نفس الطلب|الطلب السابق|زي المرة|عيد طلبي|أعد طلبي|اعد طلبي|نفس السابق|كرر الطلب|كرر طلبي|نفس الطلبية|نفس طلبي)/i.test(t);
+}
+
 export async function captureOrderFrom({ pageId, senderId, pageConfig, rows, source = "خارجي" }) {
   if (!pageId || !senderId) return { saved: false, reason: "هوية ناقصة" };
   if (!pageConfig || !Object.keys(pageConfig.PRICES || {}).length)
@@ -143,6 +165,11 @@ export async function captureOrderFrom({ pageId, senderId, pageConfig, rows, sou
 
   const convText = customerOnlyText(rows);
   if (!convText) return { saved: false, reason: "ما في رسائل من الزبون" };
+  const recentOpenOrderId = getRecentOpenOrderId(pageId, senderId);
+  if (!recentOpenOrderId && !recentPurchaseSignal(pageConfig, rows)) return { saved: false, reason: "ما في إشارة شراء/متابعة حديثة" };
+  const sourceFingerprint = captureFingerprint(pageId, senderId, rows);
+  const priorCapture = getOrderBySourceFingerprint(sourceFingerprint);
+  if (priorCapture) return { saved: false, reason: "نفس الحدث ملتقط مسبقاً", orderId: priorCapture.id };
 
   // 🔒 نفس قفل الجلسة تبع البوت — حتى ما يتسابق الالتقاط مع
   //    البوت لو صادف إنه اشتغل على نفس الزبون بنفس اللحظة
@@ -168,14 +195,31 @@ export async function captureOrderFrom({ pageId, senderId, pageConfig, rows, sou
     if (!parts.length) return { saved: false, reason: "ما في صنف معروف بأسعار الصفحة" };
 
     const orderString = parts.join(" + ");
-    try {
-      if (orderExists(pageId, senderId, orderString))
-        return { saved: false, reason: "الطلب مسجّل من قبل" };
-    } catch { /* الفحص مش حاسم — منكمّل */ }
+    const repeat = explicitRepeat(rows);
+    let orderId = null;
+    if (!repeat) {
+      orderId = recentOpenOrderId ? Number(recentOpenOrderId) : null;
+      if (!orderId && /(عدل|عدّل|تعديل|غير|غيّر|بدل|بدّل|زيد|زود|أضف|اضف|احذف|شيل|كمان)/i.test((rows || []).filter(r => r.direction === "in").slice(-4).map(r => String(r.body || "")).join(" "))) {
+        try { orderId = getLatestEditableOrderId(pageId, senderId); } catch {}
+      }
+    }
 
-    // 🔴 الحالة "بحاجة مراجعة" مش "جديد": ما في تأكيد صريح إنّ
-    //    الطلب اكتمل، والعنوان والرقم ممكن يكونوا ناقصين.
-    const orderId = saveOrder({
+    if (orderId) {
+      updateOrder(orderId, {
+        order_string: orderString,
+        total: Math.round(total * 100) / 100,
+        area: String(ai.area || ""),
+        phone: String(ai.phone || ""),
+        status: "بحاجة مراجعة",
+        source_fingerprint: sourceFingerprint
+      });
+      // نلصق بصمة آخر حدث بالطلب بعد التحديث حتى لا يتكرر نفس webhook.
+      try { /* بصمة محفوظة عبر تحديث مستقل أدناه */ } catch {}
+      console.log(`🎣 حدّثنا طلب #${orderId} من ${source}: ${orderString}`);
+      return { saved: true, updated: true, reason: source, orderId, missing: missingFields(ai) };
+    }
+
+    const orderIdNew = saveOrder({
       page_id: pageId, page_name: pageConfig.name || "",
       sender_id: senderId,
       order_string: orderString,
@@ -185,11 +229,12 @@ export async function captureOrderFrom({ pageId, senderId, pageConfig, rows, sou
       status: "بحاجة مراجعة",
       messenger_url: `https://business.facebook.com/latest/inbox/all?asset_id=${pageId}&thread_id=${senderId}`,
       created_at: Date.now(),
+      source_fingerprint: sourceFingerprint,
       session_key: `${pageId}_${senderId}`
     });
 
-    console.log(`🎣 التقطنا طلب #${orderId} من ${source}: ${orderString}`);
-    return { saved: true, reason: source, orderId, missing: missingFields(ai) };
+    console.log(`🎣 التقطنا طلب #${orderIdNew} من ${source}: ${orderString}${repeat ? " (إعادة طلب = فاتورة جديدة)" : ""}`);
+    return { saved: true, created: true, reason: source, orderId: orderIdNew, missing: missingFields(ai) };
   });
 }
 
