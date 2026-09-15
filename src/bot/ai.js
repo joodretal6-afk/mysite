@@ -68,16 +68,18 @@ function normalizePhone(raw) {
 
 export async function extractOrderWithAI(conversationText, pageConfig) {
   const allowed = Object.keys(pageConfig.PRICES || {});
-  const bundles = Array.isArray(pageConfig.BUNDLE_OFFERS) ? pageConfig.BUNDLE_OFFERS : [];
   if (!conversationText || !conversationText.trim() || !allowed.length) {
     return { ok: false, is_order: false, items: [], area: "", phone: "" };
   }
 
+  const bundles = Array.isArray(pageConfig.BUNDLE_OFFERS) ? pageConfig.BUNDLE_OFFERS : [];
+  const bundleText = bundles.length
+    ? `\nالعروض المتاحة: ${bundles.map(b => `${b.label} = ${b.price} دينار${b.includesDelivery ? " شامل التوصيل" : ""}; مكونات العرض: ${(b.products || []).join(" + ")}`).join("\n")}. إذا قال الزبون «العرض» أو «البكج» أو طلب هذه المكونات كحزمة، أخرج مكونات العرض بالأسماء الحرفية من القائمة.`
+    : "";
+
   const prompt =
 `أنت محلّل طلبات دقيق لمتجر أردني (${pageConfig.name}). استخرج الطلب من محادثة الزبون التالية.
-الأصناف المتاحة في هذه الصفحة فقط (لا تخترع غيرها): ${allowed.join(" ، ")}.
-العروض المتاحة فعلياً: ${bundles.length ? bundles.map(b => `${b.label || "عرض"}: ${b.products.join(" + ")} = ${b.price + (pageConfig.DELIVERY || 0)}د شامل التوصيل`).join(" | ") : "لا يوجد عرض خاص"}.
-🔴 الكلور والفلاش منتجات فعلية للبيع إذا كانا ضمن القائمة أعلاه؛ لا تحذفهما ولا تعتبرهما معلومات ناقصة.
+الأصناف المتاحة في هذه الصفحة فقط (لا تخترع غيرها): ${allowed.join(" ، ")}.${bundleText}
 
 ${ADDRESS_EXPERT}
 
@@ -192,9 +194,17 @@ async function askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmDat
     : "";
 
   const nextTask = buildNextTask(memory);
+  const catalog = Object.keys(pageConfig.PRICES || {}).map(k => `${k} = ${pageConfig.PRICES[k]} د`).join("، ");
+  const bundleCatalog = (Array.isArray(pageConfig.BUNDLE_OFFERS) ? pageConfig.BUNDLE_OFFERS : [])
+    .map(b => `${b.label || (b.products || []).join(" + ")} = ${b.price} د${b.includesDelivery ? " شامل التوصيل" : ""}`)
+    .join(" | ");
+  const hardCatalog = `\n\n[كتالوج منتجات وأسعار إلزامي — هذه معلومات مؤكدة يجب الاعتماد عليها قبل أي شيء]
+المنتجات: ${catalog || "لا يوجد"}
+${bundleCatalog ? `العروض: ${bundleCatalog}\n` : ""}
+إذا سأل الزبون عن أي منتج موجود أعلاه، فهو متوفر. ممنوع قول «ما عندي معلومات عنه» أو «غير موجود» لمنتج موجود في هذه القائمة. لا تغيّر الأسعار. إذا قال «كلور» أو «فلاش» بدون حجم وكان للصنف أحجام متعددة، اعتبر الحجم 20 لتر. إذا ذكر 5 لتر أو 10 لتر التزم بالحجم والسعر المذكورين في الكتالوج.`;
   // سلوك المبيعات طبقة مستقلة عن المنتج: تنطبق على كل الصفحات حتى اللي عندها برومبت خاص.
   const baseKnowledge = SALES_PERSONA + "\n\n" + (pageConfig.SYSTEM || COMMON_KNOWLEDGE) + "\n\n" + SALES_BEHAVIOR;
-  const systemInst = `${baseKnowledge}\n\n${ADDRESS_EXPERT}\n\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
+  const systemInst = `${baseKnowledge}\n\n${hardCatalog}\n\n${ADDRESS_EXPERT}\n\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
 
   const messages = [{ role: "system", content: systemInst }];
   (history || []).forEach(h => {
@@ -236,7 +246,21 @@ async function askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmDat
       return null;
     }
     const data = await resp.json();
-    const text = (data?.choices?.[0]?.message?.content || "").replace(/\*\*/g, "").trim();
+    let text = (data?.choices?.[0]?.message?.content || "").replace(/\*\*/g, "").trim();
+
+    // حماية أخيرة: لو النموذج تجاهل الكتالوج وقال إن الكلور/الفلاش غير معروف،
+    // نصحح الرد مباشرة من بيانات الصفحة بدل إرسال معلومة خاطئة للزبون.
+    if (text && /(?:ما\s*عندي|لا\s*يوجد|غير\s*متوفر|غير\s*معروف).{0,40}(?:كلور|فلاش)/iu.test(text)) {
+      const hasChlorine = Object.keys(pageConfig.PRICES || {}).some(k => /كلور/.test(k));
+      const hasFlash = Object.keys(pageConfig.PRICES || {}).some(k => /فلاش/.test(k));
+      if (/كلور/iu.test(text) && hasChlorine && !/فلاش/iu.test(text)) {
+        text = `نعم، الكلور متوفر 5 لتر بـ2.5 د، 10 لتر بـ5 د، و20 لتر بـ7 د. التوصيل 2 دينار على الطلب الفردي.`;
+      } else if (/فلاش/iu.test(text) && hasFlash && !/كلور/iu.test(text)) {
+        text = `نعم، الفلاش متوفر 5 لتر بـ2.5 د، 10 لتر بـ5 د، و20 لتر بـ7 د. التوصيل 2 دينار على الطلب الفردي.`;
+      } else if (hasChlorine || hasFlash) {
+        text = `نعم، المنتجات متوفرة. الكلور: 5 لتر 2.5 د، 10 لتر 5 د، 20 لتر 7 د. الفلاش: 5 لتر 2.5 د، 10 لتر 5 د، 20 لتر 7 د. التوصيل 2 دينار على الطلب الفردي.`;
+      }
+    }
     return text || null;   // رد فاضي = سكوت كمان
   } catch (e) {
     console.error("OpenAI failed:", e && e.message);
