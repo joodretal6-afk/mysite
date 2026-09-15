@@ -211,7 +211,25 @@ export function parseMessage(memory, originalText, pageConfig, sourceMid = null)
   }
   hits.sort((a, b) => a.at - b.at);
 
-  let productFound = hits.length > 0;
+  // 🧼 عرض التنظيف الثلاثي: إذا الزبون قال "العرض" أو "الباقة"
+  // في ريفان/فاتي/كمبرلاند، ثبّت الأصناف الثلاثة مباشرة في السلة.
+  // لا نعتمد على الذكاء الاصطناعي وحده لفهم العرض.
+  const isCleaningBundlePage = /ريفان|فاتي|كمبرلاند/i.test(String(pageConfig?.name || ""));
+  const wantsCleaningBundle = isCleaningBundlePage && /(?:العرض|الباقة|الثلاثة|الثلاثي)/i.test(text);
+  if (wantsCleaningBundle) {
+    const prices = pageConfig.PRICES || {};
+    const gel = Object.keys(prices).find(k => /جل غسيل/i.test(k));
+    const chlorine = Object.keys(prices).find(k => /كلور/i.test(k));
+    const flash = Object.keys(prices).find(k => /فلاش/i.test(k));
+    if (gel && chlorine && flash) {
+      memory.cart[gel] = 1;
+      memory.cart[chlorine] = 1;
+      memory.cart[flash] = 1;
+      memory.cleaningBundle = true;
+    }
+  }
+
+  let productFound = hits.length > 0 || wantsCleaningBundle;
   if (hits.length === 1) {
     // صنف واحد: نستخدم كمية الرسالة كاملة — أدق لأن الكمية ممكن تجي بعده
     const h = hits[0];
