@@ -67,10 +67,7 @@ function normalizePhone(raw) {
 }
 
 export async function extractOrderWithAI(conversationText, pageConfig) {
-  const allowed = Array.from(new Set([
-    ...Object.keys(pageConfig.PRICES || {}),
-    ...Object.values(pageConfig.OFFER_BUNDLES || {}).flatMap(b => Object.keys(b.items || {}))
-  ]));
+  const allowed = Object.keys(pageConfig.PRICES || {});
   if (!conversationText || !conversationText.trim() || !allowed.length) {
     return { ok: false, is_order: false, items: [], area: "", phone: "" };
   }
@@ -78,6 +75,9 @@ export async function extractOrderWithAI(conversationText, pageConfig) {
   const prompt =
 `أنت محلّل طلبات دقيق لمتجر أردني (${pageConfig.name}). استخرج الطلب من محادثة الزبون التالية.
 الأصناف المتاحة في هذه الصفحة فقط (لا تخترع غيرها): ${allowed.join(" ، ")}.
+العروض المركبة المتاحة: ${Object.entries(pageConfig.OFFERS || {}).map(([n,o]) => `${n}: ${Object.entries(o.items || {}).map(([p,q]) => `${p} × ${q}`).join(" + ")} = ${o.price}د قبل التوصيل`).join(" | ") || "لا يوجد عرض"}.
+🔴 إذا ذكر الزبون "العرض" أو "الباقة" وكان لهذه الصفحة عرض، استخرج جميع أصناف العرض بالكميات المطلوبة.
+🔴 إذا طلب الزبون جل أو كلور أو فلاش منفرداً، استخرج الصنف المنفرد ولا تفترض العرض.
 
 ${ADDRESS_EXPERT}
 
@@ -99,7 +99,6 @@ ${ADDRESS_EXPERT}
 - إذا الكمية غير واضحة أو مبهمة، اجعل الكمية 1 (لا تضاعفها من عندك أبداً).
 - لو ما في نية طلب واضحة (مجرد سؤال/سلام) اجعل is_order=false و items فارغة.
 - طابق اسم الصنف مع القائمة المتاحة (مثلاً "بلدية"→"غنم" إن لم يوجد "بلدية").
-- 🔥 إذا قال الزبون "العرض" أو "العرض الثلاثي" أو ذكر اسم عرض الصفحة، وكان في pageConfig.OFFER_BUNDLES عرض ثلاثي، استخرج كل أصناف العرض الموجودة في OFFER_BUNDLES مع كمياتها حرفياً، ولا تستخرج صنفاً واحداً فقط من العرض. في ريفان وفاتي وكمبرلاند العرض هو: جل الغسيل ×1 + كلور مركز ×1 + فلاش ×1.
 
 المحادثة:
 ${conversationText.slice(0, 6000)}`;
@@ -211,36 +210,38 @@ async function askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmDat
   }
   messages.push({ role: "user", content: finalUser || "..." });
 
-  try {
-    // مسار الرد على الزبون: نفس معالجة نماذج التفكير، بس هون
-    // المحادثة متعددة الرسائل فمنبني الجسم ومنستبدل الرسائل.
-    const model = oaiModel();
-    const body = await oaiBody({ model, prompt: "", json: false, temperature: 0.2, maxTokens: 400 });
-    body.messages = messages;
+  // نجرب الطلب مرتين عند فشل الشبكة/المزوّد أو رجوع رد فارغ. هذا يمنع سكوت البوت
+  // بسبب عطل عابر، بدون تكرار أي رسالة للزبون لأن هذه مجرد طلبات توليد داخلية.
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const model = oaiModel();
+      const body = await oaiBody({ model, prompt: "", json: false, temperature: 0.2, maxTokens: 400 });
+      body.messages = messages;
 
-    const resp = await fetch(`${oaiBase()}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${oaiKey()}`
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
-    });
+      const resp = await fetch(`${oaiBase()}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${oaiKey()}`
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
+      });
 
-    if (!resp.ok) {
-      console.error("OpenAI error:", resp.status, await resp.text());
-      // 🔴 ما منبعت رسالة تعبئة لمّا الذكاء يفشل.
-      //    "أبشر كمّل طلبك" بتوهم الزبون إنّ في حدا فاهمه، فبيكمّل
-      //    كلام ما حدا بيقراه، وبيروح الطلب. السكوت أصدق: الزبون
-      //    بيعيد أو بيتصل، وإنت بتشوف المحادثة بالوارد.
-      return null;
+      if (!resp.ok) {
+        const errText = await resp.text();
+        console.error(`OpenAI error (attempt ${attempt}):`, resp.status, errText);
+        if (attempt < 2) continue;
+        return null;
+      }
+      const data = await resp.json();
+      const text = (data?.choices?.[0]?.message?.content || "").replace(/\*\*/g, "").trim();
+      if (text) return text;
+      console.warn(`OpenAI returned empty response (attempt ${attempt})`);
+    } catch (e) {
+      console.error(`OpenAI failed (attempt ${attempt}):`, e && e.message);
+      if (attempt >= 2) return null;
     }
-    const data = await resp.json();
-    const text = (data?.choices?.[0]?.message?.content || "").replace(/\*\*/g, "").trim();
-    return text || null;   // رد فاضي = سكوت كمان
-  } catch (e) {
-    console.error("OpenAI failed:", e && e.message);
-    return null;   // 🔴 فشل الذكاء = سكوت، مش رسالة تعبئة
   }
+  return null;
 }
