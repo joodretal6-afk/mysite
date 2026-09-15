@@ -417,7 +417,13 @@ function rebrandPage(cfg, fromName, toName, extra = {}) {
   out.SYSTEM = hardRule + "\n\n" + (out.SYSTEM || "") + (appendSystem ? "\n\n" + appendSystem : "");
   return { ...out, ...rest };
 }
-
+// ═══════════════════════════════════════════════════════════
+//صفحة ريفان وفاتي — مواد تنظيف (منتجات متعددة، هوية مستقلة)
+//متوفر 20 لتر منتجات كلور وفلاش  20 لتر بسعر 7 دنانير + 2 دينار توصيل لطلب الفردي  ولو قام العميل بطلب اكثر من صنف نحسب التوصيل مرة واحدة مثلاً طلب 2جلن سائل جلي  ال 20 لتر بتم حسب السعر في 16 د 
+// 🧴 صفحة ريفان وفاتي — مواد تنظيف (منتجات متعددة، هوية مستقلة)
+//جل غسيل 12 شامل التوصيل + منتجات 5 لتر بـ2.5. التوصيل 2 مرة
+//وحدة على الطلب (سعر الجل شامله أصلاً).
+// ═══════════════════════════════════════════════════════════
 PAGES["514074765127663"] = rebrandPage(PAGES["618622274665182"], "ريفان", "فاتي", {
   name: "فاتي",
   PAGE_TOKEN: "EAARu8DdiVZAwBSQHIZBjeiwwck91CfCy4OsQB8pk9dRNcZBYbrptM6069IhQcMwsdZCaQUV6LkZCzgKEhdxe6YOknJAoBaKVfwgEZCCPFLvCi04p3FXkGxTflTEkQLk3ZCdxZAc2fvtANTCrvShuZA2ZARnmFIMyPYLKQjJEpzurHZCK01cA3WHhkwzrU5fDO6WBehlpiwlIQZDZD",
