@@ -23,6 +23,10 @@ const REPEAT_INTENT = /(نفس الطلب|الطلب السابق|زي المر�
 // كشف تاجر الجملة
 const WHOLESALE_INTENT = /(جملة|بالجملة|تاجر|كرتون|كرتونة|كراتين|محل|بقالة|بقالية|سوبر ?ماركت|سوبرماركت|كمية كبيرة|كميات كبيرة|بسعر الجملة|عرض جملة)/i;
 
+// نعتبر الرسالة نية شراء فقط عند وجود صيغة طلب واضحة أو موافقة على الطلب؛
+// مجرد سؤال عن السعر/التوفر لا ينشئ فاتورة تلقائياً.
+const PURCHASE_INTENT = /(?:بدي|بدّي|اريد|أريد|بديش|هات|اعطيني|أعطيني|خذلي|حطلي|اطلب|أطلب|اطلبي|احجز|بحجز|بدي اطلب|بدي أطلب|تمام بطلب|تمام بدي|(?:واحد|وحدة)(?:\s+من)?|اثنين|ثنتين|تنتين|الثلاثة|العرض|البكج|الباقة|كلهم|موافق|ماشي|تمام|خلص|ثبت|ثبّت|كمّل|كمل|كملنا|نعم|اه|آه)/i;
+
 // هل ذكر الزبون هذا الصنف الإضافي؟ (بالاسم الكامل أو أول كلمة مميّزة منه)
 function addonMentioned(text, addonName) {
   const nm = String(addonName || "").trim();
@@ -188,7 +192,7 @@ async function _handleEvent(event, env, ctx) {
 
   if (!memory) {
     memory = {
-      cart: {}, area: null, phone: null, customerName: null, sent: false,
+      cart: {}, area: null, phone: null, sent: false,
       history: [], lastReply: "", invalidPhoneProvided: false, upsellOffered: false,
       prov: {}, sessionKey
     };
@@ -198,7 +202,7 @@ async function _handleEvent(event, env, ctx) {
   //    بدل ما نخاطر نخلط بيانات عميل بعميل.
   if (memory.sessionKey && memory.sessionKey !== sessionKey) {
     console.error(`🔴 عدم تطابق بصمة الجلسة: ${memory.sessionKey} ≠ ${sessionKey} — ذاكرة نظيفة`);
-    memory = { cart: {}, area: null, phone: null, customerName: null, sent: false, history: [],
+    memory = { cart: {}, area: null, phone: null, sent: false, history: [],
                lastReply: "", invalidPhoneProvided: false, upsellOffered: false,
                prov: {}, sessionKey };
   }
@@ -216,14 +220,6 @@ async function _handleEvent(event, env, ctx) {
   }
 
   if (!userMsg && !audioPart) return;
-
-  // 👤 التقاط اسم الزبون من الصيغ الواضحة فقط، بدون تخمين من أسماء الصفحات أو الكلمات العادية.
-  try {
-    if (userMsg && !memory.customerName) {
-      const nm = userMsg.match(/(?:^|[،,\s])(اسم(?:ي|ي هو)?|الاسم)\s*[:：-]?\s*([\u0600-\u06FF]{2,}(?:\s+[\u0600-\u06FF]{2,}){0,2})$/i);
-      if (nm && nm[2]) memory.customerName = nm[2].trim();
-    }
-  } catch {}
 
   // 💬 حفظ رسالة الزبون في أرشيف الدردشات
   logMessage({
@@ -411,6 +407,7 @@ async function _handleEvent(event, env, ctx) {
       if (ai.ok) {
         // نستبدل السلة فقط لو الذكاء لقى طلباً فعلياً (حتى لا نمسح سلة سابقة برسالة سؤال/سلام)
         if (ai.is_order && ai.items.length) {
+          memory.purchaseIntent = true;
           memory.cart = {};
           ai.items.forEach(it => { memory.cart[it.product] = it.qty; });
           // 🧾 مصدر الطلب: الذكاء استخرجه من رسائل الزبون بهالجلسة. بدون
@@ -523,6 +520,11 @@ async function _handleEvent(event, env, ctx) {
     } catch (e) { console.error("address gate:", e && e.message); }
   }
 
+  // نثبت نية الشراء على مستوى الجلسة؛ سؤال السعر/المتوفر وحده لا يكفي لإنشاء طلب،
+  // بينما أي استخراج AI كطلب فعلي أو صيغة شراء واضحة يفعّلها.
+  if (!memory.purchaseIntent && (PURCHASE_INTENT.test(userMsg) || /^(?:نعم|اه|آه|تمام|ماشي|خلص|ثبت)/i.test(userMsg.trim()))) {
+    memory.purchaseIntent = true;
+  }
   const cartItemsCount = memory.cart ? Object.keys(memory.cart).length : 0;
 
   // ═══════════════════════════════════════════════════════════
@@ -551,16 +553,16 @@ async function _handleEvent(event, env, ctx) {
   if (check.reasons.length)
     console.log(`🧾 تحقق الطلب [${sessionKey}]: ${check.complete ? "مكتمل" : "ناقص → " + check.missing.join(",")} | ${check.reasons.join(" · ")}`);
   const complete = check.complete && !check.blocked;
-  const readyForInvoice = complete && !memory.sent;
+  // 🧾 فاتورة لكل طلب مؤكَّد: لا ننتظر اكتمال العنوان/الهاتف.
+  // الطلب الناقص يُسجَّل بحالة "ناقص" وتصدر له فاتورة مباشرة، ثم تُحدّث لاحقاً.
+  const readyForInvoice = cartItemsCount > 0 && !!memory.purchaseIntent && !memory.sent;
   const needsAddressReview = complete && addrCoarse;
 
   // معه صنف ورقم، بس ما بنعرف وين ⇒ سؤال واحد محدّد، مرة وحدة بس.
   // بعدها بيكمّل مع الذكاء الاصطناعي عادي — ما بنسكت ولا بنعلّق الطلب.
-  if (cartItemsCount > 0 && memory.phone && addrUnknown
-      && memory.addressQuestion && !memory._addrAsked && !memory.sent) {
-    const ask = memory.customerName
-      ? `تمام 👌 وصلني الرقم والمنطقة. ضلّ بس تفاصيل العنوان، مثل أقرب معلم أو الشارع.`
-      : `تمام 👌 وصلني الرقم والمنطقة. ضلّ الاسم وتفاصيل العنوان، مثل أقرب معلم أو الشارع.`;
+  if (cartItemsCount > 0 && memory.purchaseIntent && memory.phone && addrUnknown
+      && memory.addressQuestion && !memory._addrAsked && memory.sent) {
+    const ask = `تمام 👌 ضلّ إشي واحد بس عشان يوصلك الطلب صح:\n${memory.addressQuestion}`;
     // 🔴 ترتيب المعاملات: sendText(pageToken, senderId, text) — لا تعكسه.
     // عكسه سابقاً كان يمرّر كائن مكان النص فترمي .trim() خطأً وينهار
     // المعالج كاملاً ⇒ الزبون ما بيوصله ولا رد والطلب بيعلق.
@@ -595,7 +597,9 @@ async function _handleEvent(event, env, ctx) {
   }
 
   // 🟢 وصول فوري للسستم: أي أوردر فيه أصناف + (عنوان أو رقم) ينزل باللوحة مباشرة
-  const hasIntent = cartItemsCount > 0 && (memory.area || memory.phone);
+  // 🧾 نصدر الطلب للموقع بمجرد ثبوت نية الشراء ووجود سلة، حتى لو بيانات الاتصال ناقصة.
+  // status="ناقص" يوضح للموظف ما يحتاج استكماله بدل إسقاط الطلب بالكامل.
+  const hasIntent = cartItemsCount > 0 && !!memory.purchaseIntent;
   if (hasIntent) {
     try {
       const { total, orderString } = computeOrder(effConfig, memory.cart, memory.coupon);
@@ -636,7 +640,9 @@ async function _handleEvent(event, env, ctx) {
   // 🔴 إصدار الفاتورة للزبون عند اكتمال الطلب (مرة واحدة)
   if (readyForInvoice) {
     const { total, orderString, detailedString, priceString } = computeOrder(effConfig, memory.cart, memory.coupon);
-    reply = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, memory.area, memory.phone);
+    const invoiceArea = memory.area || "سيتم استكمال العنوان";
+    const invoicePhone = memory.phone || "سيتم استكمال رقم الهاتف";
+    reply = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, invoiceArea, invoicePhone);
     // العنوان خشن: منطلب المعلم **مع** الفاتورة مش بدالها.
     // الطلب بيمشي، والزبون بيقدر يزوّدنا بلا ما يستنى ولا يضيع.
     if (needsAddressReview)
