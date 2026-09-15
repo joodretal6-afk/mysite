@@ -672,22 +672,38 @@ async function _handleEvent(event, env, ctx) {
       extraKnowledge += "\n\n[هام جداً] الزبونة أنثى — خاطبها دائماً بصيغة المؤنث (حياكي الله، تفضلي، يا هلا فيكي، شو حابة، بدك تطلبي) ولا تستخدم أبداً صيغ المذكر (يا أخوي، يا غالي، يا شيخ، يا زعيم، حابب). وإذا كان لهذه الصفحة أسلوب نداء خاص بها فالتزم به هو.";
     }
     reply = await askAI(memory.history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
-    memory.invalidPhoneProvided = false;   // بعد ما ننبّه الزبون منصفّر الفلاغ
+    memory.invalidPhoneProvided = false;   // بعد ما ننبه الزبون منصفّر الفلاغ
 
-    // 🔴 الذكاء رجع فاضي (فشل نداء أو مزوّد واقف) = **سكوت تام**.
-    //    زمان كنا نبعت "أبشر كمّل طلبك" — وهاي أسوأ من السكوت:
-    //    بتوهم الزبون إنّ في حدا فاهمه فبيكمّل كلام ما حدا بيقراه،
-    //    وبيروح الطلب وهو مبسوط. بلا رد، بيعيد أو بيتصل، والمحادثة
-    //    بتضل بالوارد عندك تشوفها.
+    // 🔴 لا نسكت إذا تعطل مزوّد الذكاء. نعمل محاولة ثانية، وإذا بقي فاضي
+    // نستخدم ردًا احتياطيًا قصيرًا مبنيًا على حالة الطلب.
     if (reply == null || !String(reply).trim()) {
-      console.warn(`🔇 الذكاء ما رجّع رد — سكتنا بدل ما نبعت تعبئة (${senderId})`);
+      console.warn(`🔁 AI returned empty reply — retrying once (${pageConfig.name}/${senderId})`);
+      try {
+        reply = await askAI(memory.history, userMsg, audioPart, pageConfig, memory, crmData,
+          extraKnowledge + "\n[طوارئ] أجب بجملة أو جملتين فقط وبشكل مباشر على آخر رسالة للزبون.");
+      } catch (e) {
+        console.error("AI retry failed:", e && e.message);
+      }
+    }
+
+    if (reply == null || !String(reply).trim()) {
+      const hasCart = memory.cart && Object.keys(memory.cart).length > 0;
+      if (pageConfig.name === "كمبرلاند") {
+        if (!hasCart) reply = "أهلاً وسهلاً 🌹 شو حابب تعرف عن منتجات كمبرلاند؟";
+        else if (!memory.phone) reply = "تمام 👌 ابعتلي رقم تلفونك عشان أكمل معك الطلب.";
+        else if (!memory.area) reply = "تمام 👌 ابعتلي منطقتك وعنوان التوصيل.";
+        else reply = "تمام 👌 وصلتني رسالتك، بكمل معك الطلب.";
+      } else {
+        reply = hasCart
+          ? "تمام 👌 وصلتني رسالتك، بكمل معك الطلب."
+          : "أهلاً وسهلاً 🌹 وصلتني رسالتك، كيف بقدر أساعدك؟";
+      }
       try {
         flagHandoff({
           page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
-          reason: "الذكاء ما رد — الزبون مستني", snippet: userMsg, pause: 0
+          reason: "الذكاء تعطل — تم استخدام الرد الاحتياطي", snippet: userMsg, pause: 0
         });
       } catch (e) { console.error("flagHandoff:", e && e.message); }
-      return;
     }
   }
 
