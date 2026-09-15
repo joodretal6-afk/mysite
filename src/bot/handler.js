@@ -687,6 +687,18 @@ async function _handleEvent(event, env, ctx) {
       extraKnowledge += "\n\n[هام جداً] الزبونة أنثى — خاطبها دائماً بصيغة المؤنث (حياكي الله، تفضلي، يا هلا فيكي، شو حابة، بدك تطلبي) ولا تستخدم أبداً صيغ المذكر (يا أخوي، يا غالي، يا شيخ، يا زعيم، حابب). وإذا كان لهذه الصفحة أسلوب نداء خاص بها فالتزم به هو.";
     }
     reply = await askAI(memory.history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
+    // 🔴 حماية حتمية لصفحات ريفان/فاتي/كمبرلاند: إذا أنكر الذكاء وجود منتج معروف، صحّح الرد.
+    try {
+      const isCleaningPage = /^(ريفان|فاتي|كمبرلاند)/i.test(String(pageConfig.name || ""));
+      const msg = String(userMsg || "").trim();
+      const denied = /ما عندي (?:معلومات|بيانات)|لا (?:يوجد|توجد) معلومات|غير متوفر|مش متوفر|ما في عنا|ما عندنا|لا أعرف|ما بعرف|لا توجد لدينا/i.test(String(reply || ""));
+      if (isCleaningPage && denied) {
+        if (/العرض|الباقة/i.test(msg)) reply = `أكيد 🌹 العرض: جل غسيل 20 لتر + كلور 20 لتر + فلاش 20 لتر بـ26 دينار شامل التوصيل.`;
+        else if (/كلور/i.test(msg)) reply = `أكيد، الكلور 20 لتر بـ7 دنانير، والتوصيل 2 دينار.`;
+        else if (/فلاش|مزيل\s*التكلس|مزيل\s*الكلس/i.test(msg)) reply = `أكيد، الفلاش 20 لتر بـ7 دنانير، والتوصيل 2 دينار.`;
+        else if (/جل|غسيل/i.test(msg)) reply = `أكيد، جل الغسيل 20 لتر بـ10 دنانير، والتوصيل 2 دينار.`;
+      }
+    } catch (e) { console.error("cleaning catalog guard:", e && e.message); }
     memory.invalidPhoneProvided = false;   // بعد ما ننبّه الزبون منصفّر الفلاغ
 
     // 🔴 لا نسكت أبداً إذا فشل مزوّد الذكاء: نستخدم رد احتياطي حتمي للصفحات
