@@ -11,26 +11,26 @@ export function computeOrder(pageConfig, cart, coupon) {
   const defaultUnit = pageConfig.DEFAULT_UNIT || "نصية";
 
   let total = 0;
-  const lines = [];
-  const detailed = [];
-  const remaining = { ...cart };
+  const lines = [];        // مختصر (للجدول والتخزين)
+  const detailed = [];     // مفصّل بالأسعار (للفاتورة)
 
-  // 🎁 العروض المركبة: السعر المخزن للباقة هنا بدون التوصيل؛ التوصيل يضاف مرة واحدة لاحقاً.
+  // عروض الحزمة: إذا كانت السلة تطابق جميع مكونات عرض، نستخدم سعر العرض مرة واحدة.
+  // أي مكونات زائدة تُحسب بأسعارها العادية.
   const bundles = Array.isArray(pageConfig.BUNDLE_OFFERS) ? pageConfig.BUNDLE_OFFERS : [];
+  const used = new Set();
   for (const b of bundles) {
     const products = Array.isArray(b.products) ? b.products : [];
-    if (!products.length || !Number.isFinite(Number(b.price))) continue;
-    const bundleQty = Math.min(...products.map(p => Math.max(0, Number(remaining[p] || 0))));
-    if (bundleQty > 0) {
-      total += round2(bundleQty * Number(b.price));
-      for (const product of products) remaining[product] = Math.max(0, Number(remaining[product] || 0) - bundleQty);
-      const label = b.label || "عرض";
-      lines.push(`${label} × ${bundleQty}`);
-      detailed.push(`• ${label} × ${bundleQty} = ${round2(bundleQty * Number(b.price) + (pageConfig.DELIVERY || 0))}د شامل التوصيل`);
-    }
+    if (!products.length) continue;
+    const matched = products.every(prod => Number(cart[prod] || 0) >= 1);
+    if (!matched) continue;
+    products.forEach(prod => used.add(prod));
+    total += round2(Number(b.price) || 0);
+    lines.push(b.label || products.join(" + "));
+    detailed.push(`• ${b.label || products.join(" + ")} = ${round2(Number(b.price) || 0)}د${b.includesDelivery ? " شامل التوصيل" : ""}`);
   }
 
-  for (const [product, qty] of Object.entries(remaining)) {
+  for (const [product, qty] of Object.entries(cart)) {
+    if (used.has(product)) continue;
     if (!qty || qty <= 0) continue;
     const base = prices[product] != null ? prices[product] : CONFIG.DEFAULT_PRICE;
     const offerPrice = offers[product] && offers[product][qty];
@@ -41,7 +41,11 @@ export function computeOrder(pageConfig, cart, coupon) {
     detailed.push(`• ${product} × ${qty} ${unit} = ${lineTotal}د`);
   }
 
-  const delivery = pageConfig.DELIVERY || 0;
+  const bundleIncludesDelivery = bundles.some(b => {
+    const products = Array.isArray(b.products) ? b.products : [];
+    return !!b.includesDelivery && products.length && products.every(prod => used.has(prod));
+  });
+  const delivery = bundleIncludesDelivery ? 0 : (pageConfig.DELIVERY || 0);
   total = round2(total + delivery);
 
   // 🎟️ تطبيق كود الخصم إن وُجد
