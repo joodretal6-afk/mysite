@@ -35,7 +35,10 @@ export function captureEnabled() {
   try {
     // التسليم الكامل بيشغّل الالتقاط ضمناً — وإلا بتضيع كل الطلبات
     if (handedOverToMeta()) return true;
-    return String(getSetting("capture_external") || "") === "on";
+    // الالتقاط مفعّل افتراضياً لضمان عدم ضياع أي طلب تلتقطه قنوات Meta/الموظفين؛
+    // يمكن إيقافه صراحةً من لوحة التحكم.
+    const v = String(getSetting("capture_external") || "");
+    return v === "off" ? false : true;
   } catch { return false; }
 }
 
