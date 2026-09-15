@@ -45,24 +45,6 @@ function chosenProvider() {
 
 // نقطة الدخول الموحّدة (نفس توقيع askGemini)
 export async function askAI(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge = "") {
-  // 🧼 إجابات حتمية لمنتجات التنظيف الحساسة: لا نترك نموذج الذكاء ينكر
-  // وجود الكلور أو الفلاش بسبب تعارض/هلوسة في البرومبت.
-  // هذا المسار يخص ريفان وفاتي وكمبرلاند فقط، وللسؤال المباشر عن المنتج.
-  const pageName = String(pageConfig?.name || "");
-  const msg = String(userMsg || "").trim();
-  if (/ريفان|فاتي|كمبرلاند/i.test(pageName) && msg) {
-    if (/كلور/i.test(msg) && !/عرض|باقة|جل|فلاش/i.test(msg)) {
-      const price = Number(pageConfig?.PRICES?.كلور ?? 7);
-      return `نعم، الكلور المركز متوفر 20 لتر بـ${price} دنانير + 2 دينار توصيل.`;
-    }
-    if (/(?:فلاش|مزيل\s*(?:التكلس|الكلس))/i.test(msg) && !/عرض|باقة|جل|كلور/i.test(msg)) {
-      const price = Number(pageConfig?.PRICES?.فلاش ?? 7);
-      return `نعم، فلاش مزيل التكلس متوفر 20 لتر بـ${price} دنانير + 2 دينار توصيل.`;
-    }
-    if (/(?:العرض|الباقة|الثلاثي)/i.test(msg)) {
-      return `العرض: جالون جل غسيل + جالون كلور + جالون فلاش، كل واحد 20 لتر، بـ26 دينار شامل التوصيل.`;
-    }
-  }
   if (chosenProvider() === "openai") {
     return askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
   }
@@ -86,6 +68,7 @@ function normalizePhone(raw) {
 
 export async function extractOrderWithAI(conversationText, pageConfig) {
   const allowed = Object.keys(pageConfig.PRICES || {});
+  const bundles = Array.isArray(pageConfig.BUNDLE_OFFERS) ? pageConfig.BUNDLE_OFFERS : [];
   if (!conversationText || !conversationText.trim() || !allowed.length) {
     return { ok: false, is_order: false, items: [], area: "", phone: "" };
   }
@@ -93,6 +76,8 @@ export async function extractOrderWithAI(conversationText, pageConfig) {
   const prompt =
 `أنت محلّل طلبات دقيق لمتجر أردني (${pageConfig.name}). استخرج الطلب من محادثة الزبون التالية.
 الأصناف المتاحة في هذه الصفحة فقط (لا تخترع غيرها): ${allowed.join(" ، ")}.
+العروض المتاحة فعلياً: ${bundles.length ? bundles.map(b => `${b.label || "عرض"}: ${b.products.join(" + ")} = ${b.price + (pageConfig.DELIVERY || 0)}د شامل التوصيل`).join(" | ") : "لا يوجد عرض خاص"}.
+🔴 الكلور والفلاش منتجات فعلية للبيع إذا كانا ضمن القائمة أعلاه؛ لا تحذفهما ولا تعتبرهما معلومات ناقصة.
 
 ${ADDRESS_EXPERT}
 

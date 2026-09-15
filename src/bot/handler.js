@@ -391,24 +391,9 @@ async function _handleEvent(event, env, ctx) {
     parseMessage(memory, userMsg, effConfig, srcId);
   }
 
-  // 🔥 عرض مواد التنظيف: ثبّت العرض مباشرة من النص قبل الذكاء الاصطناعي.
-  // هيك عبارة "بدي العرض" ما بتعتمد على تفسير النموذج، وما ممكن ينكر وجوده.
-  if (!memory.sent && !memory._repeated && pageConfig.OFFERS && Object.keys(pageConfig.OFFERS).length) {
-    const offer = Object.values(pageConfig.OFFERS)[0];
-    if (offer?.items && /\b(?:العرض|عرض|الباقة|باقة)\b/i.test(userMsg)) {
-      const wantsOffer = /بدي|بديش|اريد|أريد|بدي اياها|بدي إياه|خذ|هات|اعطيني|اعطني|طلبت|اطلب|احجز/i.test(userMsg);
-      if (wantsOffer) {
-        memory.cart = {};
-        for (const [product, qty] of Object.entries(offer.items)) memory.cart[product] = Number(qty) || 1;
-        recordSource(memory, "order", { ...memory.cart }, srcId);
-        memory._offerLocked = true;
-      }
-    }
-  }
-
   // 🧠 استخراج ذكي من كامل المحادثة (يفهم أي صياغة طبيعية ويكمّل النواقص)
-  // نتخطّاه لو الزبون طلب إعادة طلبه السابق أو تم تثبيت العرض مباشرة.
-  if (!memory.sent && !memory._repeated && !memory._offerLocked) {
+  // نتخطّاه لو الزبون طلب إعادة طلبه السابق (حتى لا نمسح السلة المُعادة)
+  if (!memory.sent && !memory._repeated) {
     try {
       const convText = [
         ...(memory.history || []).filter(h => h.role === "user").map(h => h.content),
@@ -687,49 +672,37 @@ async function _handleEvent(event, env, ctx) {
       extraKnowledge += "\n\n[هام جداً] الزبونة أنثى — خاطبها دائماً بصيغة المؤنث (حياكي الله، تفضلي، يا هلا فيكي، شو حابة، بدك تطلبي) ولا تستخدم أبداً صيغ المذكر (يا أخوي، يا غالي، يا شيخ، يا زعيم، حابب). وإذا كان لهذه الصفحة أسلوب نداء خاص بها فالتزم به هو.";
     }
     reply = await askAI(memory.history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
-    // 🔴 حماية حتمية لصفحات ريفان/فاتي/كمبرلاند: إذا أنكر الذكاء وجود منتج معروف، صحّح الرد.
-    try {
-      const isCleaningPage = /^(ريفان|فاتي|كمبرلاند)/i.test(String(pageConfig.name || ""));
-      const msg = String(userMsg || "").trim();
-      const denied = /ما عندي (?:معلومات|بيانات)|لا (?:يوجد|توجد) معلومات|غير متوفر|مش متوفر|ما في عنا|ما عندنا|لا أعرف|ما بعرف|لا توجد لدينا/i.test(String(reply || ""));
-      if (isCleaningPage && denied) {
-        if (/العرض|الباقة/i.test(msg)) reply = `أكيد 🌹 العرض: جل غسيل 20 لتر + كلور 20 لتر + فلاش 20 لتر بـ26 دينار شامل التوصيل.`;
-        else if (/كلور/i.test(msg)) reply = `أكيد، الكلور 20 لتر بـ7 دنانير، والتوصيل 2 دينار.`;
-        else if (/فلاش|مزيل\s*التكلس|مزيل\s*الكلس/i.test(msg)) reply = `أكيد، الفلاش 20 لتر بـ7 دنانير، والتوصيل 2 دينار.`;
-        else if (/جل|غسيل/i.test(msg)) reply = `أكيد، جل الغسيل 20 لتر بـ10 دنانير، والتوصيل 2 دينار.`;
+
+    // 🛡️ حارس منتجات التنظيف: إذا تجاهل النموذج كتالوج الصفحة وقال إن
+    // الكلور/الفلاش غير معروفين، نصلّح الرد من بيانات الصفحة نفسها.
+    // هذا يمنع أي انحراف من النموذج بعد النشر أو تغيّر الموديل.
+    if (pageConfig.BUNDLE_OFFERS && /(?:ريفان|فاتي|كمبرلاند|تنظيف|غسيل|كلور|فلاش)/i.test(pageConfig.name || "")) {
+      const q = String(userMsg || "");
+      const denied = /(?:ما عندي معلومات|لا يوجد معلومات|غير متوفر|مش متوفر|غير موجود|ما بعرف|لا أعرف|ما عندي)/i.test(String(reply || ""));
+      if (denied && /كلور/i.test(q)) {
+        reply = "نعم، الكلور المركز متوفر 20 لتر بـ7 دنانير + 2 دينار توصيل 🌹";
+      } else if (denied && /(?:فلاش|مزيل التكلس|مزيل الكلس)/i.test(q)) {
+        reply = "نعم، فلاش مزيل التكلس متوفر 20 لتر بـ7 دنانير + 2 دينار توصيل 🌹";
+      } else if (denied && /(?:العرض|البكج|الباكدج|الباقة)/i.test(q)) {
+        reply = "أكيد، العرض: جل غسيل + كلور + فلاش، كل واحد 20 لتر بـ26 دينار شامل التوصيل 🌹";
       }
-    } catch (e) { console.error("cleaning catalog guard:", e && e.message); }
+    }
     memory.invalidPhoneProvided = false;   // بعد ما ننبّه الزبون منصفّر الفلاغ
 
-    // 🔴 لا نسكت أبداً إذا فشل مزوّد الذكاء: نستخدم رد احتياطي حتمي للصفحات
-    // الثلاث الخاصة بمواد التنظيف، ونرفع تنبيه للإدارة حتى ينحل سبب الفشل.
+    // 🔴 الذكاء رجع فاضي (فشل نداء أو مزوّد واقف) = **سكوت تام**.
+    //    زمان كنا نبعت "أبشر كمّل طلبك" — وهاي أسوأ من السكوت:
+    //    بتوهم الزبون إنّ في حدا فاهمه فبيكمّل كلام ما حدا بيقراه،
+    //    وبيروح الطلب وهو مبسوط. بلا رد، بيعيد أو بيتصل، والمحادثة
+    //    بتضل بالوارد عندك تشوفها.
     if (reply == null || !String(reply).trim()) {
-      console.warn(`🔇 الذكاء ما رجّع رد — استخدام رد احتياطي (${senderId})`);
+      console.warn(`🔇 الذكاء ما رجّع رد — سكتنا بدل ما نبعت تعبئة (${senderId})`);
       try {
         flagHandoff({
           page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
-          reason: "الذكاء ما رد — تم استخدام الرد الاحتياطي", snippet: userMsg, pause: 0
+          reason: "الذكاء ما رد — الزبون مستني", snippet: userMsg, pause: 0
         });
       } catch (e) { console.error("flagHandoff:", e && e.message); }
-
-      const isCleaning = /^(ريفان|فاتي|كمبرلاند)/i.test(String(pageConfig.name || ""));
-      if (isCleaning) {
-        const t = String(userMsg || "").trim();
-        const offer = Object.values(pageConfig.OFFERS || {})[0];
-        if (/العرض|الباقة/i.test(t) && offer) {
-          reply = "أكيد 🌹 العرض: جل غسيل 20 لتر + كلور 20 لتر + فلاش 20 لتر بـ26 دينار شامل التوصيل.";
-        } else if (/كلور/i.test(t)) {
-          reply = "أكيد، الكلور 20 لتر بـ7 دنانير، والتوصيل 2 دينار.";
-        } else if (/فلاش|مزيل\s*التكلس|مزيل\s*الكلس/i.test(t)) {
-          reply = "أكيد، الفلاش 20 لتر بـ7 دنانير، والتوصيل 2 دينار.";
-        } else if (/جل|غسيل/i.test(t)) {
-          reply = `أكيد، جل الغسيل 20 لتر بـ10 دنانير، والتوصيل 2 دينار.`;
-        } else {
-          reply = "أهلاً فيك 🌹 متوفر عنا جل غسيل 20 لتر، كلور 20 لتر، وفلاش 20 لتر. وفي عرض الثلاثة بـ26 دينار شامل التوصيل.";
-        }
-      } else {
-        reply = "وصلت رسالتك 🌹 لحظات وبنكون معك.";
-      }
+      return;
     }
   }
 

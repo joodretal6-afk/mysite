@@ -11,10 +11,26 @@ export function computeOrder(pageConfig, cart, coupon) {
   const defaultUnit = pageConfig.DEFAULT_UNIT || "نصية";
 
   let total = 0;
-  const lines = [];        // مختصر (للجدول والتخزين)
-  const detailed = [];     // مفصّل بالأسعار (للفاتورة)
+  const lines = [];
+  const detailed = [];
+  const remaining = { ...cart };
 
-  for (const [product, qty] of Object.entries(cart)) {
+  // 🎁 العروض المركبة: السعر المخزن للباقة هنا بدون التوصيل؛ التوصيل يضاف مرة واحدة لاحقاً.
+  const bundles = Array.isArray(pageConfig.BUNDLE_OFFERS) ? pageConfig.BUNDLE_OFFERS : [];
+  for (const b of bundles) {
+    const products = Array.isArray(b.products) ? b.products : [];
+    if (!products.length || !Number.isFinite(Number(b.price))) continue;
+    const bundleQty = Math.min(...products.map(p => Math.max(0, Number(remaining[p] || 0))));
+    if (bundleQty > 0) {
+      total += round2(bundleQty * Number(b.price));
+      for (const product of products) remaining[product] = Math.max(0, Number(remaining[product] || 0) - bundleQty);
+      const label = b.label || "عرض";
+      lines.push(`${label} × ${bundleQty}`);
+      detailed.push(`• ${label} × ${bundleQty} = ${round2(bundleQty * Number(b.price) + (pageConfig.DELIVERY || 0))}د شامل التوصيل`);
+    }
+  }
+
+  for (const [product, qty] of Object.entries(remaining)) {
     if (!qty || qty <= 0) continue;
     const base = prices[product] != null ? prices[product] : CONFIG.DEFAULT_PRICE;
     const offerPrice = offers[product] && offers[product][qty];
@@ -26,18 +42,7 @@ export function computeOrder(pageConfig, cart, coupon) {
   }
 
   const delivery = pageConfig.DELIVERY || 0;
-
-  // عرض التنظيف الثلاثي: جل + كلور + فلاش، حبة واحدة من كل صنف = 26 شامل التوصيل.
-  const isCleaningPage = /ريفان|فاتي|كمبرلاند/i.test(String(pageConfig?.name || ""));
-  const names = Object.keys(prices);
-  const gelName = names.find(n => /جل غسيل/i.test(n));
-  const chlorineName = names.find(n => /كلور/i.test(n));
-  const flashName = names.find(n => /فلاش/i.test(n));
-  const exactBundle = isCleaningPage && gelName && chlorineName && flashName
-    && Number(cart[gelName]) === 1 && Number(cart[chlorineName]) === 1 && Number(cart[flashName]) === 1
-    && Object.entries(cart).every(([k, q]) => !q || [gelName, chlorineName, flashName].includes(k));
-  if (exactBundle) total = 26;
-  else total = round2(total + delivery);
+  total = round2(total + delivery);
 
   // 🎟️ تطبيق كود الخصم إن وُجد
   let discount = 0;
