@@ -188,7 +188,7 @@ async function _handleEvent(event, env, ctx) {
 
   if (!memory) {
     memory = {
-      cart: {}, area: null, phone: null, sent: false,
+      cart: {}, area: null, phone: null, customerName: null, sent: false,
       history: [], lastReply: "", invalidPhoneProvided: false, upsellOffered: false,
       prov: {}, sessionKey
     };
@@ -198,7 +198,7 @@ async function _handleEvent(event, env, ctx) {
   //    بدل ما نخاطر نخلط بيانات عميل بعميل.
   if (memory.sessionKey && memory.sessionKey !== sessionKey) {
     console.error(`🔴 عدم تطابق بصمة الجلسة: ${memory.sessionKey} ≠ ${sessionKey} — ذاكرة نظيفة`);
-    memory = { cart: {}, area: null, phone: null, sent: false, history: [],
+    memory = { cart: {}, area: null, phone: null, customerName: null, sent: false, history: [],
                lastReply: "", invalidPhoneProvided: false, upsellOffered: false,
                prov: {}, sessionKey };
   }
@@ -216,6 +216,14 @@ async function _handleEvent(event, env, ctx) {
   }
 
   if (!userMsg && !audioPart) return;
+
+  // 👤 التقاط اسم الزبون من الصيغ الواضحة فقط، بدون تخمين من أسماء الصفحات أو الكلمات العادية.
+  try {
+    if (userMsg && !memory.customerName) {
+      const nm = userMsg.match(/(?:^|[،,\s])(اسم(?:ي|ي هو)?|الاسم)\s*[:：-]?\s*([\u0600-\u06FF]{2,}(?:\s+[\u0600-\u06FF]{2,}){0,2})$/i);
+      if (nm && nm[2]) memory.customerName = nm[2].trim();
+    }
+  } catch {}
 
   // 💬 حفظ رسالة الزبون في أرشيف الدردشات
   logMessage({
@@ -550,7 +558,9 @@ async function _handleEvent(event, env, ctx) {
   // بعدها بيكمّل مع الذكاء الاصطناعي عادي — ما بنسكت ولا بنعلّق الطلب.
   if (cartItemsCount > 0 && memory.phone && addrUnknown
       && memory.addressQuestion && !memory._addrAsked && !memory.sent) {
-    const ask = `تمام 👌 ضلّ إشي واحد بس عشان يوصلك الطلب صح:\n${memory.addressQuestion}`;
+    const ask = memory.customerName
+      ? `تمام 👌 وصلني الرقم والمنطقة. ضلّ بس تفاصيل العنوان، مثل أقرب معلم أو الشارع.`
+      : `تمام 👌 وصلني الرقم والمنطقة. ضلّ الاسم وتفاصيل العنوان، مثل أقرب معلم أو الشارع.`;
     // 🔴 ترتيب المعاملات: sendText(pageToken, senderId, text) — لا تعكسه.
     // عكسه سابقاً كان يمرّر كائن مكان النص فترمي .trim() خطأً وينهار
     // المعالج كاملاً ⇒ الزبون ما بيوصله ولا رد والطلب بيعلق.
