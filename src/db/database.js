@@ -237,10 +237,20 @@ for (const col of [
   "ALTER TABLE orders ADD COLUMN cancel_reason TEXT DEFAULT ''",   // سبب الإلغاء (لتحليله)
   // ثقة العنوان — عشان تعرف أي فاتورة عنوانها مؤكّد وأيها يحتاج مراجعة
   "ALTER TABLE orders ADD COLUMN address_score INTEGER DEFAULT -1", // 0-100 (-1 = غير مقاس، طلبات قديمة)
-  "ALTER TABLE orders ADD COLUMN address_level TEXT DEFAULT ''"     // مؤكّد / كافٍ / ناقص / غير كافٍ
+  "ALTER TABLE orders ADD COLUMN address_level TEXT DEFAULT ''",     // مؤكّد / كافٍ / ناقص / غير كافٍ
+  "ALTER TABLE orders ADD COLUMN source_fingerprint TEXT DEFAULT ''", // منع إعادة معالجة نفس رسالة/لقطة محادثة
+  "ALTER TABLE orders ADD COLUMN updated_at INTEGER DEFAULT 0",       // آخر تحديث للطلب
+  "ALTER TABLE orders ADD COLUMN invoice_no TEXT DEFAULT ''",       // رقم فاتورة ثابت لكل طلب
+  "ALTER TABLE orders ADD COLUMN invoice_created_at INTEGER DEFAULT 0" // وقت إنشاء الفاتورة
 ]) {
   try { db.exec(col); } catch { /* العمود موجود */ }
 }
+
+// أرقام فواتير للطلبات القديمة التي أُنشئت قبل إضافة حقل الفاتورة.
+try {
+  db.prepare("UPDATE orders SET invoice_no = 'INV-' || printf('%08d', id) WHERE COALESCE(invoice_no,'') = ''").run();
+  db.prepare("UPDATE orders SET invoice_created_at = CASE WHEN COALESCE(updated_at,0) > 0 THEN updated_at ELSE created_at END WHERE COALESCE(invoice_created_at,0)=0").run();
+} catch (e) { console.error("invoice backfill:", e.message); }
 
 // ═══════════════════════════════════════════════════════════
 // 📇 فهارس الأداء
@@ -255,6 +265,8 @@ for (const idx of [
   "CREATE INDEX IF NOT EXISTS idx_orders_sender ON orders(sender_id, created_at)",
   "CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)",
   "CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status, created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_orders_source_fp ON orders(source_fingerprint)",
+  "CREATE INDEX IF NOT EXISTS idx_orders_invoice_no ON orders(invoice_no)",
   "CREATE INDEX IF NOT EXISTS idx_kv_expires ON kv(expires_at) WHERE expires_at IS NOT NULL"
 ]) {
   try { db.exec(idx); } catch (e) { console.error("فهرس:", e.message); }
@@ -355,37 +367,63 @@ export const SESSIONS_KV = {
 // دوال الأوردرات
 // ═══════════════════════════════════════════════════════════
 // نستخدم بارامترات ترتيبية (?) — الأضمن مع Turso/libsql
-const INSERT_ORDER = `INSERT INTO orders (page_id, page_name, sender_id, order_string, total, area, phone, status, messenger_url, created_at, address_score, address_level)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+const INSERT_ORDER = `INSERT INTO orders (page_id, page_name, sender_id, order_string, total, area, phone, status, messenger_url, created_at, address_score, address_level, source_fingerprint, updated_at, invoice_no, invoice_created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 export function saveOrder(o) {
-  // 🔴 حاجز الهوية على مستوى قاعدة البيانات (دفاع بالعمق، مستقل عن
-  //    الـ prompt والمنطق الأعلى): ممنوع نحفظ طلب بلا صفحة أو مرسِل،
-  //    وإذا انبعتت بصمة الجلسة لازم تطابق page_id_sender_id — وإلا
-  //    يعني بيانات تجمّعت من سياق غلط، فبنرفض الحفظ كلياً.
   const pageId = String(o.page_id || "");
   const senderId = String(o.sender_id || "");
   if (!pageId || !senderId)
     throw new Error(`saveOrder مرفوض: هوية ناقصة (page_id="${pageId}" sender_id="${senderId}")`);
   if (o.session_key && o.session_key !== `${pageId}_${senderId}`)
     throw new Error(`saveOrder مرفوض: بصمة الجلسة (${o.session_key}) لا تطابق ${pageId}_${senderId}`);
+
+  const createdAt = Number(o.created_at) || Date.now();
+  const invoiceCreatedAt = Number(o.invoice_created_at) || createdAt;
   const info = retryDb(() => db.prepare(INSERT_ORDER).run(
-    String(o.page_id || ""),
+    pageId,
     String(o.page_name || ""),
-    String(o.sender_id || ""),
+    senderId,
     String(o.order_string || ""),
     Number(o.total) || 0,
     String(o.area || ""),
     String(o.phone || ""),
     String(o.status || "جديد"),
     String(o.messenger_url || ""),
-    Number(o.created_at) || Date.now(),
+    createdAt,
     Number.isFinite(Number(o.address_score)) ? Number(o.address_score) : -1,
-    String(o.address_level || "")
+    String(o.address_level || ""),
+    String(o.source_fingerprint || ""),
+    createdAt,
+    "",
+    invoiceCreatedAt
   ));
-  const id = Number(info.lastInsertRowid);   // تفادي BigInt عند إرجاعه كـ JSON
-  console.log(`💾 order saved #${id}: ${o.page_name} | ${o.order_string} | ${o.total}د | ${o.area} | ${o.phone}`);
+  const id = Number(info.lastInsertRowid);
+  const invoiceNo = `INV-${String(id).padStart(8, "0")}`;
+  retryDb(() => db.prepare("UPDATE orders SET invoice_no=? WHERE id=?").run(invoiceNo, id));
+  console.log(`💾 order saved #${id} invoice=${invoiceNo}: ${o.page_name} | ${o.order_string} | ${o.total}د | ${o.area} | ${o.phone}`);
   return id;
+}
+
+export function getOrderBySourceFingerprint(fingerprint) {
+  const fp = String(fingerprint || "").trim();
+  if (!fp) return null;
+  return retryDb(() => db.prepare("SELECT * FROM orders WHERE source_fingerprint = ? ORDER BY id DESC LIMIT 1").get(fp)) || null;
+}
+
+export function getLatestCustomerOrder(pageId, senderId) {
+  if (!pageId || !senderId) return null;
+  return retryDb(() => db.prepare(
+    "SELECT * FROM orders WHERE page_id=? AND sender_id=? ORDER BY created_at DESC, id DESC LIMIT 1"
+  ).get(pageId, senderId)) || null;
+}
+
+export function getLatestEditableOrderId(pageId, senderId) {
+  if (!pageId || !senderId) return null;
+  const row = retryDb(() => db.prepare(
+    "SELECT id FROM orders WHERE page_id=? AND sender_id=? AND status IN ('ناقص','جديد','تم التواصل') ORDER BY updated_at DESC, created_at DESC, id DESC LIMIT 1"
+  ).get(pageId, senderId));
+  return row ? Number(row.id) : null;
 }
 
 export function listOrders({ page_id, search, from, to, status, limit = 500, offset = 0 } = {}) {
@@ -427,9 +465,9 @@ export function getRecentOpenOrderId(pageId, senderId) {
   if (!senderId) return null;
   const since = Date.now() - 6 * 3600 * 1000;
   const row = retryDb(() => db.prepare(
-    "SELECT id FROM orders WHERE page_id=? AND sender_id=? AND status IN ('ناقص','جديد') AND created_at>=? ORDER BY created_at DESC LIMIT 1"
+    "SELECT id FROM orders WHERE page_id=? AND sender_id=? AND status IN ('ناقص','جديد') AND COALESCE(updated_at,created_at)>=? ORDER BY COALESCE(updated_at,created_at) DESC, id DESC LIMIT 1"
   ).get(pageId, senderId, since));
-  return row ? row.id : null;
+  return row ? Number(row.id) : null;
 }
 
 export function orderExists(page_id, sender_id, order_string) {
@@ -441,27 +479,31 @@ export function orderExists(page_id, sender_id, order_string) {
 
 // تحديث أوردر موجود (للتحديث اللحظي أثناء المحادثة)
 export function updateOrder(id, f) {
+  const now = Date.now();
+  const fp = String(f.source_fingerprint || "").trim();
   retryDb(() => db.prepare(
-    "UPDATE orders SET order_string = ?, total = ?, area = ?, phone = ?, status = ? WHERE id = ?"
+    "UPDATE orders SET order_string = ?, total = ?, area = ?, phone = ?, status = ?, updated_at = ?, source_fingerprint = CASE WHEN ? <> '' THEN ? ELSE source_fingerprint END WHERE id = ?"
   ).run(
     String(f.order_string || ""),
     Number(f.total) || 0,
     String(f.area || ""),
     String(f.phone || ""),
     String(f.status || "جديد"),
+    now,
+    fp, fp,
     Number(id)
   ));
 }
 
-// تعديل حقول الأوردر من اللوحة (بدون المساس بالحالة)
 export function editOrder(id, f) {
   return retryDb(() => db.prepare(
-    "UPDATE orders SET order_string = ?, total = ?, area = ?, phone = ? WHERE id = ?"
+    "UPDATE orders SET order_string = ?, total = ?, area = ?, phone = ?, updated_at = ? WHERE id = ?"
   ).run(
     String(f.order_string || ""),
     Number(f.total) || 0,
     String(f.area || ""),
     String(f.phone || ""),
+    Date.now(),
     Number(id)
   ));
 }
@@ -1155,10 +1197,15 @@ export function topProducts(limit = 20) {
 // 🎯 تخصيص للزبائن السابقين: أكثر أصنافهم طلباً (للاقتراح الذكي)
 // ═══════════════════════════════════════════════════════════
 // آخر طلب مكتمل للزبون (لإعادته بضغطة) — يرجّع الصف أو null
-export function lastCompletedOrder(senderId) {
+export function lastCompletedOrder(senderId, pageId = null) {
   if (!senderId) return null;
+  if (pageId) {
+    return retryDb(() => db.prepare(
+      "SELECT * FROM orders WHERE sender_id = ? AND page_id = ? AND status != 'ملغي' AND status != 'ناقص' ORDER BY created_at DESC, id DESC LIMIT 1"
+    ).get(senderId, pageId)) || null;
+  }
   return retryDb(() => db.prepare(
-    "SELECT * FROM orders WHERE sender_id = ? AND status != 'ملغي' AND status != 'ناقص' ORDER BY created_at DESC LIMIT 1"
+    "SELECT * FROM orders WHERE sender_id = ? AND status != 'ملغي' AND status != 'ناقص' ORDER BY created_at DESC, id DESC LIMIT 1"
   ).get(senderId)) || null;
 }
 
