@@ -67,7 +67,10 @@ function normalizePhone(raw) {
 }
 
 export async function extractOrderWithAI(conversationText, pageConfig) {
-  const allowed = Object.keys(pageConfig.PRICES || {});
+  const allowed = Array.from(new Set([
+    ...Object.keys(pageConfig.PRICES || {}),
+    ...Object.values(pageConfig.OFFER_BUNDLES || {}).flatMap(b => Object.keys(b.items || {}))
+  ]));
   if (!conversationText || !conversationText.trim() || !allowed.length) {
     return { ok: false, is_order: false, items: [], area: "", phone: "" };
   }
@@ -96,6 +99,7 @@ ${ADDRESS_EXPERT}
 - إذا الكمية غير واضحة أو مبهمة، اجعل الكمية 1 (لا تضاعفها من عندك أبداً).
 - لو ما في نية طلب واضحة (مجرد سؤال/سلام) اجعل is_order=false و items فارغة.
 - طابق اسم الصنف مع القائمة المتاحة (مثلاً "بلدية"→"غنم" إن لم يوجد "بلدية").
+- 🔥 إذا قال الزبون "العرض" أو "العرض الثلاثي" أو ذكر اسم عرض الصفحة، وكان في pageConfig.OFFER_BUNDLES عرض ثلاثي، استخرج كل أصناف العرض الموجودة في OFFER_BUNDLES مع كمياتها حرفياً، ولا تستخرج صنفاً واحداً فقط من العرض. في ريفان وفاتي وكمبرلاند العرض هو: جل الغسيل ×1 + كلور مركز ×1 + فلاش ×1.
 
 المحادثة:
 ${conversationText.slice(0, 6000)}`;
