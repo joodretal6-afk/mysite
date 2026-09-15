@@ -45,6 +45,24 @@ function chosenProvider() {
 
 // نقطة الدخول الموحّدة (نفس توقيع askGemini)
 export async function askAI(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge = "") {
+  // 🧼 إجابات حتمية لمنتجات التنظيف الحساسة: لا نترك نموذج الذكاء ينكر
+  // وجود الكلور أو الفلاش بسبب تعارض/هلوسة في البرومبت.
+  // هذا المسار يخص ريفان وفاتي وكمبرلاند فقط، وللسؤال المباشر عن المنتج.
+  const pageName = String(pageConfig?.name || "");
+  const msg = String(userMsg || "").trim();
+  if (/ريفان|فاتي|كمبرلاند/i.test(pageName) && msg) {
+    if (/كلور/i.test(msg) && !/عرض|باقة|جل|فلاش/i.test(msg)) {
+      const price = Number(pageConfig?.PRICES?.كلور ?? 7);
+      return `نعم، الكلور المركز متوفر 20 لتر بـ${price} دنانير + 2 دينار توصيل.`;
+    }
+    if (/(?:فلاش|مزيل\s*(?:التكلس|الكلس))/i.test(msg) && !/عرض|باقة|جل|كلور/i.test(msg)) {
+      const price = Number(pageConfig?.PRICES?.فلاش ?? 7);
+      return `نعم، فلاش مزيل التكلس متوفر 20 لتر بـ${price} دنانير + 2 دينار توصيل.`;
+    }
+    if (/(?:العرض|الباقة|الثلاثي)/i.test(msg)) {
+      return `العرض: جالون جل غسيل + جالون كلور + جالون فلاش، كل واحد 20 لتر، بـ26 دينار شامل التوصيل.`;
+    }
+  }
   if (chosenProvider() === "openai") {
     return askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
   }
@@ -75,9 +93,6 @@ export async function extractOrderWithAI(conversationText, pageConfig) {
   const prompt =
 `أنت محلّل طلبات دقيق لمتجر أردني (${pageConfig.name}). استخرج الطلب من محادثة الزبون التالية.
 الأصناف المتاحة في هذه الصفحة فقط (لا تخترع غيرها): ${allowed.join(" ، ")}.
-العروض المركبة المتاحة: ${Object.entries(pageConfig.OFFERS || {}).map(([n,o]) => `${n}: ${Object.entries(o.items || {}).map(([p,q]) => `${p} × ${q}`).join(" + ")} = ${o.price}د قبل التوصيل`).join(" | ") || "لا يوجد عرض"}.
-🔴 إذا ذكر الزبون "العرض" أو "الباقة" وكان لهذه الصفحة عرض، استخرج جميع أصناف العرض بالكميات المطلوبة.
-🔴 إذا طلب الزبون جل أو كلور أو فلاش منفرداً، استخرج الصنف المنفرد ولا تفترض العرض.
 
 ${ADDRESS_EXPERT}
 
@@ -210,38 +225,36 @@ async function askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmDat
   }
   messages.push({ role: "user", content: finalUser || "..." });
 
-  // نجرب الطلب مرتين عند فشل الشبكة/المزوّد أو رجوع رد فارغ. هذا يمنع سكوت البوت
-  // بسبب عطل عابر، بدون تكرار أي رسالة للزبون لأن هذه مجرد طلبات توليد داخلية.
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const model = oaiModel();
-      const body = await oaiBody({ model, prompt: "", json: false, temperature: 0.2, maxTokens: 400 });
-      body.messages = messages;
+  try {
+    // مسار الرد على الزبون: نفس معالجة نماذج التفكير، بس هون
+    // المحادثة متعددة الرسائل فمنبني الجسم ومنستبدل الرسائل.
+    const model = oaiModel();
+    const body = await oaiBody({ model, prompt: "", json: false, temperature: 0.2, maxTokens: 400 });
+    body.messages = messages;
 
-      const resp = await fetch(`${oaiBase()}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${oaiKey()}`
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
-      });
+    const resp = await fetch(`${oaiBase()}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${oaiKey()}`
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
+    });
 
-      if (!resp.ok) {
-        const errText = await resp.text();
-        console.error(`OpenAI error (attempt ${attempt}):`, resp.status, errText);
-        if (attempt < 2) continue;
-        return null;
-      }
-      const data = await resp.json();
-      const text = (data?.choices?.[0]?.message?.content || "").replace(/\*\*/g, "").trim();
-      if (text) return text;
-      console.warn(`OpenAI returned empty response (attempt ${attempt})`);
-    } catch (e) {
-      console.error(`OpenAI failed (attempt ${attempt}):`, e && e.message);
-      if (attempt >= 2) return null;
+    if (!resp.ok) {
+      console.error("OpenAI error:", resp.status, await resp.text());
+      // 🔴 ما منبعت رسالة تعبئة لمّا الذكاء يفشل.
+      //    "أبشر كمّل طلبك" بتوهم الزبون إنّ في حدا فاهمه، فبيكمّل
+      //    كلام ما حدا بيقراه، وبيروح الطلب. السكوت أصدق: الزبون
+      //    بيعيد أو بيتصل، وإنت بتشوف المحادثة بالوارد.
+      return null;
     }
+    const data = await resp.json();
+    const text = (data?.choices?.[0]?.message?.content || "").replace(/\*\*/g, "").trim();
+    return text || null;   // رد فاضي = سكوت كمان
+  } catch (e) {
+    console.error("OpenAI failed:", e && e.message);
+    return null;   // 🔴 فشل الذكاء = سكوت، مش رسالة تعبئة
   }
-  return null;
 }
