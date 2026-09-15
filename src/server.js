@@ -461,6 +461,10 @@ async function captureEcho(pageId, event) {
     if (!senderId || !text) return;
     archiveExternal({ pageId, pageName: page.name, senderId,
                       direction: "out", body: text, source: "🤖 رد خارجي:" });
+    // إذا كان الرد صادرًا عن ذكاء ميتا/موظف/تطبيق آخر في قناة messaging الأساسية،
+    // جدولة استخراج الطلب أيضًا. النسخة القديمة كانت تحفظ الـecho فقط بدون جدولة،
+    // فكان الطلب يختفي من الموقع إذا لم يصل الحدث عبر standby.
+    scheduleCapture(pageId, senderId, page, "رد خارجي");
   } catch (e) { console.error("captureEcho:", e && e.message); }
 }
 
