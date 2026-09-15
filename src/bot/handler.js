@@ -12,7 +12,7 @@ import { attributeReorder } from "../features/whatsapp.js";
 import { validateOrder, recordSource, sessionFingerprint } from "./validate.js";
 import { inboxUrl } from "../brain/links.js";
 import { askAI, extractOrderWithAI } from "./ai.js";
-import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, getRecentOpenOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting, lastCompletedOrder, setCancelReason, db, retryDb } from "../db/database.js";
+import { saveOrder, updateOrder, updateOrderStatus, getKnowledge, logMessage, customerCompletedCount, customerCompletedCountBySender, addReview, getActiveAddons, getRecentOpenOrderId, getLatestEditableOrderId, getActiveCouponsList, incrementCouponUse, flagHandoff, isBotPaused, customerHistoryHint, isBlocked, priceOverrideMap, getSetting, lastCompletedOrder, setCancelReason, db, retryDb } from "../db/database.js";
 
 // إلغاء صريح للطلب (منفصل عن "تعديل/تغيير الرأي")
 const CANCEL_INTENT = /(الغي الطلب|ألغي الطلب|الغاء الطلب|إلغاء الطلب|بطّل الطلب|بطل الطلب|ما بدي الطلب|ما عاد بدي|ما بديش|كنسل|cancel|لا تبعت|لا ترسل|ما بدي اكمل|ما بدي أكمل)/i;
@@ -20,12 +20,13 @@ const CANCEL_INTENT = /(الغي الطلب|ألغي الطلب|الغاء ال�
 // إعادة الطلب السابق بضغطة
 const REPEAT_INTENT = /(نفس الطلب|الطلب السابق|زي المرة|زي كل مرة|عيد طلبي|أعد طلبي|اعد طلبي|نفس اللي طلبت|نفس السابق|كرر الطلب|كرر طلبي|نفس الطلبية|الطلب الي فات|اللي فات|نفس طلبي)/i;
 
+// تعديل الطلب الحالي بعد صدور الفاتورة: نحدّث نفس الصف والفاتورة.
+const EDIT_ORDER_INTENT = /(عدّل|عدل|تعديل|غيّر|غير|بدّل|بدل|زيد|زِد|زود|زوّد|أضف|اضف|احذف|شيل|شيللي|بدي.*كمان|بدّي.*كمان|كمان|زيادة|بدون|ناقص)/i;
+// طلب جديد صريح بعد فاتورة سابقة: ننشئ طلبًا وفاتورةً جديدين.
+const NEW_ORDER_INTENT = /(طلب جديد|طلب ثاني|طلب تاني|طلب اخر|طلب آخر|فاتورة جديدة)/i;
+
 // كشف تاجر الجملة
 const WHOLESALE_INTENT = /(جملة|بالجملة|تاجر|كرتون|كرتونة|كراتين|محل|بقالة|بقالية|سوبر ?ماركت|سوبرماركت|كمية كبيرة|كميات كبيرة|بسعر الجملة|عرض جملة)/i;
-
-// نعتبر الرسالة نية شراء فقط عند وجود صيغة طلب واضحة أو موافقة على الطلب؛
-// مجرد سؤال عن السعر/التوفر لا ينشئ فاتورة تلقائياً.
-const PURCHASE_INTENT = /(?:بدي|بدّي|اريد|أريد|بديش|هات|اعطيني|أعطيني|خذلي|حطلي|اطلب|أطلب|اطلبي|احجز|بحجز|بدي اطلب|بدي أطلب|تمام بطلب|تمام بدي|(?:واحد|وحدة)(?:\s+من)?|اثنين|ثنتين|تنتين|الثلاثة|العرض|البكج|الباقة|كلهم|موافق|ماشي|تمام|خلص|ثبت|ثبّت|كمّل|كمل|كملنا|نعم|اه|آه)/i;
 
 // هل ذكر الزبون هذا الصنف الإضافي؟ (بالاسم الكامل أو أول كلمة مميّزة منه)
 function addonMentioned(text, addonName) {
@@ -339,31 +340,50 @@ async function _handleEvent(event, env, ctx) {
     return;
   }
 
-  // 🔴 تغيير الرأي: بيفرّغ السلة وبيسمح بفاتورة جديدة حتى بعد ما تطلع فاتورة
+  // 🔴 تغيير الرأي صريحاً = طلب جديد مستقل.
   if (RESET_INTENT.test(userMsg)) {
     memory.cart = {};
     memory.sent = false;
+    memory.orderId = null;
+    memory._repeated = false;
+    memory._newOrder = true;
   }
 
-  // 🛒 إضافة صنف إضافي بعد الفاتورة: لو الزبون طلب صنف إضافي بعد ما طلعت الفاتورة،
-  // نعيد فتح الطلب (بدون مسح السلة) ليُحدَّث ويُصدَّر من جديد شامل الإضافة.
-  if (memory.sent && activeAddons.some(a => addonMentioned(userMsg, a.name))) {
-    memory.sent = false;
-  }
-
-  // 🔁 إعادة الطلب السابق بضغطة: نعبّي السلة والعنوان والرقم من آخر طلب مكتمل
-  if (REPEAT_INTENT.test(userMsg) && !memory.sent) {
+  // 🔁 إعادة الطلب = دائماً فاتورة/طلب جديد، حتى لو نفس المنتجات بالضبط.
+  if (REPEAT_INTENT.test(userMsg)) {
     try {
-      const last = lastCompletedOrder(senderId);
+      const last = lastCompletedOrder(senderId, recipientId);
       if (last && last.order_string) {
         memory.cart = parseOrderStringToCart(last.order_string);
         if (!memory.phone) memory.phone = last.phone || "";
-        // 🔴 حتى بإعادة الطلب: ما منعبّي العنوان القديم لحالنا. منعيد
-        //    الأصناف بس، والعنوان بيسأل عنه الزبون من جديد — بلكي الطلب
-        //    لمكان ثاني. ما منفترض إنه نفس العنوان.
-        memory._repeated = true;   // نتخطى استخراج الذكاء هالدور حتى ما يمسح السلة
+        memory.orderId = null;
+        memory.sent = false;
+        memory._repeated = true;
+        memory._newOrder = true;
+        memory.area = null;
+        memory.addr = null;
+        memory.addressReady = false;
+        memory.addressQuestion = null;
       }
     } catch (e) { console.error("repeat order:", e && e.message); }
+  }
+
+  // 🛒 تعديل بعد الفاتورة: نفس orderId، حتى ينعكس التعديل مباشرة على الموقع والفاتورة.
+  if (memory.sent && (EDIT_ORDER_INTENT.test(userMsg) || activeAddons.some(a => addonMentioned(userMsg, a.name)))) {
+    memory.sent = false;
+    if (!memory.orderId) {
+      try { memory.orderId = getLatestEditableOrderId(recipientId, senderId); } catch {}
+    }
+    memory._editingExisting = !!memory.orderId;
+  }
+
+  // 🆕 طلب جديد صريح بعد فاتورة سابقة.
+  if (memory.sent && NEW_ORDER_INTENT.test(userMsg)) {
+    memory.sent = false;
+    memory.orderId = null;
+    memory.cart = {};
+    memory._newOrder = true;
+    memory._editingExisting = false;
   }
 
   // 🙋 كشف حاجة الزبون لتدخّل بشري (غضب / يطلب موظف) → تنبيه فوري + تعليق البوت + رسالة طمأنة
@@ -407,7 +427,6 @@ async function _handleEvent(event, env, ctx) {
       if (ai.ok) {
         // نستبدل السلة فقط لو الذكاء لقى طلباً فعلياً (حتى لا نمسح سلة سابقة برسالة سؤال/سلام)
         if (ai.is_order && ai.items.length) {
-          memory.purchaseIntent = true;
           memory.cart = {};
           ai.items.forEach(it => { memory.cart[it.product] = it.qty; });
           // 🧾 مصدر الطلب: الذكاء استخرجه من رسائل الزبون بهالجلسة. بدون
@@ -466,7 +485,7 @@ async function _handleEvent(event, env, ctx) {
   try {
     const cartHasItems = memory.cart && Object.keys(memory.cart).length > 0;
     if (cartHasItems && !memory.phone) {
-      const last = lastCompletedOrder(senderId);
+      const last = lastCompletedOrder(senderId, recipientId);
       memory.phone = (last && last.phone) || (crmData && crmData.phone) || memory.phone;
     }
   } catch (e) { console.error("saved phone:", e && e.message); }
@@ -520,11 +539,6 @@ async function _handleEvent(event, env, ctx) {
     } catch (e) { console.error("address gate:", e && e.message); }
   }
 
-  // نثبت نية الشراء على مستوى الجلسة؛ سؤال السعر/المتوفر وحده لا يكفي لإنشاء طلب،
-  // بينما أي استخراج AI كطلب فعلي أو صيغة شراء واضحة يفعّلها.
-  if (!memory.purchaseIntent && (PURCHASE_INTENT.test(userMsg) || /^(?:نعم|اه|آه|تمام|ماشي|خلص|ثبت)/i.test(userMsg.trim()))) {
-    memory.purchaseIntent = true;
-  }
   const cartItemsCount = memory.cart ? Object.keys(memory.cart).length : 0;
 
   // ═══════════════════════════════════════════════════════════
@@ -553,15 +567,13 @@ async function _handleEvent(event, env, ctx) {
   if (check.reasons.length)
     console.log(`🧾 تحقق الطلب [${sessionKey}]: ${check.complete ? "مكتمل" : "ناقص → " + check.missing.join(",")} | ${check.reasons.join(" · ")}`);
   const complete = check.complete && !check.blocked;
-  // 🧾 فاتورة لكل طلب مؤكَّد: لا ننتظر اكتمال العنوان/الهاتف.
-  // الطلب الناقص يُسجَّل بحالة "ناقص" وتصدر له فاتورة مباشرة، ثم تُحدّث لاحقاً.
-  const readyForInvoice = cartItemsCount > 0 && !!memory.purchaseIntent && !memory.sent;
+  const readyForInvoice = complete && !memory.sent;
   const needsAddressReview = complete && addrCoarse;
 
   // معه صنف ورقم، بس ما بنعرف وين ⇒ سؤال واحد محدّد، مرة وحدة بس.
   // بعدها بيكمّل مع الذكاء الاصطناعي عادي — ما بنسكت ولا بنعلّق الطلب.
-  if (cartItemsCount > 0 && memory.purchaseIntent && memory.phone && addrUnknown
-      && memory.addressQuestion && !memory._addrAsked && memory.sent) {
+  if (cartItemsCount > 0 && memory.phone && addrUnknown
+      && memory.addressQuestion && !memory._addrAsked && !memory.sent) {
     const ask = `تمام 👌 ضلّ إشي واحد بس عشان يوصلك الطلب صح:\n${memory.addressQuestion}`;
     // 🔴 ترتيب المعاملات: sendText(pageToken, senderId, text) — لا تعكسه.
     // عكسه سابقاً كان يمرّر كائن مكان النص فترمي .trim() خطأً وينهار
@@ -597,15 +609,14 @@ async function _handleEvent(event, env, ctx) {
   }
 
   // 🟢 وصول فوري للسستم: أي أوردر فيه أصناف + (عنوان أو رقم) ينزل باللوحة مباشرة
-  // 🧾 نصدر الطلب للموقع بمجرد ثبوت نية الشراء ووجود سلة، حتى لو بيانات الاتصال ناقصة.
-  // status="ناقص" يوضح للموظف ما يحتاج استكماله بدل إسقاط الطلب بالكامل.
-  const hasIntent = cartItemsCount > 0 && !!memory.purchaseIntent;
+  const hasIntent = cartItemsCount > 0 && (memory.area || memory.phone);
   if (hasIntent) {
     try {
       const { total, orderString } = computeOrder(effConfig, memory.cart, memory.coupon);
       const status = complete ? "جديد" : "ناقص";
-      // منع التكرار: لو ضاع orderId (انتهت الجلسة) استرجع الأوردر المفتوح لنفس الزبون
-      if (!memory.orderId) memory.orderId = getRecentOpenOrderId(recipientId, senderId);
+      // الطلب الجديد/المكرر الصريح لا يعيد استخدام طلب سابق.
+      // التعديل فقط يحافظ على orderId لتحديث نفس الطلب.
+      if (!memory.orderId && !memory._newOrder) memory.orderId = getRecentOpenOrderId(recipientId, senderId);
       if (memory.orderId) {
         updateOrder(memory.orderId, {
           order_string: orderString, total,
@@ -629,6 +640,8 @@ async function _handleEvent(event, env, ctx) {
       } catch {}
       // 📲 ربط إعادة الشراء: لو هالزبون كان مستهدَف بحملة واتساب حديثة
       try { if (memory.phone) attributeReorder({ page_id: recipientId, phone: memory.phone, order_id: memory.orderId, total }); } catch {}
+      memory._newOrder = false;
+      memory._editingExisting = false;
     } catch (e) {
       console.error("🔴 live upsert FAILED:", e && e.message, e && e.stack);
     }
@@ -640,9 +653,7 @@ async function _handleEvent(event, env, ctx) {
   // 🔴 إصدار الفاتورة للزبون عند اكتمال الطلب (مرة واحدة)
   if (readyForInvoice) {
     const { total, orderString, detailedString, priceString } = computeOrder(effConfig, memory.cart, memory.coupon);
-    const invoiceArea = memory.area || "سيتم استكمال العنوان";
-    const invoicePhone = memory.phone || "سيتم استكمال رقم الهاتف";
-    reply = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, invoiceArea, invoicePhone);
+    reply = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, memory.area, memory.phone);
     // العنوان خشن: منطلب المعلم **مع** الفاتورة مش بدالها.
     // الطلب بيمشي، والزبون بيقدر يزوّدنا بلا ما يستنى ولا يضيع.
     if (needsAddressReview)
