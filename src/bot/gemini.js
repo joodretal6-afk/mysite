@@ -17,6 +17,7 @@ export function buildNextTask(memory) {
   if (cartItemsCount > 0) known.push("الطلب: " + Object.entries(memory.cart).map(([p, q]) => p + " ×" + q).join("، "));
   if (memory.area) known.push("العنوان: " + memory.area);
   if (memory.phone) known.push("الرقم: " + memory.phone);
+  if (memory.customerName) known.push("الاسم: " + memory.customerName);
   if (known.length) ctx += "✅ معلومات مؤكدة محفوظة (لا تسأل عنها مرة أخرى أبداً): " + known.join(" | ") + "\n";
 
   if (memory.invalidPhoneProvided) {
@@ -33,6 +34,9 @@ export function buildNextTask(memory) {
   }
   if (!memory.phone) {
     return ctx + "الآن: 🔴 اطلب رقم الهاتف فوراً وبشكل حازم. (ممنوع تأكيد الطلب أو طباعة فاتورة قبل أخذ الرقم!)";
+  }
+  if (!memory.customerName) {
+    return ctx + "الآن: اطلب الاسم فقط، ولا تطلب رقم الهاتف أو المنطقة أو العنوان مرة أخرى لأنها محفوظة.";
   }
   return ctx;
 }
