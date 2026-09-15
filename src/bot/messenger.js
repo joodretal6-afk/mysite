@@ -6,20 +6,22 @@ import { bufferToBase64 } from "./utils.js";
 
 export async function graphSend(pageToken, payload) {
   if (!pageToken) return false;
-  try {
-    const res = await fetch(
-      `https://graph.facebook.com/${CONFIG.GRAPH_VERSION}/me/messages?access_token=${pageToken}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
-    );
-    if (!res.ok) {
-      console.error("Graph error:", res.status, await res.text());
-      return false;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(
+        `https://graph.facebook.com/${CONFIG.GRAPH_VERSION}/me/messages?access_token=${pageToken}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
+      );
+      if (res.ok) return true;
+      const err = await res.text();
+      console.error(`Graph error (attempt ${attempt}):`, res.status, err);
+      if (res.status < 500 || attempt >= 2) return false;
+    } catch (e) {
+      console.error(`Graph fetch failed (attempt ${attempt}):`, e && e.message);
+      if (attempt >= 2) return false;
     }
-    return true;
-  } catch (e) {
-    console.error("Graph fetch failed:", e && e.message);
-    return false;
   }
+  return false;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -51,18 +53,11 @@ export async function sendText(pageToken, senderId, text) {
     console.warn("🛑 إرسال استباقي مرفوض (خارج نافذة الرد) — لم تُرسل أي رسالة للزبون.");
     return;   // 🔒 لا إرسال إطلاقاً خارج نافذة الرد
   }
-  const payload = {
+  await graphSend(pageToken, {
     recipient: { id: senderId },
-    messaging_type: "RESPONSE",
+    messaging_type: "RESPONSE",   // رد داخل نافذة 24 ساعة فقط
     message: { text: text.slice(0, 1900) }
-  };
-  // إعادة محاولة واحدة عند فشل فيسبوك المؤقت حتى ما تضيع رسالة صحيحة.
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    const ok = await graphSend(pageToken, payload);
-    if (ok) return true;
-    if (attempt === 1) await new Promise(r => setTimeout(r, 700));
-  }
-  return false;
+  });
 }
 
 export async function sendTyping(pageToken, senderId) {
