@@ -14,6 +14,11 @@ export function computeOrder(pageConfig, cart, coupon) {
   const lines = [];        // مختصر (للجدول والتخزين)
   const detailed = [];     // مفصّل بالأسعار (للفاتورة)
 
+  // قاعدة الطلبات المتعددة: مهما كان عدد الأصناف/الأحجام في الطلب العادي،
+  // تُحسب أسعارها كلها أولاً، ثم تُضاف رسوم التوصيل مرة واحدة فقط على كامل الطلب.
+  // العرض المعلن الذي يتضمن التوصيل هو الاستثناء الوحيد.
+
+
   // عروض الحزمة: إذا كانت السلة تطابق جميع مكونات عرض، نستخدم سعر العرض مرة واحدة.
   // أي مكونات زائدة تُحسب بأسعارها العادية.
   const bundles = Array.isArray(pageConfig.BUNDLE_OFFERS) ? pageConfig.BUNDLE_OFFERS : [];
@@ -45,7 +50,9 @@ export function computeOrder(pageConfig, cart, coupon) {
     const products = Array.isArray(b.products) ? b.products : [];
     return !!b.includesDelivery && products.length && products.every(prod => used.has(prod));
   });
-  const delivery = bundleIncludesDelivery ? 0 : (pageConfig.DELIVERY || 0);
+
+  // توصيل واحد فقط على كامل الطلب العادي، وليس لكل سطر أو لكل منتج.
+  const delivery = bundleIncludesDelivery ? 0 : Number(pageConfig.DELIVERY || 0);
   total = round2(total + delivery);
 
   // 🎟️ تطبيق كود الخصم إن وُجد
