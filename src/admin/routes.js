@@ -447,7 +447,7 @@ adminRouter.get("/api/ai/status", requireAuth, async (req, res) => {
 adminRouter.get("/api/capture", requireAuth, (req, res) => {
   try {
     res.json({
-      enabled: String(getSetting("capture_external") || "") === "on",
+      enabled: String(getSetting("capture_external") || "off") !== "off",
       handover: String(getSetting("handover_meta") || "") === "on",
       delay_min: Number(getSetting("capture_delay_min")) || 3
     });
