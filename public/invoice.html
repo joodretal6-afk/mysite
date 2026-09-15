@@ -60,7 +60,7 @@
       }
       const rows = items.map(it=>`<tr><td>${esc(it)}</td></tr>`).join('') || '<tr><td>—</td></tr>';
       document.getElementById('inv').innerHTML = `
-        <div class="head"><div class="logo">🧀</div><h1>${esc(o.page_name)}</h1><div class="sub">فاتورة رقم #${o.id}</div></div>
+        <div class="head"><div class="logo">🧀</div><h1>${esc(o.page_name)}</h1><div class="sub">فاتورة رقم ${esc(o.invoice_no || ('INV-' + String(o.id).padStart(8,'0')))}</div></div>
         <div class="meta"><span>التاريخ: ${new Date(o.created_at).toLocaleString('ar-EG')}</span><span>الحالة: ${esc(o.status)}</span></div>
         <table class="rows"><thead><tr><th>تفاصيل الطلب</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="info">
