@@ -5,15 +5,20 @@ import { CONFIG } from "../config.js";
 import { bufferToBase64 } from "./utils.js";
 
 export async function graphSend(pageToken, payload) {
-  if (!pageToken) return;
+  if (!pageToken) return false;
   try {
     const res = await fetch(
       `https://graph.facebook.com/${CONFIG.GRAPH_VERSION}/me/messages?access_token=${pageToken}`,
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
     );
-    if (!res.ok) console.error("Graph error:", res.status, await res.text());
+    if (!res.ok) {
+      console.error("Graph error:", res.status, await res.text());
+      return false;
+    }
+    return true;
   } catch (e) {
     console.error("Graph fetch failed:", e && e.message);
+    return false;
   }
 }
 
@@ -46,11 +51,18 @@ export async function sendText(pageToken, senderId, text) {
     console.warn("🛑 إرسال استباقي مرفوض (خارج نافذة الرد) — لم تُرسل أي رسالة للزبون.");
     return;   // 🔒 لا إرسال إطلاقاً خارج نافذة الرد
   }
-  await graphSend(pageToken, {
+  const payload = {
     recipient: { id: senderId },
-    messaging_type: "RESPONSE",   // رد داخل نافذة 24 ساعة فقط
+    messaging_type: "RESPONSE",
     message: { text: text.slice(0, 1900) }
-  });
+  };
+  // إعادة محاولة واحدة عند فشل فيسبوك المؤقت حتى ما تضيع رسالة صحيحة.
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const ok = await graphSend(pageToken, payload);
+    if (ok) return true;
+    if (attempt === 1) await new Promise(r => setTimeout(r, 700));
+  }
+  return false;
 }
 
 export async function sendTyping(pageToken, senderId) {
