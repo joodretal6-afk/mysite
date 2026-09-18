@@ -210,7 +210,7 @@ export const PAGES = {
 
   "907535882452054": {
     name: "اجبان المعتمد",
-    PAGE_TOKEN: "EAARu8DdiVZAwBSHnSCh10a9vKSRBZCeWRmUv3iKMnteYdZC29i8BvkU05GfZC4JmILDe0veBAKkpHZBoWZAbARuw2DInPfLmZCozGlsdKvZBZBaiCqlLW6oC7hoV6umjxv6eYPVRtJKrbZBJzRjc4Do3lLszIFxspiZBYNUZCZCZCoZBj9JcHSHs67mkcajRuIWR0IhD7QxHCMCmAhrZBAZDZD",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSm0arYaSdRCIKJj0ogY5fpvz4GyjIZAev28L6agSXW0Lj2M7rZA1IdtGb1is6AUPIdLCiMMDB46p58FZC5eHbyQIQM95q9OB3vqTtTz5Yeh9gyZBsAIhzFtNk8my5EY6sKkyYSThwjUA01NFlcvuvnrrYZCEuffDeF8SDufXqOumBAYFwLRjechkXB7HwOQZDZD",
     DELIVERY: 0,
     DEFAULT_UNIT: "نصية",
     PRICES: { "غنم": 15, "شخل": 17, "ماعز": 20 },
@@ -223,7 +223,7 @@ export const PAGES = {
 
   "1271513032713402": {
     name: "منتجات أم نزار",
-    PAGE_TOKEN: "EAARu8DdiVZAwBSKECVe5fpZABp6hWGlxOcu4CrU4GcnjAqKwhhPxzSZBqZCCZAhpwxn0z5Qet40lUzUBoSZCDindog6t9O1OnWtiSYM2ccDy9tPNzJncZB1F45gdDgxkOP6YgLCmEYfXbTSLi54mvY0ZAa52ctBkjMxsEEMBbj3O3dO5ab4KNQrQ3qKIk7cpBMFXyLQFxZBhwcAZDZD",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSpFIqzZAHkEQQjkZCT1ZB2pLO2GhjPrx0mwv2tS48cSDH0ZCY9NtJHVEZCdJOZANt0FpVVkKym2DPZBFEAjLGdjJbHIM2oo8xlg0kEFolPIZBWZAqxOKhPrL4km4TImFZBa2EXNaReyj4ySUtZAWvmzuSZAlwQoL9OSwHykbQzhCuUNCsH1p0fhyOW8DdPjL3ra6awZDZD",
     DELIVERY: 0,
     DEFAULT_UNIT: "نصية",
     PRICES: { "غنم": 17, "مشمولة": 19, "نعاج": 17, "سمار": 20, "كيلو غنم": 4.25 },
@@ -263,7 +263,7 @@ export const PAGES = {
   // 🧼 صفحة مواد التنظيف (ريفان) — معرفة خاصة (SYSTEM) مستقلة عن الجبنة
   "618622274665182": {
     name: "ريفان لمواد التنظيف",
-    PAGE_TOKEN: "EAARu8DdiVZAwBSPty0EYjFgeppa6vmi8pqzixG0x4vNYcR0FC6Qc2iRZBIcQTNNcIh8NBFy5P7IpJw3fKXtnltUHpCTrZCpv13MZC5gPUcl70khGUZCkZAcfFywvy5RmcaoRZCzFfwJSpO6OeSH8WR6N8MHd42TOK9uKZBOyVjCbSqZCXVStXHeyHUej5vcsM85j0ZBdPt90VQiQZDZD",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSnWZAtTncxIaZAZA99ZBZAiONZAtCWeApA2v7y5cjTvJhj0Ug7qlhwOzOUbzIkynodyJDMRFgW8ukO6P7wZCpX0TOzOhZBe9tlKnToyHeZBPEpqPk4KtFS8ZCJji05ZBMrvPfSplIPUNjcheLlSnIsP3YsNIzZCLijuo4itw3Ol1RYdFGAjnaWDsafv8fgmc7OIjHQZDZD",
     DELIVERY: 2,
     DEFAULT_UNIT: "عبوة",
     PRICES: {
@@ -535,7 +535,7 @@ PAGES["514074765127663"] = rebrandPage(PAGES["618622274665182"], "ريفان", "
 // ═══════════════════════════════════════════════════════════
 PAGES["1229773096895942"] = {
   name: "كمبرلاند",
-  PAGE_TOKEN: "EAARu8DdiVZAwBSUj3Sig0ZBZC0pOHoCuS9wnz8SScUJl51hfLtmO6YsFWidisbE2VjR6xPPB0omhf2pPTFiZAxEQROqrsaisuFaqFPqeo4CvZBKo7Bn1vuTAKwV2rAvOxpjvwTpg7G74swW3e5XrQMXUP8lvIw3YOpB8rbpgxatdtRWQX7ZCxVjlONUeY1Kb75TcGZBuAZDZD",
+  PAGE_TOKEN: "EAARu8DdiVZAwBSk8uuuiabwsMMvZATlj7FXtJMn30WQ2lr0TCEKvtcMGVieNVxh4VigkWzNM7vAYOttUkauhVZC71m7JV9gP9MyZA1gRCrntDBdncZAqazzh5fJ1rAZCUjqmNCGzBqKjCPCFKtsfz4WSdX4oEp51alZAmcj0HuiRLiOkwt1QWpDLsEB346zi5pDqTPSLtmkRAZDZD",
   DELIVERY: 2,
   DEFAULT_UNIT: "عبوة",
   PRICES: {
