@@ -679,7 +679,7 @@ export const PAGES = {
     TONE: "friendly",
 
     PAGE_TOKEN:
-      "EAARu8DdiVZAwBSnWZAtTncxIaZAZA99ZBZAiONZAtCWeApA2v7y5cjTvJhj0Ug7qlhwOzOUbzIkynodyJDMRFgW8ukO6P7wZCpX0TOzOhZBe9tlKnToyHeZBPEpqPk4KtFS8ZCJji05ZBMrvPfSplIPUNjcheLlSnIsP3YsNIzZCLijuo4itw3Ol1RYdFGAjnaWDsafv8fgmc7OIjHQZDZD",
+      "",
 
     DELIVERY: 2,
     DEFAULT_UNIT: "عبوة",
