@@ -120,7 +120,7 @@ export const SALES_BEHAVIOR = `
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 const EASTERN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 
-export const BOT_VERSION = "2026-PRO-6.3-RIVAN-MULTI-PRODUCT-INVOICE";
+export const BOT_VERSION = "2026-PRO-6.4-HALAL-ABYAD";
 
 export const INTENTS = Object.freeze([
   "greeting", "product_info", "price", "comparison", "purchase", "order_status",
@@ -325,8 +325,33 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
     }
   }
 
+  // صفحة الحلال الأبيض: التسعير بالكيلو مع حد أدنى وقواعد توصيل محددة فقط.
+  if (page.MINIMUM_QUANTITY != null) {
+    const totalQuantity = [...quantities.values()].reduce((sum, q) => sum + Number(q || 0), 0);
+    if (totalQuantity < Number(page.MINIMUM_QUANTITY)) {
+      return { error: "minimum_quantity", minimumQuantity: Number(page.MINIMUM_QUANTITY), subtotal: Number(subtotal.toFixed(2)) };
+    }
+  }
+
   let delivery = 0;
-  if (deliveryMode === "included" || deliveryMode === "none") {
+  if (page.DELIVERY_BY_QUANTITY && deliveryMode !== "included" && deliveryMode !== "none") {
+    const totalQuantity = [...quantities.values()].reduce((sum, q) => sum + Number(q || 0), 0);
+    const quotedDelivery = page.DELIVERY_BY_QUANTITY[totalQuantity];
+    if (quotedDelivery == null) {
+      return {
+        subtotal: Number(subtotal.toFixed(2)),
+        delivery: null,
+        total: null,
+        requiresDeliveryQuote: true,
+        items: [...quantities.entries()].map(([product, quantity]) => ({
+          product, quantity: Number(quantity), unitPrice: Number(page.PRICES[product]),
+          lineTotal: Number((Number(page.PRICES[product]) * Number(quantity)).toFixed(2))
+        })),
+        offer: null
+      };
+    }
+    delivery = Number(quotedDelivery);
+  } else if (deliveryMode === "included" || deliveryMode === "none") {
     delivery = 0;
   } else if (deliveryIncluded) {
     delivery = 0;
@@ -485,7 +510,9 @@ export const PAGE_ALIASES = Object.freeze({
   "ريفان 2": "1398135996715010",
   "2": "1398135996715010",
   "كمبرلاند": "1229773096895942",
-  "فاتي": "892685600593825"
+  "فاتي": "892685600593825",
+  "الحلال الأبيض": "446086435262675",
+  "الحلال الابيض": "446086435262675"
 });
 
 export function resolvePageId(key = "") {
@@ -517,7 +544,7 @@ export const PAGES = {
     TONE: "friendly_expert",
 
     PAGE_TOKEN:
-      "EAARu8DdiVZAwBSvxvJHrFVV1vvmNGdB5mZCeXZA0WZBQubdCV9sl7egQ4V0B9NEZBroZBXH3B0xgZCtZCRHJZCZCuTtxXXDTt9Olj4psblT3WncL4tbWqZA2fUSTZB2J5IfQb7YisivxZAmNjojaRtdeVn1LvUj2JlxfUZBsEP3E4FeWdJHkkGwpgm0ZAzV0x9YAZCwLZAg4pmHYoJMu7",
+      process.env.META_PAGE_TOKEN_211000052105556 || "",
 
     DELIVERY: 2,
     DEFAULT_UNIT: "عبوة (4 كيلو صافي)",
@@ -593,7 +620,7 @@ export const PAGES = {
     TONE: "formal",
 
     PAGE_TOKEN:
-      "EAARu8DdiVZAwBSm0arYaSdRCIKJj0ogY5fpvz4GyjIZAev28L6agSXW0Lj2M7rZA1IdtGb1is6AUPIdLCiMMDB46p58FZC5eHbyQIQM95q9OB3vqTtTz5Yeh9gyZBsAIhzFtNk8my5EY6sKkyYSThwjUA01NFlcvuvnrrYZCEuffDeF8SDufXqOumBAYFwLRjechkXB7HwOQZDZD",
+      process.env.META_PAGE_TOKEN_907535882452054 || "",
 
     DELIVERY: 0,
     DEFAULT_UNIT: "نصية (4 كيلو صافي)",
@@ -645,7 +672,7 @@ export const PAGES = {
     TONE: "formal",
 
     PAGE_TOKEN:
-      "EAARu8DdiVZAwBSpFIqzZAHkEQQjkZCT1ZB2pLO2GhjPrx0mwv2tS48cSDH0ZCY9NtJHVEZCdJOZANt0FpVVkKym2DPZBFEAjLGdjJbHIM2oo8xlg0kEFolPIZBWZAqxOKhPrL4km4TImFZBa2EXNaReyj4ySUtZAWvmzuSZAlwQoL9OSwHykbQzhCuUNCsH1p0fhyOW8DdPjL3ra6awZDZD",
+      process.env.META_PAGE_TOKEN_1271513032713402 || "",
 
     DELIVERY: 0,
     DEFAULT_UNIT: "نصية (4 كيلو)",
@@ -705,7 +732,7 @@ export const PAGES = {
     TONE: "friendly_expert",
 
     PAGE_TOKEN:
-      "EAARu8DdiVZAwBSucX7leoeL0FjCI1cNx8S4r3otaq0UVC97J7XShOq5sp6I9VPyLoKd6LZACX0aoqscqCO9SC2ENoB1noZCY786WXviDePtDZC0vAugQPsEboPZAxxag6mH7CIqHPoZB4mJ1u7CkZBU5eTemnaFEL1TtZCMl5aCQFEGLDiK1uXqCgk7kBr7dmerDjITWSOqbKwZDZD",
+      process.env.META_PAGE_TOKEN_1097322276797532 || "",
 
     DELIVERY: 0,
     DEFAULT_UNIT: "عبوة (3.5 كيلو صافي)",
@@ -775,7 +802,7 @@ export const PAGES = {
     TONE: "friendly_expert",
 
     PAGE_TOKEN:
-      "EAARu8DdiVZAwBSnWZAtTncxIaZAZA99ZBZAiONZAtCWeApA2v7y5cjTvJhj0Ug7qlhwOzOUbzIkynodyJDMRFgW8ukO6P7wZCpX0TOzOhZBe9tlKnToyHeZBPEpqPk4KtFS8ZCJji05ZBMrvPfSplIPUNjcheLlSnIsP3YsNIzZCLijuo4itw3Ol1RYdFGAjnaWDsafv8fgmc7OIjHQZDZD",
+      process.env.META_PAGE_TOKEN_618622274665182 || "",
 
     DELIVERY: 2,
     DEFAULT_UNIT: "عبوة 20 كيلو",
@@ -844,7 +871,7 @@ ${orderString}
     TONE: "friendly",
 
     PAGE_TOKEN:
-      "EAARu8DdiVZAwBSqydWSSJgUWJAkDbaWTPg9eXtPzFQPiihYJ7e8qkWzQs1IxUOjEPZAGN1U81u3tn1xG9jgxntq7lAALinsvH6o4USotwZBmHAyJvuFkjnKTVmSNB9i1ALw0pYVNiI9OaK5g8Pwn4hnPCw8QUAygZAMJczAv5ZCitI5mvfzlzHZBoQo6ebu2MqmllP920ZCnQZDZD",
+      process.env.META_PAGE_TOKEN_1398135996715010 || "",
 
     DELIVERY: 2,
     DEFAULT_UNIT: "عبوة",
@@ -910,7 +937,7 @@ ${orderString}
     TONE: "friendly",
 
     PAGE_TOKEN:
-      "EAARu8DdiVZAwBSk8uuuiabwsMMvZATlj7FXtJMn30WQ2lr0TCEKvtcMGVieNVxh4VigkWzNM7vAYOttUkauhVZC71m7JV9gP9MyZA1gRCrntDBdncZAqazzh5fJ1rAZCUjqmNCGzBqKjCPCFKtsfz4WSdX4oEp51alZAmcj0HuiRLiOkwt1QWpDLsEB346zi5pDqTPSLtmkRAZDZD",
+      process.env.META_PAGE_TOKEN_1229773096895942 || "",
 
     DELIVERY: 1,
     DEFAULT_UNIT: "عبوة",
@@ -950,13 +977,75 @@ ${orderString}
   // ═══════════════════════════════════════════════════════════
   // فاتي
   // ═══════════════════════════════════════════════════════════
+  "446086435262675": {
+    name: "الحلال الأبيض",
+    REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "quantity"],
+    TONE: "friendly_expert",
+    // خزّن رمز الصفحة في متغير بيئة META_PAGE_TOKEN_446086435262675 ولا تضعه داخل الكود.
+    PAGE_TOKEN: process.env.META_PAGE_TOKEN_446086435262675 || "",
+    DELIVERY: 0,
+    DELIVERY_BY_QUANTITY: { 2: 2, 4: 1 },
+    MINIMUM_QUANTITY: 2,
+    DEFAULT_UNIT: "كيلو",
+    PRICES: {
+      "جبنة الحلال الأبيض كوكتيل": 4
+    },
+    OFFERS: {},
+    BUNDLE_OFFERS: [],
+    PRODUCT_KEYWORDS: {
+      "جبنة الحلال الأبيض كوكتيل": /الحلال\s*الابيض|الحلال\s*الأبيض|جبنة|جبنه|كوكتيل|ماعز|غنم|بقر/i
+    },
+    INFO: `
+صفحة الحلال الأبيض:
+- المنتج الوحيد: جبنة كوكتيل من حليب الماعز والغنم والبقر.
+- السعر: 4 دنانير للكيلو.
+- الحد الأدنى للطلب: 2 كيلو.
+- التوصيل لكمية 2 كيلو: 2 دينار.
+- التوصيل لكمية 4 كيلو: 1 دينار.
+- لأي كمية أخرى: لا تعطِ سعراً للتوصيل؛ اطلب مراجعة الإدارة.
+- بعد 20 دقيقة تصبح جاهزة للتذوق والأكل مباشرة من العبوة.
+- مناسبة للقلي ولا تذوب حسب مواصفات المنتج المعتمدة من صاحب الصفحة.
+- قطعة كبيرة، والزبون يقطعها في البيت حسب رغبته.
+- سريعة الاستخدام مقارنة بالجبنة النابلسية.
+- مكفولة، ويمكن للزبون معاينة الطلب عند الاستلام.
+`,
+    SYSTEM: `
+أنت موظف مبيعات محترف لصفحة "الحلال الأبيض"، وتتحدث باللهجة الأردنية الطبيعية.
+
+المنتج الوحيد المسموح ببيعه:
+جبنة كوكتيل حليب ماعز وغنم وبقر، بسعر 4 دنانير للكيلو.
+
+قواعد البيع:
+1. لا تعرض أو تسجل أو تبيع أي صنف آخر نهائياً.
+2. الحد الأدنى للطلب 2 كيلو.
+3. 2 كيلو: سعر الجبنة 8 دنانير + 2 دينار توصيل = 10 دنانير.
+4. 4 كيلو: سعر الجبنة 16 دينار + 1 دينار توصيل = 17 دينار.
+5. أي كمية غير 2 أو 4 كيلو: احسب سعر الجبنة فقط، ولا تخترع التوصيل؛ قل للزبون إنك ستتأكد من تكلفة التوصيل.
+6. بعد 20 دقيقة تصبح جاهزة للتذوق والأكل مباشرة من العبوة.
+7. قابلة للقلي ولا تذوب، وقطعتها كبيرة ويمكن تقطيعها في المنزل.
+8. سريعة الاستخدام مقارنة بالجبنة النابلسية.
+9. المنتج مكفول، والزبون يستطيع معاينته عند الاستلام.
+10. لا تدّعِ أن الطلب تأكد أو تسجل أو أن المندوب تحرك إلا إذا أكد النظام ذلك.
+11. اجمع الاسم ورقم الهاتف والمنطقة والعنوان والكمية، واسأل فقط عن البيانات الناقصة.
+12. إذا سأل عن صنف آخر، قل: "المتوفر حالياً عنا جبنة الحلال الأبيض فقط يا غالي 🌹".
+13. لا تقل إنها مغلية أو جاهزة للنقع أو خالية من مواد معينة؛ هذه المواصفات غير معتمدة لهذه الصفحة.
+14. لا تذكر وقت توصيل محدداً؛ عند السؤال قل: "خليني أتأكدلك من مدة التوصيل حسب منطقتك".
+`,
+    INVOICE_TEMPLATE: (orderString, p, a, phone) =>
+      `طلب الحلال الأبيض
+▪️ الطلب: ${orderString}
+▪️ الحساب: ${p}
+▪️ العنوان: ${a}
+▪️ الهاتف: ${phone}`
+  },
+
   "892685600593825": {
     name: "فاتي",
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "quantity"],
     TONE: "friendly",
 
     PAGE_TOKEN:
-      "EAARu8DdiVZAwBSuP2I750MODZBWI3b19To5t0wMcVMcflbZCoZBVgrQxUdn08nuNaQXyLFepUliMog8OaP6UzInKcBQZCxTn0m2ZAcM0ngbwYqhmTKs8ysFWgwbJPg4lx7bnr9o4qb3gSJCXpGIKc5wcL0q6CuUbSjDKtt7hZALYeg3qAZAkFJogsKCCHVzLiNrkg0Ky9zGftgZDZD",
+      process.env.META_PAGE_TOKEN_892685600593825 || "",
 
     DELIVERY: 2,
     DEFAULT_UNIT: "عبوة",
@@ -1148,6 +1237,85 @@ export const PAGE_EXPERT_KNOWLEDGE = Object.freeze({
       ["بجير ع الكاسات؟", "أبداً، بيذوب 100% وخالي من الشوائب وبيعطي لمعان بدون أي غباش."],
       ["في ضمان؟", "أكيد، عليه كفالة استرجاع."],
       ["كم التوصيل؟", "دينار واحد فقط لجميع أنحاء المملكة."]
+    ]
+  },
+
+  "446086435262675": {
+    name: "الحلال الأبيض",
+    REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "quantity"],
+    TONE: "friendly_expert",
+    // خزّن رمز الصفحة في متغير بيئة META_PAGE_TOKEN_446086435262675 ولا تضعه داخل الكود.
+    PAGE_TOKEN: process.env.META_PAGE_TOKEN_446086435262675 || "",
+    DELIVERY: 0,
+    DELIVERY_BY_QUANTITY: { 2: 2, 4: 1 },
+    MINIMUM_QUANTITY: 2,
+    DEFAULT_UNIT: "كيلو",
+    PRICES: {
+      "جبنة الحلال الأبيض كوكتيل": 4
+    },
+    OFFERS: {},
+    BUNDLE_OFFERS: [],
+    PRODUCT_KEYWORDS: {
+      "جبنة الحلال الأبيض كوكتيل": /الحلال\s*الابيض|الحلال\s*الأبيض|جبنة|جبنه|كوكتيل|ماعز|غنم|بقر/i
+    },
+    INFO: `
+صفحة الحلال الأبيض:
+- المنتج الوحيد: جبنة كوكتيل من حليب الماعز والغنم والبقر.
+- السعر: 4 دنانير للكيلو.
+- الحد الأدنى للطلب: 2 كيلو.
+- التوصيل لكمية 2 كيلو: 2 دينار.
+- التوصيل لكمية 4 كيلو: 1 دينار.
+- لأي كمية أخرى: لا تعطِ سعراً للتوصيل؛ اطلب مراجعة الإدارة.
+- بعد 20 دقيقة تصبح جاهزة للتذوق والأكل مباشرة من العبوة.
+- مناسبة للقلي ولا تذوب حسب مواصفات المنتج المعتمدة من صاحب الصفحة.
+- قطعة كبيرة، والزبون يقطعها في البيت حسب رغبته.
+- سريعة الاستخدام مقارنة بالجبنة النابلسية.
+- مكفولة، ويمكن للزبون معاينة الطلب عند الاستلام.
+`,
+    SYSTEM: `
+أنت موظف مبيعات محترف لصفحة "الحلال الأبيض"، وتتحدث باللهجة الأردنية الطبيعية.
+
+المنتج الوحيد المسموح ببيعه:
+جبنة كوكتيل حليب ماعز وغنم وبقر، بسعر 4 دنانير للكيلو.
+
+قواعد البيع:
+1. لا تعرض أو تسجل أو تبيع أي صنف آخر نهائياً.
+2. الحد الأدنى للطلب 2 كيلو.
+3. 2 كيلو: سعر الجبنة 8 دنانير + 2 دينار توصيل = 10 دنانير.
+4. 4 كيلو: سعر الجبنة 16 دينار + 1 دينار توصيل = 17 دينار.
+5. أي كمية غير 2 أو 4 كيلو: احسب سعر الجبنة فقط، ولا تخترع التوصيل؛ قل للزبون إنك ستتأكد من تكلفة التوصيل.
+6. بعد 20 دقيقة تصبح جاهزة للتذوق والأكل مباشرة من العبوة.
+7. قابلة للقلي ولا تذوب، وقطعتها كبيرة ويمكن تقطيعها في المنزل.
+8. سريعة الاستخدام مقارنة بالجبنة النابلسية.
+9. المنتج مكفول، والزبون يستطيع معاينته عند الاستلام.
+10. لا تدّعِ أن الطلب تأكد أو تسجل أو أن المندوب تحرك إلا إذا أكد النظام ذلك.
+11. اجمع الاسم ورقم الهاتف والمنطقة والعنوان والكمية، واسأل فقط عن البيانات الناقصة.
+12. إذا سأل عن صنف آخر، قل: "المتوفر حالياً عنا جبنة الحلال الأبيض فقط يا غالي 🌹".
+13. لا تقل إنها مغلية أو جاهزة للنقع أو خالية من مواد معينة؛ هذه المواصفات غير معتمدة لهذه الصفحة.
+14. لا تذكر وقت توصيل محدداً؛ عند السؤال قل: "خليني أتأكدلك من مدة التوصيل حسب منطقتك".
+`,
+    INVOICE_TEMPLATE: (orderString, p, a, phone) =>
+      `طلب الحلال الأبيض
+▪️ الطلب: ${orderString}
+▪️ الحساب: ${p}
+▪️ العنوان: ${a}
+▪️ الهاتف: ${phone}`
+  },
+
+  "446086435262675": {
+    summary: `الحلال الأبيض: جبنة كوكتيل حليب ماعز وغنم وبقر، 4 دنانير للكيلو، الحد الأدنى 2 كيلو. التوصيل 2 كيلو = 2 دينار، و4 كيلو = 1 دينار. جاهزة للتذوق والأكل بعد 20 دقيقة، مناسبة للقلي ولا تذوب، قطعة كبيرة قابلة للتقطيع في البيت، مكفولة مع إمكانية المعاينة عند الاستلام.`,
+    products: {
+      "جبنة الحلال الأبيض كوكتيل": "4 دنانير للكيلو. الحد الأدنى 2 كيلو. بعد 20 دقيقة تصبح جاهزة للتذوق والأكل مباشرة من العبوة، مناسبة للقلي ولا تذوب، وقطعتها كبيرة ويمكن تقطيعها في المنزل."
+    },
+    faq: [
+      ["الجبنة بكم؟", "الكيلو بـ4 دنانير يا غالي، والحد الأدنى للطلب 2 كيلو."],
+      ["أقل كمية كم؟", "أقل طلب 2 كيلو يا غالي."],
+      ["كم التوصيل؟", "على 2 كيلو التوصيل دينارين، وعلى 4 كيلو دينار واحد."],
+      ["متى بقدر آكل منها؟", "بعد 20 دقيقة بتصير جاهزة للتذوق والأكل مباشرة من العبوة."],
+      ["بتنفع للقلي؟", "نعم يا غالي، بتنقلي وما بتذوب."],
+      ["حجمها صغير؟", "لا، حجمها كبير وبتقدر تقطعها بالبيت حسب رغبتك."],
+      ["بقدر أعاينها؟", "أكيد، الجبنة مكفولة وبإمكانك تعاين الطلب عند الاستلام."],
+      ["بدي أطلب", "أبشر يا غالي، أقل طلب 2 كيلو. كم كيلو بتحب؟"]
     ]
   },
 
@@ -1349,7 +1517,7 @@ export const CLEANING_MASTER_BRAIN = `
 export function getDomainExpertBrain(pageId) {
   const page = getPage(pageId);
   if (!page) return "";
-  const isCheese = ["أجبان غزة", "اجبان المعتمد", "منتجات أم نزار", "أجبان المهيري"].includes(page.name);
+  const isCheese = ["أجبان غزة", "اجبان المعتمد", "منتجات أم نزار", "أجبان المهيري", "الحلال الأبيض"].includes(page.name);
   return isCheese ? getCheeseMasterBrain() : CLEANING_MASTER_BRAIN;
 }
 
