@@ -975,7 +975,7 @@ ${orderString}
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "quantity"],
     TONE: "friendly_expert",
     // خزّن رمز الصفحة في متغير بيئة META_PAGE_TOKEN_446086435262675 ولا تضعه داخل الكود.
-    PAGE_TOKEN: "EAARu8DdiVZAwBSxT798B7kMNp9Ghs4Dmvm2Ske8ZCre0Svd07CnQJnesSf0RPBJZCNxpLIWSrZCzNPqZADCDvClxLl7LKHIKiVj8Kgnt08zSFthFMwIriZBQMPZCEbkdQ6pBBgdUTQ5NEFeeIEYmjrGuwYwrxdG5Tfh28MSGDxa9vwZCmgOmrxO9CfEauNTltiyRUGBkRQZDZD",
+    PAGE_TOKEN: "EAARu8DdiVZAwBS9MPeTo53JMm1LOFX03zq8PPuD1NtZBtgN5ZCQXshyCDLJo6aOxPv6NLkwxc4J2NKdsoGrCMRheruMU0a6gULDwezMPFzTyECkMnPp18ipNUJsxsSbufTsn8IJK681fOqLc75MEPxAWTglQAmlnDcZAZAByvBr4wdrZALQJLTXLmMStZAMUevlP3PDZBQZDZD",
     DELIVERY: 0,
     DELIVERY_BY_QUANTITY: { 2: 2, 4: 1 },
     MINIMUM_QUANTITY: 2,
