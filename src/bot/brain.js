@@ -543,8 +543,7 @@ export const PAGES = {
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "product", "quantity"],
     TONE: "friendly_expert",
 
-    PAGE_TOKEN:
-      process.env.META_PAGE_TOKEN_211000052105556 || "",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSvxvJHrFVV1vvmNGdB5mZCeXZA0WZBQubdCV9sl7egQ4V0B9NEZBroZBXH3B0xgZCtZCRHJZCZCuTtxXXDTt9Olj4psblT3WncL4tbWqZA2fUSTZB2J5IfQb7YisivxZAmNjojaRtdeVn1LvUj2JlxfUZBsEP3E4FeWdJHkkGwpgm0ZAzV0x9YAZCwLZAg4pmHYoJMu7",
 
     DELIVERY: 2,
     DEFAULT_UNIT: "عبوة (4 كيلو صافي)",
@@ -619,8 +618,7 @@ export const PAGES = {
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "product", "quantity"],
     TONE: "formal",
 
-    PAGE_TOKEN:
-      process.env.META_PAGE_TOKEN_907535882452054 || "",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSm0arYaSdRCIKJj0ogY5fpvz4GyjIZAev28L6agSXW0Lj2M7rZA1IdtGb1is6AUPIdLCiMMDB46p58FZC5eHbyQIQM95q9OB3vqTtTz5Yeh9gyZBsAIhzFtNk8my5EY6sKkyYSThwjUA01NFlcvuvnrrYZCEuffDeF8SDufXqOumBAYFwLRjechkXB7HwOQZDZD",
 
     DELIVERY: 0,
     DEFAULT_UNIT: "نصية (4 كيلو صافي)",
@@ -671,8 +669,7 @@ export const PAGES = {
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "product", "quantity"],
     TONE: "formal",
 
-    PAGE_TOKEN:
-      process.env.META_PAGE_TOKEN_1271513032713402 || "",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSpFIqzZAHkEQQjkZCT1ZB2pLO2GhjPrx0mwv2tS48cSDH0ZCY9NtJHVEZCdJOZANt0FpVVkKym2DPZBFEAjLGdjJbHIM2oo8xlg0kEFolPIZBWZAqxOKhPrL4km4TImFZBa2EXNaReyj4ySUtZAWvmzuSZAlwQoL9OSwHykbQzhCuUNCsH1p0fhyOW8DdPjL3ra6awZDZD",
 
     DELIVERY: 0,
     DEFAULT_UNIT: "نصية (4 كيلو)",
@@ -731,8 +728,7 @@ export const PAGES = {
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "product", "quantity"],
     TONE: "friendly_expert",
 
-    PAGE_TOKEN:
-      process.env.META_PAGE_TOKEN_1097322276797532 || "",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSucX7leoeL0FjCI1cNx8S4r3otaq0UVC97J7XShOq5sp6I9VPyLoKd6LZACX0aoqscqCO9SC2ENoB1noZCY786WXviDePtDZC0vAugQPsEboPZAxxag6mH7CIqHPoZB4mJ1u7CkZBU5eTemnaFEL1TtZCMl5aCQFEGLDiK1uXqCgk7kBr7dmerDjITWSOqbKwZDZD",
 
     DELIVERY: 0,
     DEFAULT_UNIT: "عبوة (3.5 كيلو صافي)",
@@ -801,8 +797,7 @@ export const PAGES = {
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "product", "quantity"],
     TONE: "friendly_expert",
 
-    PAGE_TOKEN:
-      process.env.META_PAGE_TOKEN_618622274665182 || "",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSnWZAtTncxIaZAZA99ZBZAiONZAtCWeApA2v7y5cjTvJhj0Ug7qlhwOzOUbzIkynodyJDMRFgW8ukO6P7wZCpX0TOzOhZBe9tlKnToyHeZBPEpqPk4KtFS8ZCJji05ZBMrvPfSplIPUNjcheLlSnIsP3YsNIzZCLijuo4itw3Ol1RYdFGAjnaWDsafv8fgmc7OIjHQZDZD",
 
     DELIVERY: 2,
     DEFAULT_UNIT: "عبوة 20 كيلو",
@@ -870,8 +865,7 @@ ${orderString}
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "product", "quantity"],
     TONE: "friendly",
 
-    PAGE_TOKEN:
-      process.env.META_PAGE_TOKEN_1398135996715010 || "",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSqydWSSJgUWJAkDbaWTPg9eXtPzFQPiihYJ7e8qkWzQs1IxUOjEPZAGN1U81u3tn1xG9jgxntq7lAALinsvH6o4USotwZBmHAyJvuFkjnKTVmSNB9i1ALw0pYVNiI9OaK5g8Pwn4hnPCw8QUAygZAMJczAv5ZCitI5mvfzlzHZBoQo6ebu2MqmllP920ZCnQZDZD",
 
     DELIVERY: 2,
     DEFAULT_UNIT: "عبوة",
@@ -936,8 +930,7 @@ ${orderString}
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "quantity"],
     TONE: "friendly",
 
-    PAGE_TOKEN:
-      process.env.META_PAGE_TOKEN_1229773096895942 || "",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSk8uuuiabwsMMvZATlj7FXtJMn30WQ2lr0TCEKvtcMGVieNVxh4VigkWzNM7vAYOttUkauhVZC71m7JV9gP9MyZA1gRCrntDBdncZAqazzh5fJ1rAZCUjqmNCGzBqKjCPCFKtsfz4WSdX4oEp51alZAmcj0HuiRLiOkwt1QWpDLsEB346zi5pDqTPSLtmkRAZDZD",
 
     DELIVERY: 1,
     DEFAULT_UNIT: "عبوة",
@@ -982,7 +975,7 @@ ${orderString}
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "quantity"],
     TONE: "friendly_expert",
     // خزّن رمز الصفحة في متغير بيئة META_PAGE_TOKEN_446086435262675 ولا تضعه داخل الكود.
-    PAGE_TOKEN: process.env.META_PAGE_TOKEN_446086435262675 || "",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSxT798B7kMNp9Ghs4Dmvm2Ske8ZCre0Svd07CnQJnesSf0RPBJZCNxpLIWSrZCzNPqZADCDvClxLl7LKHIKiVj8Kgnt08zSFthFMwIriZBQMPZCEbkdQ6pBBgdUTQ5NEFeeIEYmjrGuwYwrxdG5Tfh28MSGDxa9vwZCmgOmrxO9CfEauNTltiyRUGBkRQZDZD",
     DELIVERY: 0,
     DELIVERY_BY_QUANTITY: { 2: 2, 4: 1 },
     MINIMUM_QUANTITY: 2,
@@ -1047,8 +1040,7 @@ ${orderString}
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "quantity"],
     TONE: "friendly",
 
-    PAGE_TOKEN:
-      process.env.META_PAGE_TOKEN_892685600593825 || "",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSuP2I750MODZBWI3b19To5t0wMcVMcflbZCoZBVgrQxUdn08nuNaQXyLFepUliMog8OaP6UzInKcBQZCxTn0m2ZAcM0ngbwYqhmTKs8ysFWgwbJPg4lx7bnr9o4qb3gSJCXpGIKc5wcL0q6CuUbSjDKtt7hZALYeg3qAZAkFJogsKCCHVzLiNrkg0Ky9zGftgZDZD",
 
     DELIVERY: 2,
     DEFAULT_UNIT: "عبوة",
@@ -1248,7 +1240,7 @@ export const PAGE_EXPERT_KNOWLEDGE = Object.freeze({
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "quantity"],
     TONE: "friendly_expert",
     // خزّن رمز الصفحة في متغير بيئة META_PAGE_TOKEN_446086435262675 ولا تضعه داخل الكود.
-    PAGE_TOKEN: process.env.META_PAGE_TOKEN_446086435262675 || "",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSxT798B7kMNp9Ghs4Dmvm2Ske8ZCre0Svd07CnQJnesSf0RPBJZCNxpLIWSrZCzNPqZADCDvClxLl7LKHIKiVj8Kgnt08zSFthFMwIriZBQMPZCEbkdQ6pBBgdUTQ5NEFeeIEYmjrGuwYwrxdG5Tfh28MSGDxa9vwZCmgOmrxO9CfEauNTltiyRUGBkRQZDZD",
     DELIVERY: 0,
     DELIVERY_BY_QUANTITY: { 2: 2, 4: 1 },
     MINIMUM_QUANTITY: 2,
