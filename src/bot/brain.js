@@ -830,12 +830,14 @@ export const PAGES = {
     PAGE_TOKEN: "EAARu8DdiVZAwBSnWZAtTncxIaZAZA99ZBZAiONZAtCWeApA2v7y5cjTvJhj0Ug7qlhwOzOUbzIkynodyJDMRFgW8ukO6P7wZCpX0TOzOhZBe9tlKnToyHeZBPEpqPk4KtFS8ZCJji05ZBMrvPfSplIPUNjcheLlSnIsP3YsNIzZCLijuo4itw3Ol1RYdFGAjnaWDsafv8fgmc7OIjHQZDZD",
 
     DELIVERY: 2,
-    DEFAULT_UNIT: "عبوة 20 كيلو",
+    DEFAULT_UNIT: "   سعر العرض فقط 10 دنانير وخدمة التوصيل 2 دينار  -ل غسيل ريفان 2 3.5 ك  سائل جلي 3.5 كيلو عدد 1  كلور عدد2 1 لتر فلاش 1 لتر   معطر ملابس 3.5 لتر   ديتول  1 لتر
+",
     INCLUSIVE_PRODUCTS: [],
     OFFER_DELIVERY_INCLUDED: false,
 
     PRICES: {
-      "جل غسيل ريفان 20 كيلو": 10
+      "   سعر العرض فقط 10 دنانير وخدمة التوصيل 2 دينار  -ل غسيل ريفان 2 3.5 ك  سائل جلي 3.5 كيلو عدد 1  كلور عدد2 1 لتر فلاش 1 لتر   معطر ملابس 3.5 لتر   ديتول  1 لتر
+": 10
     },
 
     OFFERS: {},
