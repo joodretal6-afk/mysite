@@ -1044,7 +1044,7 @@ ${RIVAN_OFFER.description}
     PAGE_TOKEN: "EAARu8DdiVZAwBS1mtdgzZAepsEuWOrwPNHUyEiH7N2A0xZBajaz3wXfwlNQTz5DgAizJUhQsr8ZBjaX7CvrqyBWieVgvNC72H6ntvdHzCKeU0qnXeCdYXPqGwO7ZCc3FwWZC17GhZCeZBITeZAZBP0btaa5ZAUIewCLQAXnMT5PkZAS7P57VdfOT4KZBFJG37d9jD8Prg1CX2IgZDZD",
 
     DELIVERY: 2,
-    DELIVERY_BY_QUANTITY: { 2: 2, 4: 1 },
+    DELIVERY_BY_QUANTITY: { 2: 2, 8: 2 },
     MINIMUM_QUANTITY: 2,
     DEFAULT_UNIT: "كيلو",
 
@@ -1068,6 +1068,7 @@ ${RIVAN_OFFER.description}
 - التوصيل لكمية 2 كيلو: 2 دينار.
 - التوصيل لكمية 4 كيلو: 1 دينار.
 -الجبنة صلاحيتها 3 اشهر كاملة 
+-يمنع بيع اقل من 2 كيلو او عرض اقل من 2 كيلو لجبنة الرياض 
 - لأي كمية أخرى: لا تعطِ سعراً للتوصيل؛ اطلب مراجعة الإدارة.
 - بعد 20 دقيقة تصبح جاهزة للتذوق والأكل مباشرة من العبوة.
 - مناسبة للقلي ولا تذوب حسب مواصفات المنتج المعتمدة من صاحب الصفحة.
