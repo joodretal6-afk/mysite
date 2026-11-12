@@ -1036,12 +1036,12 @@ ${RIVAN_OFFER.description}
   // ═══════════════════════════════════════════════════════════
   // الحلال الأبيض
   // ═══════════════════════════════════════════════════════════
-  "446086435262675": {
-    name: "الحلال الأبيض",
+  "1488299554357978": {
+    name: "اجبان الرياض",
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "quantity"],
     TONE: "friendly_expert",
 
-    PAGE_TOKEN: "EAARu8DdiVZAwBS1mtdgzZAepsEuWOrwPNHUyEiH7N2A0xZBajaz3wXfwlNQTz5DgAizJUhQsr8ZBjaX7CvrqyBWieVgvNC72H6ntvdHzCKeU0qnXeCdYXPqGwO7ZCc3FwWZC17GhZCeZBITeZAZBP0btaa5ZAUIewCLQAXnMT5PkZAS7P57VdfOT4KZBFJG37d9jD8Prg1CX2IgZDZD",
+    PAGE_TOKEN: "EAARu8DdiVZAwBSwvANMwe5WrM1aOj730DVqbCkzfkvTbGngkjWZBMjk49P0AUYHZARltQh6O7lYRbPSrllbeVgxCTNGtyd9ygUuJEzAAFDvDKMaJSe5EfT1kQjflBjPoUYUAAr0qN3UJ82s2GxhEbZCE82y3rDi9BROdPdKAAKPS5Wt84Nq3aVMTC4xkDItZB7qGQbgZDZD",
 
     DELIVERY: 2,
     DELIVERY_BY_QUANTITY: { 2: 2, 8: 2 },
@@ -1076,6 +1076,7 @@ ${RIVAN_OFFER.description}
 - مناسبة للقلي ولا تذوب حسب مواصفات المنتج المعتمدة من صاحب الصفحة.
 - قطعة كبيرة، والزبون يقطعها في البيت حسب رغبته.
 - سريعة الاستخدام مقارنة بالجبنة النابلسية.
+- اقل قيمة للفاتورة يجب ان تصدرها في قيمة 10 دنانير  شامل التوصيل 
 - مكفولة، ويمكن للزبون معاينة الطلب عند الاستلام.
 `,
 
@@ -1105,7 +1106,7 @@ ${RIVAN_OFFER.description}
 `,
 
     INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة الحلال الأبيض
+      `✅ فاتورة اجبان الرياض
 ▪️ الطلب: ${orderString}
 ▪️ الحساب: ${p}
 ▪️ العنوان: ${a}
