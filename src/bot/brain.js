@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// 🧠 عقل المبيعات وخبير التجارة — نسخة 2026 PRO 6.5 HALAL RYADH
+// 🧠 عقل المبيعات وخبير التجارة — نسخة 2026 PRO 6.7 HALAL RYADH (INVOICE SHIELD)
 // ═══════════════════════════════════════════════════════════
 
 export const SALES_PERSONA = `[الدور]
@@ -29,6 +29,11 @@ export const SALES_PERSONA = `[الدور]
 - عند طلب أكثر من عرض: 10 دنانير لكل عرض + 2 دينار توصيل مرة واحدة على الطلب كله.
 - أي صنف غير موجود ضمن مكونات العرض: وجّه العميل إلى الرقم 0796210083، ولا تعرض أو تسجل أي صنف آخر.
 - التواصل في صفحة ريفان حصراً على الرقم: 0796210083.
+14) في صفحة أجبان الرياض حصراً:
+- يمنع منعاً باتاً إصدار أو ذكر أي فاتورة أو طلب بقيمة 6 دنانير أو لكمية 1 كيلو تحت أي ظرف نهائياً.
+- أقل كمية للطلب هي 2 كيلو، وأقل فاتورة مسموح بإصدارها هي 10 دنانير شامل التوصيل (8 دنانير جبنة + 2 دينار توصيل).
+- عند طلب 4 كيلو من أجبان الرياض، السعر الثابت والدقيق للفاتورة هو 18 دينار شامل التوصيل (16 دينار جبنة + 2 دينار توصيل).
+- معادلة أجبان الرياض الصارمة لأي كمية مسموحة (2 كيلو فأكثر): (عدد الكيلوات × 4 دنانير) + 2 دينار توصيل مرة واحدة على الطلب.
 
 [العزل]
 كل صفحة متجر مستقل بالكامل.
@@ -51,6 +56,7 @@ export const SALES_PERSONA = `[الدور]
 هل الصفحة صحيحة؟
 هل السعر والوزن صحيح؟
 هل التوصيل صحيح؟
+هل الفاتورة مطابقة 100% لمعادلة الصفحة وبدون أي فاتورة أقل من الحد الأدنى؟
 هل كررت سؤالاً معروفاً؟
 هل يوجد رد أقصر وأوضح وأكثر إقناعاً كأنه رد بشري 100%؟`;
 
@@ -59,6 +65,7 @@ export const COMMON_KNOWLEDGE = `[قواعد الدقة]
 - ممنوع تقديم معلومة من صفحة أخرى.
 - لا تستخدم جواباً آلياً من نوع "ما بعرف" أو "المعلومة غير متوفرة". أجب كخبير بالمنتج حسب المواصفات المعتمدة.
 - لا تدّعي أنك اتصلت بالإدارة أو السائق، ولا تؤكد إجراءً خارجياً لم يحدث.
+- يمنع إصدار أي فاتورة بقيمة خاطئة أو أقل من الحد الأدنى المعتمد للصفحة (خصوصاً أجبان الرياض: ممنوع نهائياً فاتورة 6 دنانير، أقل فاتورة 10 دنانير لـ 2 كيلو، والـ 4 كيلو بـ 18 دينار شامل التوصيل).
 
 [قواعد الأجبان]
 - كل صفحة أجبان مستقلة؛ لا تفترض وحدة بيع أو وزن أو مكونات أو طريقة تجهيز أو أسعاراً مشتركة.
@@ -103,6 +110,7 @@ export const SALES_BEHAVIOR = `[محرك النية]
 - إذا سأل عن المستكة والمحلب في أجبان غزة: "نعم صحيح يا غالي، جبنة الغنم والملوكية عليها مستكة ومحلب بلدي أصلي بطعم وريحة بتفتح النفس. لكن خدمة التوصيل دينارين على الطلب يا شيخ. حددلي النوع والكمية والعنوان ورقم الهاتف وأبشر بالطلب."
 - إذا سأل عن حالة الجبنة: "الجبنة عنا مغلية وجاهزة للنقع والتحلاي مباشرة، ما بدها غلي بالبيت نهائياً ولا بتغلبك بشيء."
 - في ريفان: اعرض عرض ريفان الكامل فقط بمكوناته الثابتة، ولا تبع أي مكوّن منفرداً. السعر 10 دنانير للعرض والتوصيل 2 دينار مرة واحدة على الطلب كله، واختم بـ "أهلاً وسهلاً فيكم مع ريفان".
+- في أجبان الرياض: أقل طلب 2 كيلو بـ 10 دنانير شامل التوصيل (ممنوع نهائياً قبول 1 كيلو أو إصدار فاتورة بـ 6 دنانير)، وعند طلب 4 كيلو يكون الحساب 18 دينار شامل التوصيل (16 جبنة + 2 توصيل) بدقة تامة بدون أي خربطة.
 - رسالة واحدة، مكتملة، مختصرة، مقنعة وطبيعية 100% وليست رد بوت.
 `;
 
@@ -113,7 +121,16 @@ export const SALES_BEHAVIOR = `[محرك النية]
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 const EASTERN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 
-export const BOT_VERSION = "2026-PRO-6.6-RIVAN-BUNDLE-ONLY";
+export const BOT_VERSION = "2026-PRO-6.7-INVOICE-SHIELD";
+
+export const RIYADH_PAGE_IDS = Object.freeze([
+  "1229773096895942",
+  "1488299554357978"
+]);
+
+export function isRiyadhPage(pageId) {
+  return RIYADH_PAGE_IDS.includes(String(pageId || "").trim());
+}
 
 export const INTENTS = Object.freeze([
   "greeting", "product_info", "price", "comparison", "purchase", "order_status",
@@ -153,35 +170,93 @@ export function normalizePhone(input = "") {
 }
 
 export function extractPhone(text = "") {
-  const matches = String(text).match(/(?:\+?962|00962|0)?7\d{8}/g) || [];
+  const normalizedDigitsText = String(text).replace(/[٠-٩۰-۹]/g, ch => {
+    const a = ARABIC_DIGITS.indexOf(ch);
+    if (a >= 0) return String(a);
+    const e = EASTERN_DIGITS.indexOf(ch);
+    return e >= 0 ? String(e) : ch;
+  });
+  const matches = normalizedDigitsText.match(/(?:\+?962|00962|0)?7\d{8}/g) || [];
   return matches.map(normalizePhone).find(v => /^07\d{8}$/.test(v)) || null;
 }
 
+/**
+ * استخراج الكمية بدقة عالية مع حماية ضد التقاط أرقام الهواتف أو الأسعار أو أرقام الشوارع/البنايات.
+ * يعطي الأولوية القصوى للكميات المرتبطة بوحدات صريحة مثل "4 كيلو" أو "اربع كيلو" أو "عرضين".
+ */
 export function extractQuantity(text = "") {
-  const t = normalizeArabicText(text);
+  let t = normalizeArabicText(text);
+  if (!t) return null;
 
-  const singularPatterns = /(?:^|\s)(نصيه|نصية|علبه|علبة|سطل|عبوه|عبوة|حبه|حبة|تنكه|تنكة|وحده|واحده|واحد|بكت|كرتونه|عرض|كيلو واحد)(?:\s|$)/i;
-  const dualPatterns = /(?:^|\s)(نصيتين|علبتين|سطلين|عبوتين|حبتين|تنتين|ثنتين|اتنين|اثنين|عرضين|كيلوين)(?:\s|$)/i;
+  // 1) إزالة أرقام الهواتف الأردنية حتى لا تُقرأ بالخطأ ككمية
+  t = t.replace(/(?:\+?962|00962|0)?7\d{8}/g, " ");
 
+  // 2) إزالة الأسعار المذكورة صراحة (مثل: 18 دينار، 10 دنانير، 18د) حتى لا تختلط بالكمية
+  t = t.replace(/\b\d+(?:\.\d+)?\s*(?:دينار|دنانير|د\.ا|jd|د)(?=\s|$)/gi, " ");
+
+  // 3) إزالة أرقام العناوين الشائعة (بناية 4، عمارة 6، شقة 2، طابق 1، شارع 10)
+  t = t.replace(/(?:بنايه|عماره|شقه|طابق|شارع|منزل|بيت|رقم\s*البنايه|رقم\s*العماره)\s*\d+/g, " ");
+
+  t = t.replace(/\s+/g, " ").trim();
+  if (!t) return null;
+
+  // 4) مطابقة الرقم المباشر المتبوع بوحدة بيع صريحة (الأعلى دقة لمنع أي خربطة مثل: "4 كيلو" أو "4كيلو")
+  const explicitUnitNumber = t.match(/(?:^|\s)(\d{1,3})\s*(?:كيلو|كيلوات|كغم|كغ|نصيه|نصيات|عبوه|عبوات|علبه|علب|سطل|سطول|عرض|عروض|حبه|حبات|تنكه|تنكات)(?=\s|$)/i);
+  if (explicitUnitNumber) {
+    const val = Number(explicitUnitNumber[1]);
+    if (Number.isFinite(val) && val > 0) return val;
+  }
+
+  // 5) مطابقة الكلمات العددية المتبوعة بوحدة (مثل: اربع كيلو، اربعة كيلو، ثلاث عروض)
+  const wordUnitMap = [
+    [/(?:^|\s)(?:اربع|اربعه)\s*(?:كيلو|كيلوات|كغم|كغ|نصيات|عبوات|علب|عروض|حبات)(?=\s|$)/, 4],
+    [/(?:^|\s)(?:ثلاث|ثلاثه)\s*(?:كيلو|كيلوات|كغم|كغ|نصيات|عبوات|علب|عروض|حبات)(?=\s|$)/, 3],
+    [/(?:^|\s)(?:خمس|خمسه)\s*(?:كيلو|كيلوات|كغم|كغ|نصيات|عبوات|علب|عروض|حبات)(?=\s|$)/, 5],
+    [/(?:^|\s)(?:ست|سته)\s*(?:كيلو|كيلوات|كغم|كغ|نصيات|عبوات|علب|عروض|حبات)(?=\s|$)/, 6],
+    [/(?:^|\s)(?:سبع|سبعه)\s*(?:كيلو|كيلوات|كغم|كغ|نصيات|عبوات|علب|عروض|حبات)(?=\s|$)/, 7],
+    [/(?:^|\s)(?:ثمان|ثمانيه)\s*(?:كيلو|كيلوات|كغم|كغ|نصيات|عبوات|علب|عروض|حبات)(?=\s|$)/, 8],
+    [/(?:^|\s)(?:تسع|تسعه)\s*(?:كيلو|كيلوات|كغم|كغ|نصيات|عبوات|علب|عروض|حبات)(?=\s|$)/, 9],
+    [/(?:^|\s)(?:عشر|عشره)\s*(?:كيلو|كيلوات|كغم|كغ|نصيات|عبوات|علب|عروض|حبات)(?=\s|$)/, 10],
+    [/(?:^|\s)(?:اثنين|اتنين)\s*(?:كيلو|كيلوات|كغم|كغ|عبوات|عروض)(?=\s|$)/, 2],
+    [/(?:^|\s)(?:كيلو\s*واحد|واحد\s*كيلو)(?=\s|$)/, 1]
+  ];
+  for (const [re, value] of wordUnitMap) {
+    if (re.test(t)) return value;
+  }
+
+  // 6) المثنى الصريح
+  const dualPatterns = /(?:^|\s)(نصيتين|علبتين|سطلين|عبوتين|حبتين|تنتين|ثنتين|اتنين|اثنين|عرضين|كيلوين|2\s*كيلو)(?:\s|$)/i;
   if (dualPatterns.test(t)) return 2;
-  if (singularPatterns.test(t) && !/\d+/.test(t)) return 1;
 
+  // 7) الكلمات العددية العامة (مع استثناء السياقات غير الشرائية)
   const wordMap = [
-    [/(ثلاث|ثلاثه|ثلاثة)/, 3],
-    [/(اربعه|اربع|أربع)/, 4],
-    [/(خمس|خمسه)/, 5],
-    [/(ست|سته)/, 6],
-    [/(سبع|سبعه)/, 7],
-    [/(ثمان|ثمانيه)/, 8],
-    [/(تسع|تسعه)/, 9],
-    [/(عشر|عشره)/, 10]
+    [/(?:^|\s)(ثلاث|ثلاثه)(?:\s|$)/, 3],
+    [/(?:^|\s)(اربعه|اربع)(?:\s|$)/, 4],
+    [/(?:^|\s)(خمس|خمسه)(?:\s|$)/, 5],
+    [/(?:^|\s)(ست|سته)(?:\s|$)/, 6],
+    [/(?:^|\s)(سبع|سبعه)(?:\s|$)/, 7],
+    [/(?:^|\s)(ثمان|ثمانيه)(?:\s|$)/, 8],
+    [/(?:^|\s)(تسع|تسعه)(?:\s|$)/, 9],
+    [/(?:^|\s)(عشر|عشره)(?:\s|$)/, 10]
   ];
   for (const [re, value] of wordMap) {
     if (re.test(t)) return value;
   }
 
-  const m = t.match(/(?:^|\s)(\d{1,3})(?:\s|$)/);
-  return m ? Number(m[1]) : null;
+  // 8) المفرد الصريح (مع الحذر من كلمة "عرض" في سؤال السعر مثل "كم سعر العرض")
+  const isPriceQuestionOnly = /^(?:كم|بكم|قديش|شو\s*سعر|كم\s*سعر)/.test(t) && !/بدي|اعطيني|ابعت|وصلي|اطلب|احجز|هات|باخذ/.test(t);
+  const singularPatterns = /(?:^|\s)(نصيه|علبه|سطل|عبوه|حبه|تنكه|وحده|واحده|واحد|بكت|كرتونه|كيلو\s*واحد)(?:\s|$)/i;
+  if (!isPriceQuestionOnly && singularPatterns.test(t) && !/\d+/.test(t)) return 1;
+  if (!isPriceQuestionOnly && /(?:^|\s)(?:بدي|اعطيني|ابعتلي|وصلي|احجزلي|باخذ)\s+عرض(?:\s|$)/i.test(t)) return 1;
+
+  // 9) رقم مفرد صريح في الرسالة القصيرة أو سياق الطلب (من 1 إلى 50)
+  const m = t.match(/(?:^|\s)(\d{1,2})(?:\s|$)/);
+  if (m) {
+    const num = Number(m[1]);
+    if (num >= 1 && num <= 50) return num;
+  }
+
+  return null;
 }
 
 export function detectIntent(text = "") {
@@ -205,8 +280,8 @@ export function detectIntent(text = "") {
   if (/وصلني غلط|ناقص|في مشكله|مشكله|شكوى|خربان/.test(t)) return "complaint";
   if (/غالي|سعره عالي|في خصم|راعينا|اخر سعر/.test(t)) return "objection";
   if (/الفرق|احسن|افضل|انسب|شو اختار|اي واحد/.test(t)) return "comparison";
-  // أولوية نية الشراء حتى لا تُصنّف عبارة "بدي عرضين" على أنها سؤال سعر.
-  if (/بدي|اعطيني|ابعت|وصلي|اطلب|احجز|هات|باخذ/.test(t)) return "purchase";
+  // أولوية نية الشراء حتى لا تُصنّف عبارة "بدي عرضين" أو "بدي 4 كيلو" على أنها سؤال سعر.
+  if (/بدي|اعطيني|ابعت|وصلي|اطلب|احجز|هات|باخذ|سجل|اعتمد/.test(t)) return "purchase";
   if (/كم|بكم|السعر|سعرو|تكلفه|دينار|حساب|العرض|عرض/.test(t)) return "price";
   if (/وين طلبي|شو صار بالطلب|تاخر الطلب/.test(t)) return "order_status";
   if (/شو هو|مواصفات|حجم|وزن/.test(t)) return "product_info";
@@ -216,7 +291,8 @@ export function detectIntent(text = "") {
 }
 
 export function getPage(pageId) {
-  return PAGES[pageId] || null;
+  const resolved = PAGES[pageId] ? pageId : (PAGE_ALIASES?.[pageId] || PAGE_ALIASES?.[normalizeArabicText(pageId)] || null);
+  return resolved ? PAGES[resolved] || null : null;
 }
 
 export function listPageProducts(pageId) {
@@ -240,31 +316,138 @@ export function findProductMatches(pageId, text = "") {
   return [...new Set(hits)];
 }
 
+/**
+ * محرك الحساب والفوترة المحصّن ضد أي خطأ حسابي أو فاتورة تحت الحد الأدنى.
+ * - أجبان الرياض: يمنع منعاً باتاً أي فاتورة بقيمة 6 دنانير أو أقل من 10 دنانير (أقل كمية 2 كيلو = 10 دنانير، و4 كيلو = 18 دينار شامل التوصيل).
+ */
 export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
-  const page = getPage(pageId);
+  const resolvedId = resolvePageId(pageId) || pageId;
+  const page = getPage(resolvedId);
   if (!page) return null;
 
   const defaultQty = Number(page.MINIMUM_QUANTITY || 1);
   const quantities = new Map();
+
   for (const line of Array.isArray(lines) ? lines : []) {
-    const product = String(line?.product || "").trim();
-    const quantity = Number(line?.quantity || defaultQty);
+    let product = String(line?.product || "").trim();
+    const rawQty = line?.quantity;
+    const quantity = rawQty == null || rawQty === "" ? defaultQty : Number(rawQty);
+
+    // إذا كانت الصفحة بمنتج وحيد (مثل أجبان الرياض أو المهيري أو فاتي أو ريفان) ولم يُمرر اسم المنتج أو مُرر اسم بديل، اعتمد المنتج الوحيد رسمياً
+    const pageProductKeys = Object.keys(page.PRICES || {});
+    if (pageProductKeys.length === 1 && (!product || page.PRICES?.[product] == null)) {
+      if (resolvedId !== RIVAN_OFFER.pageId) {
+        product = pageProductKeys[0];
+      }
+    }
+
     if (!product || !Number.isFinite(quantity) || quantity <= 0) continue;
+
     // صفحة ريفان تقبل العرض الكامل فقط؛ ارفض أي اسم منتج منفرد أو قديم.
-    if (pageId === RIVAN_OFFER.pageId && product !== RIVAN_OFFER.productName) continue;
+    if (resolvedId === RIVAN_OFFER.pageId && product !== RIVAN_OFFER.productName) continue;
+
+    // تجاهل أي منتج غير معرّف في الصفحة الحالية لمنع أي خربطة
+    if (page.PRICES?.[product] == null && !(page.BUNDLE_OFFERS || []).some(b => b.name === product)) continue;
+
     quantities.set(product, (quantities.get(product) || 0) + quantity);
   }
 
-  // إذا لم يكن هناك أي أصناف بعد، أرجع قيماً صفرية آمنة حتى لا يتعطل السيرفر
+  // إذا لم يكن هناك أي أصناف بعد، أرجع قيماً صفرية آمنة مع منع إصدار فاتورة
   if (quantities.size === 0) {
     return {
       subtotal: 0,
       delivery: 0,
       total: 0,
       items: [],
+      offer: null,
+      canIssueInvoice: false
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 🛡️ مسار خاص ومغلق 100% لصفحات أجبان الرياض لمنع أي فاتورة 6 د أو أي خربطة بالـ 4 كيلو
+  // ═══════════════════════════════════════════════════════════
+  if (isRiyadhPage(resolvedId)) {
+    const productName = "جبنة الرياض";
+    const unitPrice = 4; // 4 دنانير للكيلو ثابت
+    const fixedDelivery = 2; // 2 دينار توصيل ثابت مرة واحدة على الطلب
+    const minQty = 2; // أقل كمية 2 كيلو
+    const minInvoiceTotal = 10; // أقل فاتورة مسموحة إطلاقاً هي 10 دنانير (ممنوع 6 دنانير نهائياً)
+
+    const rawTotalKilos = [...quantities.values()].reduce((sum, q) => sum + Number(q || 0), 0);
+    const totalKilos = Math.round(rawTotalKilos * 100) / 100;
+
+    // منع صارم لأي كمية أقل من 2 كيلو (مثل 1 كيلو = 6 دنانير مرفوضة تماماً ولا تصدر فاتورة)
+    if (totalKilos < minQty) {
+      return {
+        error: "minimum_quantity",
+        message: "أقل كمية للطلب في أجبان الرياض هي 2 كيلو (10 دنانير شامل التوصيل). يمنع إصدار فاتورة بقيمة 6 دنانير.",
+        minimumQuantity: minQty,
+        minimumInvoiceTotal: minInvoiceTotal,
+        requestedQuantity: totalKilos,
+        subtotal: 0,
+        delivery: 0,
+        total: 0,
+        canIssueInvoice: false,
+        invoiceBlocked: true,
+        items: [],
+        offer: null
+      };
+    }
+
+    const subtotal = Number((totalKilos * unitPrice).toFixed(2));
+    const delivery = (deliveryMode === "included" || deliveryMode === "none") ? 0 : fixedDelivery;
+    const total = Number((subtotal + delivery).toFixed(2));
+
+    // حاجز أمان إضافي: لو لأي سبب كان المجموع أقل من 10 دنانير (حتى مع deliveryMode مختلف)، امنع إصدار الفاتورة
+    if (total < minInvoiceTotal) {
+      return {
+        error: "below_minimum_invoice",
+        message: "أقل فاتورة مسموح بإصدارها في أجبان الرياض هي 10 دنانير.",
+        minimumQuantity: minQty,
+        minimumInvoiceTotal: minInvoiceTotal,
+        subtotal: 0,
+        delivery: 0,
+        total: 0,
+        canIssueInvoice: false,
+        invoiceBlocked: true,
+        items: [],
+        offer: null
+      };
+    }
+
+    // مثال توثيقي مضمون 100%:
+    // 2 كيلو -> subtotal: 8 + delivery: 2 = total: 10
+    // 3 كيلو -> subtotal: 12 + delivery: 2 = total: 14
+    // 4 كيلو -> subtotal: 16 + delivery: 2 = total: 18 (شامل التوصيل بدون أي غلط)
+    return {
+      subtotal,
+      delivery,
+      total,
+      canIssueInvoice: true,
+      invoiceBlocked: false,
+      totalQuantity: totalKilos,
+      unit: "كيلو",
+      orderSummary: `${totalKilos} كيلو ${productName}`,
+      formattedTotal: `${total} دينار شامل التوصيل`,
+      items: [
+        {
+          product: productName,
+          quantity: totalKilos,
+          unitPrice,
+          lineTotal: subtotal,
+          deliveryIncluded: false
+        }
+      ],
       offer: null
     };
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // الحساب القياسي المحسّن لباقي الصفحات (احتفاظ بنسخة أصلية من الكميات قبل خصم الباقات لبناء items بدقة)
+  // ═══════════════════════════════════════════════════════════
+  const originalQuantities = new Map(quantities);
+  const workingQuantities = new Map(quantities);
 
   let subtotal = 0;
   let appliedOffers = [];
@@ -283,13 +466,13 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
 
       let canApply = true;
       while (canApply) {
-        canApply = needed.every(bp => (quantities.get(bp.name) || 0) >= bp.quantity);
+        canApply = needed.every(bp => (workingQuantities.get(bp.name) || 0) >= bp.quantity);
         if (!canApply) break;
 
         for (const bp of needed) {
-          const left = (quantities.get(bp.name) || 0) - bp.quantity;
-          if (left > 0) quantities.set(bp.name, left);
-          else quantities.delete(bp.name);
+          const left = (workingQuantities.get(bp.name) || 0) - bp.quantity;
+          if (left > 0) workingQuantities.set(bp.name, left);
+          else workingQuantities.delete(bp.name);
         }
 
         subtotal += Number(bundle.price);
@@ -304,11 +487,12 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
     }
   }
 
-  for (const [product, quantity] of quantities.entries()) {
+  for (const [product, quantity] of workingQuantities.entries()) {
     const numericQuantity = Math.max(1, Number(quantity || 1));
     const directBundle = (page.BUNDLE_OFFERS || []).find(bundle => bundle.name === product);
     const offerPrice = page.OFFERS?.[product]?.[numericQuantity];
 
+    // معالجة التكرار الزوجي للعروض (مثلاً لو طلب 4 عبوات في صفحة فيها عرض عبوتين، أو عرض مباشر)
     if (offerPrice != null) {
       subtotal += Number(offerPrice);
       appliedOffers.push({ type: "product_offer", product, quantity: numericQuantity, price: Number(offerPrice) });
@@ -333,28 +517,36 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
     }
   }
 
-  const items = [...quantities.entries()]
-    .filter(([product, quantity]) => page.PRICES?.[product] != null && Number(quantity) > 0)
-    .map(([product, quantity]) => ({
-      product,
-      quantity: Number(quantity),
-      unitPrice: Number(page.PRICES[product]),
-      lineTotal: Number((Number(page.PRICES[product]) * Number(quantity)).toFixed(2)),
-      deliveryIncluded: (page.INCLUSIVE_PRODUCTS || []).includes(product)
-    }));
+  const items = [...originalQuantities.entries()]
+    .filter(([product, quantity]) => (page.PRICES?.[product] != null || page.OFFERS?.[product] != null) && Number(quantity) > 0)
+    .map(([product, quantity]) => {
+      const unitPrice = Number(page.PRICES?.[product] ?? page.OFFERS?.[product]?.[1] ?? 0);
+      const offerMatch = page.OFFERS?.[product]?.[Number(quantity)];
+      const lineTotal = offerMatch != null
+        ? Number(Number(offerMatch).toFixed(2))
+        : Number((unitPrice * Number(quantity)).toFixed(2));
+      return {
+        product,
+        quantity: Number(quantity),
+        unitPrice,
+        lineTotal,
+        deliveryIncluded: (page.INCLUSIVE_PRODUCTS || []).includes(product) || (offerMatch != null && Boolean(page.OFFER_DELIVERY_INCLUDED))
+      };
+    });
 
-  // صفحة اجبان الرياض: التسعير بالكيلو مع حد أدنى وقواعد توصيل محددة فقط (مع إرجاع كافة الحقول لمنع أي خطأ في السيرفر)
+  // فحص الحد الأدنى العام لأي صفحة أخرى إن وجد (مع منع إصدار الفاتورة وتصفير المجموع الخاطئ)
   if (page.MINIMUM_QUANTITY != null) {
-    const totalQuantity = [...quantities.values()].reduce((sum, q) => sum + Number(q || 0), 0);
+    const totalQuantity = [...originalQuantities.values()].reduce((sum, q) => sum + Number(q || 0), 0);
     if (totalQuantity > 0 && totalQuantity < Number(page.MINIMUM_QUANTITY)) {
-      const fallbackDelivery = Number(page.DELIVERY_BY_QUANTITY?.[page.MINIMUM_QUANTITY] ?? page.DELIVERY ?? 0);
       return {
         error: "minimum_quantity",
         minimumQuantity: Number(page.MINIMUM_QUANTITY),
-        subtotal: Number(subtotal.toFixed(2)),
-        delivery: fallbackDelivery,
-        total: Number((subtotal + fallbackDelivery).toFixed(2)),
-        items,
+        subtotal: 0,
+        delivery: 0,
+        total: 0,
+        canIssueInvoice: false,
+        invoiceBlocked: true,
+        items: [],
         offer: null
       };
     }
@@ -362,7 +554,7 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
 
   let delivery = 0;
   if (page.DELIVERY_BY_QUANTITY && deliveryMode !== "included" && deliveryMode !== "none") {
-    const totalQuantity = [...quantities.values()].reduce((sum, q) => sum + Number(q || 0), 0);
+    const totalQuantity = [...originalQuantities.values()].reduce((sum, q) => sum + Number(q || 0), 0);
     const quotedDelivery = page.DELIVERY_BY_QUANTITY[totalQuantity];
     if (quotedDelivery == null) {
       return {
@@ -370,6 +562,7 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
         delivery: 0,
         total: Number(subtotal.toFixed(2)),
         requiresDeliveryQuote: true,
+        canIssueInvoice: false,
         items,
         offer: null
       };
@@ -377,12 +570,28 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
     delivery = Number(quotedDelivery);
   } else if (deliveryMode === "included" || deliveryMode === "none") {
     delivery = 0;
-  } else if (deliveryIncluded) {
+  } else if (deliveryIncluded && !hasChargeableItems) {
     delivery = 0;
   } else if (hasPricedItems && hasChargeableItems) {
     delivery = Number(page.DELIVERY ?? 0);
   } else if (hasPricedItems && allPricedItemsInclusive) {
     delivery = 0;
+  }
+
+  const finalTotal = Number((subtotal + delivery).toFixed(2));
+
+  if (page.MINIMUM_INVOICE_TOTAL != null && finalTotal < Number(page.MINIMUM_INVOICE_TOTAL)) {
+    return {
+      error: "below_minimum_invoice",
+      minimumInvoiceTotal: Number(page.MINIMUM_INVOICE_TOTAL),
+      subtotal: 0,
+      delivery: 0,
+      total: 0,
+      canIssueInvoice: false,
+      invoiceBlocked: true,
+      items: [],
+      offer: null
+    };
   }
 
   const offer = appliedOffers.length === 0
@@ -394,10 +603,180 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
   return {
     subtotal: Number(subtotal.toFixed(2)),
     delivery: Number(delivery.toFixed(2)),
-    total: Number((subtotal + delivery).toFixed(2)),
+    total: finalTotal,
+    canIssueInvoice: finalTotal > 0,
+    invoiceBlocked: false,
     items,
     offer
   };
+}
+
+/**
+ * 🛡️ حارس الفواتير المركزي لجميع الصفحات (يضمن استحالة صدور فاتورة خاطئة أو فاتورة 6 دنانير في أجبان الرياض)
+ */
+export function validateInvoiceBeforeSend(pageId, lines = [], customer = {}) {
+  const resolvedId = resolvePageId(pageId) || pageId;
+  const page = getPage(resolvedId);
+  if (!page) {
+    return { ok: false, error: "unknown_page", message: "الصفحة غير معروفة." };
+  }
+
+  const calc = calculateOrderTotal(resolvedId, lines);
+  if (!calc || calc.error || !calc.canIssueInvoice || calc.invoiceBlocked || calc.total <= 0) {
+    return {
+      ok: false,
+      error: calc?.error || "invalid_invoice_total",
+      minimumQuantity: calc?.minimumQuantity || page.MINIMUM_QUANTITY || 1,
+      minimumInvoiceTotal: calc?.minimumInvoiceTotal || page.MINIMUM_INVOICE_TOTAL || 0,
+      message: isRiyadhPage(resolvedId)
+        ? "عذراً يا غالي، أقل كمية للطلب في أجبان الرياض هي 2 كيلو (10 دنانير شامل التوصيل)، ولا يمكن إصدار فاتورة لأقل من ذلك."
+        : "لا يمكن إصدار الفاتورة قبل استكمال الكمية الصحيحة."
+    };
+  }
+
+  if (isRiyadhPage(resolvedId) && calc.total < 10) {
+    return {
+      ok: false,
+      error: "riyadh_minimum_10_jod",
+      minimumQuantity: 2,
+      minimumInvoiceTotal: 10,
+      message: "يمنع نهائياً إصدار فاتورة أقل من 10 دنانير في أجبان الرياض."
+    };
+  }
+
+  const cleanPhone = normalizePhone(customer?.phone || "");
+  if (customer?.phone && !/^07\d{8}$/.test(cleanPhone)) {
+    return {
+      ok: false,
+      error: "invalid_phone",
+      message: "يرجى التأكد من رقم الهاتف الأردني المكون من 10 خانات قبل إصدار الفاتورة."
+    };
+  }
+
+  return {
+    ok: true,
+    pageId: resolvedId,
+    totals: calc,
+    phone: cleanPhone || customer?.phone || ""
+  };
+}
+
+/**
+ * بناء نص الفاتورة النهائي بشكل آمن ومضمون 100% بدون أي خطأ بالحساب أو الكميات
+ */
+export function buildSafeInvoice(pageId, stateOrOrder = {}) {
+  const resolvedId = resolvePageId(pageId) || pageId;
+  const page = getPage(resolvedId);
+  if (!page) return { ok: false, error: "unknown_page", invoiceText: null };
+
+  const defaultProduct = Object.keys(page.PRICES || {})[0] || "";
+  const lines = Array.isArray(stateOrOrder.lines) && stateOrOrder.lines.length > 0
+    ? stateOrOrder.lines
+    : [{
+        product: stateOrOrder.product || defaultProduct,
+        quantity: Number(stateOrOrder.quantity || 0)
+      }];
+
+  const check = validateInvoiceBeforeSend(resolvedId, lines, stateOrOrder);
+  if (!check.ok) {
+    return {
+      ok: false,
+      error: check.error,
+      message: check.message,
+      invoiceText: null
+    };
+  }
+
+  const { totals } = check;
+  const fullAddress = [stateOrOrder.region, stateOrOrder.address]
+    .map(v => String(v || "").trim())
+    .filter(Boolean)
+    .filter((v, idx, arr) => idx === 0 || !arr[0].includes(v))
+    .join(" - ") || String(stateOrOrder.address || stateOrOrder.region || "").trim();
+
+  const phone = check.phone || String(stateOrOrder.phone || "").trim();
+
+  let orderString = "";
+  let priceString = "";
+
+  if (isRiyadhPage(resolvedId)) {
+    const qty = totals.totalQuantity;
+    orderString = `${qty} كيلو جبنة الرياض (${totals.subtotal} د جبنة + ${totals.delivery} د توصيل)`;
+    priceString = `${totals.total} دينار شامل التوصيل`;
+  } else if (resolvedId === RIVAN_OFFER.pageId) {
+    const qty = totals.items.reduce((s, it) => s + it.quantity, 0);
+    orderString = `${RIVAN_OFFER.productName} × ${qty}`;
+    priceString = `${totals.total}`;
+  } else {
+    orderString = totals.items
+      .map(it => {
+        const unit = page.UNITS?.[it.product] || page.DEFAULT_UNIT || "عبوة";
+        return `${it.product} × ${it.quantity} (${unit})`;
+      })
+      .join(" + ");
+    priceString = totals.delivery > 0
+      ? `${totals.total} دينار (شامل ${totals.delivery} د توصيل)`
+      : `${totals.total} دينار شامل التوصيل`;
+  }
+
+  const invoiceText = page.INVOICE_TEMPLATE(orderString, priceString, fullAddress, phone);
+  return {
+    ok: true,
+    totals,
+    invoiceText
+  };
+}
+
+/**
+ * حارس داخلي لقالب فاتورة أجبان الرياض حتى لو تم استدعاء INVOICE_TEMPLATE مباشرة من كود خارجي بقيمة خاطئة!
+ */
+function renderProtectedRiyadhInvoice(orderString, p, a, phone) {
+  const normalizedOrder = normalizeArabicText(String(orderString || ""));
+  const normalizedPrice = normalizeArabicText(String(p || ""));
+
+  // استخراج عدد الكيلوات الحقيقي من نص الطلب إن وجد
+  const kiloMatch = normalizedOrder.match(/(\d+(?:\.\d+)?)\s*(?:كيلو|كغم|كغ)/) || normalizedOrder.match(/^(\d+(?:\.\d+)?)$/);
+  let detectedKilos = kiloMatch ? Number(kiloMatch[1]) : null;
+
+  if (!detectedKilos) {
+    if (/كيلوين|اثنين|اتنين/.test(normalizedOrder)) detectedKilos = 2;
+    else if (/ثلاث|ثلاثه/.test(normalizedOrder)) detectedKilos = 3;
+    else if (/اربع|اربعه/.test(normalizedOrder)) detectedKilos = 4;
+    else if (/خمس|خمسه/.test(normalizedOrder)) detectedKilos = 5;
+    else if (/كيلو\s*واحد|^1\b/.test(normalizedOrder)) detectedKilos = 1;
+  }
+
+  // استخراج السعر الممرر لفحص هل هو 6 دنانير أو أقل من 10 دنانير
+  const passedPriceMatch = normalizedPrice.match(/(\d+(?:\.\d+)?)/);
+  const passedNumericPrice = passedPriceMatch ? Number(passedPriceMatch[1]) : null;
+
+  // منع قاطع 100% لإصدار أي فاتورة بقيمة 6 دنانير أو أقل من 2 كيلو تحت أي ظرف
+  if ((detectedKilos != null && detectedKilos < 2) || (passedNumericPrice != null && passedNumericPrice < 10)) {
+    return null; // يمنع صدور الفاتورة الخاطئة نهائياً
+  }
+
+  // إذا كانت الكيلوات معروفة (مثلاً 2 أو 3 أو 4 كيلو...) احسب السعر الرسمي إجبارياً لمنع أي خربطة:
+  // 2 كيلو = 10 د | 3 كيلو = 14 د | 4 كيلو = 18 د شامل التوصيل
+  let finalOrderLabel = String(orderString || "").trim();
+  let finalPriceLabel = String(p || "").trim();
+
+  if (detectedKilos != null && detectedKilos >= 2) {
+    const exactSubtotal = Number((detectedKilos * 4).toFixed(2));
+    const exactTotal = Number((exactSubtotal + 2).toFixed(2));
+    finalOrderLabel = `${detectedKilos} كيلو جبنة الرياض`;
+    finalPriceLabel = `${exactTotal} دينار شامل التوصيل (${exactSubtotal} د جبنة + 2 د توصيل)`;
+  } else if (passedNumericPrice != null && passedNumericPrice >= 10) {
+    finalPriceLabel = /شامل/.test(finalPriceLabel)
+      ? finalPriceLabel
+      : `${passedNumericPrice} دينار شامل التوصيل`;
+  }
+
+  return `✅ فاتورة أجبان الرياض
+▪️ الطلب: ${finalOrderLabel}
+▪️ الحساب الإجمالي: ${finalPriceLabel}
+▪️ العنوان: ${a}
+▪️ التلفون: ${phone}
+صحتين وعافية 🌹`;
 }
 
 /**
@@ -438,44 +817,95 @@ export function formatRivanInvoiceLines(lines = []) {
 }
 
 export function getMissingOrderFields(pageId, state = {}) {
-  const page = getPage(pageId);
+  const resolvedId = resolvePageId(pageId) || pageId;
+  const page = getPage(resolvedId);
   if (!page) return ["page"];
   const fields = page.REQUIRED_ORDER_FIELDS || ["name", "phone", "region", "address", "quantity"];
-  return fields.filter(field => state?.[field] == null || String(state[field]).trim() === "");
+  const missing = fields.filter(field => state?.[field] == null || String(state[field]).trim() === "");
+
+  // في أجبان الرياض: إذا كانت الكمية المحفوظة أقل من 2 كيلو (مثلاً 1 كيلو)، اعتبر حقل الكمية غير مكتمل حتى يرفعه العميل لـ 2 كيلو فأكثر ولا تصدر فاتورة ابداً
+  if (isRiyadhPage(resolvedId)) {
+    const qty = Number(state?.quantity || 0);
+    if (!Number.isFinite(qty) || qty < 2) {
+      if (!missing.includes("quantity")) missing.unshift("quantity");
+    }
+  }
+
+  return missing;
 }
 
 export function makeConversationState(previous = {}, message = "", pageId = previous.pageId) {
-  const next = { ...previous, pageId, lastMessage: String(message) };
+  const resolvedId = resolvePageId(pageId) || pageId;
+  const next = { ...previous, pageId: resolvedId, lastMessage: String(message) };
   next.intent = detectIntent(message);
 
   const phone = extractPhone(message);
   if (phone) next.phone = phone;
 
   const quantity = extractQuantity(message);
-  if (quantity) next.quantity = quantity;
+  if (quantity != null) {
+    if (isRiyadhPage(resolvedId) && quantity < 2) {
+      // لا تحفظ كمية 1 كيلو ككمية صالحة للفوترة في أجبان الرياض؛ سجل تحذيراً واضحاً للنظام والرد البشري
+      next.rejectedBelowMinimumQuantity = quantity;
+      if (next.quantity != null && Number(next.quantity) < 2) {
+        delete next.quantity;
+      }
+    } else {
+      next.quantity = quantity;
+      delete next.rejectedBelowMinimumQuantity;
+    }
+  }
 
-  const matches = findProductMatches(pageId, message);
+  const matches = findProductMatches(resolvedId, message);
   if (matches.length === 1) next.product = matches[0];
   if (matches.length > 1) next.products = matches;
 
-  // إذا كانت الصفحة تحتوي على منتج وحيد فقط (مثل اجبان الرياض)، يتم اعتماده تلقائياً
-  const page = getPage(pageId);
+  // إذا كانت الصفحة تحتوي على منتج وحيد فقط (مثل اجبان الرياض، ريفان، المهيري، فاتي)، يتم اعتماده تلقائياً
+  const page = getPage(resolvedId);
   const pageProducts = page ? Object.keys(page.PRICES || {}) : [];
   if (!next.product && pageProducts.length === 1) {
     next.product = pageProducts[0];
   }
 
   const t = normalizeArabicText(message);
-  if (/اسمي|انا |أنا /.test(t)) {
-    const name = String(message).match(/(?:اسمي|انا|أنا)\s+([^،,.!؟\n]+)/i)?.[1]?.trim();
+  if (/اسمي|انا |أنا |الاسم/.test(t)) {
+    const name = String(message).match(/(?:اسمي|الاسم|انا|أنا)\s*[:\-]?\s*([^،,.!؟\n0-9]+)/i)?.[1]?.trim();
     if (name && name.length >= 2 && name.length <= 40) next.name = name;
   }
 
-  const regions = ["عمان", "الزرقاء", "اربد", "المفرق", "جرش", "عجلون", "مادبا", "البلقاء", "السلط", "الكرك", "الطفيلة", "معان", "العقبة"];
-  for (const reg of regions) {
-    if (t.includes(reg)) {
-      next.region = reg;
+  const regions = [
+    ["عمان", /عمان|طبربور|ماركا|الجبيهه|صويلح|تلاع العلي|خلدا|مرج الحمام|سحاب|ابو نصير|شفا بدران|جبل النصر|جبل التاج|الهاشمي|المقابلين|القويسمه|البيادر|وادي السير|الياسمين|ضاحيه الرشيد/],
+    ["الزرقاء", /الزرقاء|الزرقا|الرصيفه|رصيفه|الهاشميه|الزرقاء الجديده/],
+    ["اربد", /اربد|إربد|الرمثا|الحصن|حواره|بني كنانه|الاغوار الشماليه|كفرسوم|دير ابي سعيد/],
+    ["المفرق", /المفرق|الخالديه|بلعما|رحاب|منشيه بني حسن/],
+    ["جرش", /جرش|سوف|ساكب/],
+    ["عجلون", /عجلون|كفرنجه|عنجره/],
+    ["مادبا", /مادبا|مأدبا|ذيبان/],
+    ["البلقاء", /البلقاء|السلط|عين الباشا|البقعه|الفحيص|ماحص|دير علا|الشونه/],
+    ["الكرك", /الكرك|المزار الجنوبي|مؤته|غور الصافي|القطرانه/],
+    ["الطفيلة", /الطفيله|بصيرا|الحسا/],
+    ["معان", /معان|البتراء|وادي موسى|الشوبك/],
+    ["العقبة", /العقبه/]
+  ];
+  for (const [regName, regRegex] of regions) {
+    if (regRegex.test(t)) {
+      next.region = regName;
       break;
+    }
+  }
+
+  // حساب حي ودقيق للطلب الحالي وحفظه في الحالة لضمان عدم تأليف البوت لأي رقم خاطئ
+  if (next.product && next.quantity) {
+    const preview = calculateOrderTotal(resolvedId, [{ product: next.product, quantity: next.quantity }]);
+    if (preview && preview.canIssueInvoice) {
+      next.calculatedInvoicePreview = {
+        quantity: next.quantity,
+        subtotal: preview.subtotal,
+        delivery: preview.delivery,
+        total: preview.total
+      };
+    } else {
+      delete next.calculatedInvoicePreview;
     }
   }
 
@@ -483,11 +913,30 @@ export function makeConversationState(previous = {}, message = "", pageId = prev
 }
 
 export function buildPageSystemPrompt(pageId, state = {}) {
-  const page = getPage(pageId);
+  const resolvedId = resolvePageId(pageId) || pageId;
+  const page = getPage(resolvedId);
   if (!page) throw new Error(`Unknown pageId: ${pageId}`);
-  const products = listPageProducts(pageId);
-  const missing = getMissingOrderFields(pageId, state);
-  const expert = buildExpertResponseContext(pageId, state?.lastMessage || "", state);
+  const products = listPageProducts(resolvedId);
+  const missing = getMissingOrderFields(resolvedId, state);
+  const expert = buildExpertResponseContext(resolvedId, state?.lastMessage || "", state);
+
+  const invoiceGuardNote = isRiyadhPage(resolvedId)
+    ? `\n[🔒 قفل فواتير أجبان الرياض الإلزامي]
+- يمنع منعاً باتاً إصدار أو ذكر أي فاتورة بقيمة 6 دنانير نهائياً تحت أي ظرف.
+- أقل كمية للطلب هي 2 كيلو = 10 دنانير شامل التوصيل (8 دنانير جبنة + 2 دينار توصيل).
+- إذا طلب الزبون 1 كيلو، اعتذر بلباقة ووضّح أن أقل طلب هو 2 كيلو بـ 10 دنانير شامل التوصيل، ولا تصدر فاتورة أبداً.
+- إذا طلب الزبون 4 كيلو: الفاتورة الصحيحة والحصرية هي 18 دينار شامل التوصيل (16 دينار جبنة + 2 دينار توصيل).
+- جدول الأسعار الثابت لأجبان الرياض (شامل التوصيل 2 د):
+  * 2 كيلو = 10 دنانير شامل التوصيل
+  * 3 كيلو = 14 دينار شامل التوصيل
+  * 4 كيلو = 18 دينار شامل التوصيل
+  * 5 كيلو = 22 دينار شامل التوصيل
+  * 6 كيلو = 26 دينار شامل التوصيل
+- لا تصدر أي فاتورة إلا بعد التأكد من: الاسم + الهاتف + المنطقة/العنوان + كمية (2 كيلو فأكثر) + مطابقة الحساب 100% للمعادلة أعلاه.`
+    : `\n[🔒 قفل دقة الفواتير العام]
+- لا تصدر أي فاتورة برقم تقديري أو غير مطابق لمعادلة الصفحة الرسمية في calculateOrderTotal.
+- تأكد من اكتمال البيانات الأساسية وصحة المجموع مع التوصيل 100% قبل كتابة الفاتورة.`;
+
   return [
     SALES_PERSONA,
     COMMON_KNOWLEDGE,
@@ -496,10 +945,11 @@ export function buildPageSystemPrompt(pageId, state = {}) {
     `\n[منتجات الصفحة]\n${products.join("، ") || "لا يوجد"}`,
     `\n[معلومات موثوقة للصفحة]\n${page.INFO || ""}`,
     `\n[نظام الصفحة]\n${page.SYSTEM || ""}`,
+    invoiceGuardNote,
     `\n[المعرفة الخبيرة الخاصة بهذه الصفحة]\n${expert}`,
     `\n[بيانات المحادثة المحفوظة]\n${JSON.stringify(state || {}, null, 2)}`,
     `\n[الحقول الناقصة]\n${missing.join("، ") || "لا يوجد"}`,
-    `\n[الحاجز النهائي]\nأجب كمعلّم مبيعات أردني فاهم، مقنع، محترم، واثق، ومختصر جداً كأنك إنسان حقيقي 100% بدون أي أثر للذكاء الاصطناعي. أجب على السؤال مباشرة واطلب بيانات التوصيل لإغلاق البيعة. لا تقل ما بعرف ولا تتلعثم.`
+    `\n[الحاجز النهائي]\nأجب كمعلّم مبيعات أردني فاهم، مقنع، محترم، واثق، ومختصر جداً كأنك إنسان حقيقي 100% بدون أي أثر للذكاء الاصطناعي. أجب على السؤال مباشرة واطلب بيانات التوصيل لإغلاق البيعة. لا تقل ما بعرف ولا تتلعثم، ولا تصدر أي فاتورة خاطئة نهائياً.`
   ].join("\n");
 }
 
@@ -514,6 +964,10 @@ export function validatePages() {
     for (const [product, price] of Object.entries(page.PRICES || {})) {
       if (typeof price !== "number" || price < 0) errors.push(`${id}: invalid price ${product}`);
       if (!page.PRODUCT_KEYWORDS?.[product]) warnings.push(`${id}: no keyword matcher for ${product}`);
+    }
+    if (isRiyadhPage(id)) {
+      if (page.MINIMUM_QUANTITY !== 2) errors.push(`${id}: Riyadh MINIMUM_QUANTITY must be 2`);
+      if (page.MINIMUM_INVOICE_TOTAL !== 10) errors.push(`${id}: Riyadh MINIMUM_INVOICE_TOTAL must be 10`);
     }
   }
   return { ok: errors.length === 0, errors, warnings };
@@ -541,6 +995,8 @@ export const PAGE_ALIASES = Object.freeze({
   "أجبان الرياض": "1229773096895942",
   "جبنة الرياض": "1229773096895942",
   "جبنه الرياض": "1229773096895942",
+  "اجبان الرياض 2": "1488299554357978",
+  "أجبان الرياض 2": "1488299554357978",
   "فاتي": "892685600593825"
 });
 
@@ -556,7 +1012,9 @@ export const PAGE_SAFETY_RULES = Object.freeze({
   noFabricatedFacts: true,
   rememberProvidedFields: true,
   noExternalActionClaims: true,
-  shortReplies: true
+  shortReplies: true,
+  strictInvoiceValidation: true,
+  blockRiyadhSixJodInvoice: true
 });
 
 export const RIVAN_OFFER = Object.freeze({
@@ -965,6 +1423,7 @@ ${RIVAN_OFFER.description}
 
     DELIVERY: 2,
     MINIMUM_QUANTITY: 2,
+    MINIMUM_INVOICE_TOTAL: 10,
     DEFAULT_UNIT: "كيلو",
 
     PRICES: {
@@ -981,8 +1440,11 @@ ${RIVAN_OFFER.description}
     INFO: `صفحة أجبان الرياض:
 - المنتج الوحيد: جبنة الرياض، كوكتيل حليب ماعز وغنم وبقر بنسب مدروسة.
 - سعر الكيلو: 4 دنانير.
-- أقل كمية للطلب: 2 كيلو.
-- التوصيل: 2 دينار لجميع محافظات المملكة.
+- أقل كمية للطلب: 2 كيلو (أقل فاتورة 10 دنانير شامل التوصيل — ممنوع نهائياً بيع 1 كيلو أو إصدار فاتورة بقيمة 6 دنانير).
+- التوصيل: 2 دينار مرة واحدة للطلب لجميع محافظات المملكة.
+- 2 كيلو = 8 دنانير جبنة + 2 توصيل = 10 دنانير شامل التوصيل.
+- 3 كيلو = 12 دينار جبنة + 2 توصيل = 14 دينار شامل التوصيل.
+- 4 كيلو = 16 دينار جبنة + 2 توصيل = 18 دينار شامل التوصيل.
 - مكونات الحشوة: محلب، مستكة، وحبة البركة.
 - نسبة الملح: 5% فقط.
 - خالية من المواد الحافظة.
@@ -1005,10 +1467,13 @@ ${RIVAN_OFFER.description}
 - المنتج كوكتيل حليب ماعز وغنم وبقر بنسب مدروسة.
 - كل أسماء "جبنة الرياض" و"الجبنة الجديدة" و"الجبنة قليلة الملح" تعني المنتج نفسه، وليست أصنافاً مختلفة.
 - سعر الكيلو 4 دنانير.
-- أقل طلب 2 كيلو.
-- التوصيل 2 دينار لجميع محافظات المملكة.
-- 2 كيلو: 8 دنانير جبنة + 2 توصيل = 10 دنانير.
-- 4 كيلو: 16 دينار جبنة + 2 توصيل = 18 دينار.
+- أقل طلب 2 كيلو (ممنوع نهائياً قبول 1 كيلو أو إصدار فاتورة بقيمة 6 دنانير تحت أي ظرف).
+- أقل فاتورة تصدر هي 10 دنانير شامل التوصيل (لكيلوين).
+- التوصيل 2 دينار مرة واحدة للطلب لجميع محافظات المملكة.
+- 2 كيلو: 8 دنانير جبنة + 2 توصيل = 10 دنانير شامل التوصيل.
+- 3 كيلو: 12 دينار جبنة + 2 توصيل = 14 دينار شامل التوصيل.
+- 4 كيلو: 16 دينار جبنة + 2 توصيل = 18 دينار شامل التوصيل (تأكد من دقتها 100% دون أي خربطة).
+- 5 كيلو: 20 دينار جبنة + 2 توصيل = 22 دينار شامل التوصيل.
 - لا تقدم خصومات أو أسعار توصيل مختلفة من عندك.
 
 المكونات والمواصفات:
@@ -1024,14 +1489,14 @@ ${RIVAN_OFFER.description}
 - الصلاحية 3 أشهر.
 - المنتج مكفول، والمعاينة متاحة عند الاستلام.
 
-قواعد المحادثة:
+قواعد المحادثة والفوترة الصارمة:
 1. جاوب عن سؤال العميل مباشرة وباختصار، ولا ترسل تفاصيل المنتج كاملة إلا إذا طلبها.
-2. إذا سأل عن السعر، اذكر 4 دنانير للكيلو والحد الأدنى 2 كيلو.
+2. إذا سأل عن السعر، اذكر 4 دنانير للكيلو والحد الأدنى 2 كيلو (10 دنانير شامل التوصيل).
 3. إذا سأل عن التوصيل، اذكر أنه 2 دينار لجميع محافظات المملكة.
 4. إذا طلب الشراء، اجمع الكمية أولاً ثم الاسم ورقم الهاتف والمنطقة والعنوان؛ اسأل فقط عن البيانات الناقصة ولا تكرر ما ذكره.
-5. لا تقبل طلباً أقل من 2 كيلو.
-6. إذا طلب 2 كيلو، وضح أن الإجمالي 10 دنانير شامل التوصيل. وإذا طلب 4 كيلو، وضح أن الإجمالي 18 ديناراً شامل التوصيل.
-7. إذا طلب كمية أخرى، احسب سعر الجبنة على أساس 4 دنانير للكيلو، واذكر أن التوصيل 2 دينار، دون إضافة خصومات.
+5. يمنع منعاً باتاً قبول طلب أقل من 2 كيلو أو إصدار فاتورة بقيمة 6 دنانير؛ إذا طلب كيلو واحد اعتذر بلطف ووضّح أن أقل كمية هي 2 كيلو بـ 10 دنانير شامل التوصيل.
+6. إذا طلب 2 كيلو، وضح أن الإجمالي 10 دنانير شامل التوصيل. وإذا طلب 4 كيلو، وضح أن الإجمالي 18 ديناراً شامل التوصيل (16 جبنة + 2 توصيل) وأصدر الفاتورة بـ 18 دينار شامل التوصيل حصراً عند اكتمال بياناته.
+7. إذا طلب كمية أخرى (2 كيلو فأكثر)، احسبها بدقة: (عدد الكيلوات × 4) + 2 دينار توصيل مرة واحدة، دون أي خصومات.
 8. عند سؤال العميل عن القلي، أكد أنها مناسبة للقلي ولا تذوب ولا تفرط.
 9. عند سؤال العميل عن النقع، وضح أن النقع 5 دقائق فقط عند الحاجة، ويمكن قليها مباشرة.
 10. لا تقل إن المنتج يحتاج غلياً في البيت.
@@ -1043,13 +1508,7 @@ ${RIVAN_OFFER.description}
 `,
 
     INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة أجبان الرياض
-▪️ الطلب: ${orderString}
-▪️ الحساب: ${p}
-▪️ العنوان: ${a}
-▪️ التلفون: ${phone}
-▪️ التوصيل: 2 دينار
-صحتين وعافية 🌹`
+      renderProtectedRiyadhInvoice(orderString, p, a, phone)
   },
 
   // ═══════════════════════════════════════════════════════════
@@ -1064,6 +1523,7 @@ ${RIVAN_OFFER.description}
 
     DELIVERY: 2,
     MINIMUM_QUANTITY: 2,
+    MINIMUM_INVOICE_TOTAL: 10,
     DEFAULT_UNIT: "كيلو",
 
     PRICES: {
@@ -1080,8 +1540,11 @@ ${RIVAN_OFFER.description}
     INFO: `صفحة أجبان الرياض:
 - المنتج الوحيد: جبنة الرياض، كوكتيل حليب ماعز وغنم وبقر بنسب مدروسة.
 - سعر الكيلو: 4 دنانير.
-- أقل كمية للطلب: 2 كيلو.
-- التوصيل: 2 دينار لجميع محافظات المملكة.
+- أقل كمية للطلب: 2 كيلو (أقل فاتورة 10 دنانير شامل التوصيل — ممنوع نهائياً بيع 1 كيلو أو إصدار فاتورة بقيمة 6 دنانير).
+- التوصيل: 2 دينار مرة واحدة للطلب لجميع محافظات المملكة.
+- 2 كيلو = 8 دنانير جبنة + 2 توصيل = 10 دنانير شامل التوصيل.
+- 3 كيلو = 12 دينار جبنة + 2 توصيل = 14 دينار شامل التوصيل.
+- 4 كيلو = 16 دينار جبنة + 2 توصيل = 18 دينار شامل التوصيل.
 - مكونات الحشوة: محلب، مستكة، وحبة البركة.
 - نسبة الملح: 5% فقط.
 - خالية من المواد الحافظة.
@@ -1104,10 +1567,13 @@ ${RIVAN_OFFER.description}
 - المنتج كوكتيل حليب ماعز وغنم وبقر بنسب مدروسة.
 - كل أسماء "جبنة الرياض" و"الجبنة الجديدة" و"الجبنة قليلة الملح" تعني المنتج نفسه، وليست أصنافاً مختلفة.
 - سعر الكيلو 4 دنانير.
-- أقل طلب 2 كيلو.
-- التوصيل 2 دينار لجميع محافظات المملكة.
-- 2 كيلو: 8 دنانير جبنة + 2 توصيل = 10 دنانير.
-- 4 كيلو: 16 دينار جبنة + 2 توصيل = 18 دينار.
+- أقل طلب 2 كيلو (ممنوع نهائياً قبول 1 كيلو أو إصدار فاتورة بقيمة 6 دنانير تحت أي ظرف).
+- أقل فاتورة تصدر هي 10 دنانير شامل التوصيل (لكيلوين).
+- التوصيل 2 دينار مرة واحدة للطلب لجميع محافظات المملكة.
+- 2 كيلو: 8 دنانير جبنة + 2 توصيل = 10 دنانير شامل التوصيل.
+- 3 كيلو: 12 دينار جبنة + 2 توصيل = 14 دينار شامل التوصيل.
+- 4 كيلو: 16 دينار جبنة + 2 توصيل = 18 دينار شامل التوصيل (تأكد من دقتها 100% دون أي خربطة).
+- 5 كيلو: 20 دينار جبنة + 2 توصيل = 22 دينار شامل التوصيل.
 - لا تقدم خصومات أو أسعار توصيل مختلفة من عندك.
 
 المكونات والمواصفات:
@@ -1123,14 +1589,14 @@ ${RIVAN_OFFER.description}
 - الصلاحية 3 أشهر.
 - المنتج مكفول، والمعاينة متاحة عند الاستلام.
 
-قواعد المحادثة:
+قواعد المحادثة والفوترة الصارمة:
 1. جاوب عن سؤال العميل مباشرة وباختصار، ولا ترسل تفاصيل المنتج كاملة إلا إذا طلبها.
-2. إذا سأل عن السعر، اذكر 4 دنانير للكيلو والحد الأدنى 2 كيلو.
+2. إذا سأل عن السعر، اذكر 4 دنانير للكيلو والحد الأدنى 2 كيلو (10 دنانير شامل التوصيل).
 3. إذا سأل عن التوصيل، اذكر أنه 2 دينار لجميع محافظات المملكة.
 4. إذا طلب الشراء، اجمع الكمية أولاً ثم الاسم ورقم الهاتف والمنطقة والعنوان؛ اسأل فقط عن البيانات الناقصة ولا تكرر ما ذكره.
-5. لا تقبل طلباً أقل من 2 كيلو.
-6. إذا طلب 2 كيلو، وضح أن الإجمالي 10 دنانير شامل التوصيل. وإذا طلب 4 كيلو، وضح أن الإجمالي 18 ديناراً شامل التوصيل.
-7. إذا طلب كمية أخرى، احسب سعر الجبنة على أساس 4 دنانير للكيلو، واذكر أن التوصيل 2 دينار، دون إضافة خصومات.
+5. يمنع منعاً باتاً قبول طلب أقل من 2 كيلو أو إصدار فاتورة بقيمة 6 دنانير؛ إذا طلب كيلو واحد اعتذر بلطف ووضّح أن أقل كمية هي 2 كيلو بـ 10 دنانير شامل التوصيل.
+6. إذا طلب 2 كيلو، وضح أن الإجمالي 10 دنانير شامل التوصيل. وإذا طلب 4 كيلو، وضح أن الإجمالي 18 ديناراً شامل التوصيل (16 جبنة + 2 توصيل) وأصدر الفاتورة بـ 18 دينار شامل التوصيل حصراً عند اكتمال بياناته.
+7. إذا طلب كمية أخرى (2 كيلو فأكثر)، احسبها بدقة: (عدد الكيلوات × 4) + 2 دينار توصيل مرة واحدة، دون أي خصومات.
 8. عند سؤال العميل عن القلي، أكد أنها مناسبة للقلي ولا تذوب ولا تفرط.
 9. عند سؤال العميل عن النقع، وضح أن النقع 5 دقائق فقط عند الحاجة، ويمكن قليها مباشرة.
 10. لا تقل إن المنتج يحتاج غلياً في البيت.
@@ -1142,15 +1608,11 @@ ${RIVAN_OFFER.description}
 `,
 
     INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      `✅ فاتورة أجبان الرياض
-▪️ الطلب: ${orderString}
-▪️ الحساب: ${p}
-▪️ العنوان: ${a}
-▪️ التلفون: ${phone}
-▪️ التوصيل: 2 دينار
-صحتين وعافية 🌹`
+      renderProtectedRiyadhInvoice(orderString, p, a, phone)
   },
 
+  // ═══════════════════════════════════════════════════════════
+  // فاتي
   // ═══════════════════════════════════════════════════════════
   "892685600593825": {
     name: "فاتي",
@@ -1332,46 +1794,52 @@ export const PAGE_EXPERT_KNOWLEDGE = Object.freeze({
   },
 
   "1229773096895942": {
-    summary: `أجبان الرياض: جبنة واحدة كوكتيل حليب ماعز وغنم وبقر. 4 دنانير للكيلو، الحد الأدنى 2 كيلو، والتوصيل 2 دينار لجميع المحافظات. الملح 5%، الحشوة محلب ومستكة وحبة البركة، خالية من المواد الحافظة. مغلية وتُقلى مباشرة دون نقع، أو تُنقع 5 دقائق عند الرغبة. لا تذوب ولا تفرط بالقلي، جاهزة للتذوق بعد 20 دقيقة، صلاحيتها 3 أشهر، مكفولة مع إمكانية المعاينة عند الاستلام.`,
+    summary: `أجبان الرياض: جبنة واحدة كوكتيل حليب ماعز وغنم وبقر. 4 دنانير للكيلو، الحد الأدنى للطلب 2 كيلو (أقل فاتورة 10 دنانير شامل التوصيل، وممنوع نهائياً بيع 1 كيلو أو إصدار فاتورة بقيمة 6 دنانير)، والـ 4 كيلو بـ 18 دينار شامل التوصيل (16 جبنة + 2 توصيل). الملح 5%، الحشوة محلب ومستكة وحبة البركة، خالية من المواد الحافظة. مغلية وتُقلى مباشرة دون نقع، أو تُنقع 5 دقائق عند الرغبة. لا تذوب ولا تفرط بالقلي، جاهزة للتذوق بعد 20 دقيقة، صلاحيتها 3 أشهر، مكفولة مع إمكانية المعاينة عند الاستلام.`,
     products: {
-      "جبنة الرياض": "4 دنانير للكيلو، الحد الأدنى 2 كيلو. كوكتيل حليب ماعز وغنم وبقر، ملح 5%، محلب ومستكة وحبة البركة، خالية من المواد الحافظة. مغلية ويمكن قليها مباشرة، أو نقعها 5 دقائق عند الحاجة. لا تذوب ولا تفرط بالقلي."
+      "جبنة الرياض": "4 دنانير للكيلو، الحد الأدنى 2 كيلو (10 دنانير شامل التوصيل)، والـ 4 كيلو بـ 18 دينار شامل التوصيل. كوكتيل حليب ماعز وغنم وبقر، ملح 5%، محلب ومستكة وحبة البركة، خالية من المواد الحافظة. مغلية ويمكن قليها مباشرة، أو نقعها 5 دقائق عند الحاجة. لا تذوب ولا تفرط بالقلي."
     },
     faq: [
-      ["الجبنة بكم؟", "الكيلو بـ4 دنانير يا غالي، وأقل طلب 2 كيلو. والتوصيل 2 دينار لجميع محافظات المملكة."],
-      ["أقل كمية كم؟", "أقل كمية للطلب 2 كيلو يا غالي."],
-      ["كم التوصيل؟", "التوصيل دينارين لجميع محافظات المملكة."],
-      ["كم الحساب على 2 كيلو؟", "كيلوين بـ8 دنانير، ومع التوصيل دينارين بصير المجموع 10 دنانير."],
-      ["كم الحساب على 4 كيلو؟", "4 كيلو بـ16 دينار، ومع التوصيل دينارين بصير المجموع 18 دينار."],
+      ["الجبنة بكم؟", "الكيلو بـ4 دنانير يا غالي، وأقل طلب 2 كيلو بـ10 دنانير شامل التوصيل لجميع محافظات المملكة."],
+      ["أقل كمية كم؟", "أقل كمية للطلب 2 كيلو يا غالي، وبتطلع عليك بـ10 دنانير شامل التوصيل."],
+      ["بدي كيلو واحد", "حقك علينا يا غالي، ما بنطلع طلب أقل من 2 كيلو نهائياً؛ أقل كمية 2 كيلو وحسابها 10 دنانير شامل التوصيل لباب بيتك."],
+      ["كم التوصيل؟", "التوصيل دينارين فقط مرة واحدة على الطلب لجميع محافظات المملكة."],
+      ["كم الحساب على 2 كيلو؟", "كيلوين بـ8 دنانير جبنة + دينارين توصيل = 10 دنانير شامل التوصيل."],
+      ["كم الحساب على 3 كيلو؟", "3 كيلو بـ12 دينار جبنة + دينارين توصيل = 14 دينار شامل التوصيل."],
+      ["كم الحساب على 4 كيلو؟", "4 كيلو بـ16 دينار جبنة + دينارين توصيل = 18 دينار شامل التوصيل."],
+      ["بدي 4 كيلو", "أبشر على راسي يا غالي، 4 كيلو جبنة الرياض حسابها 18 دينار شامل التوصيل لباب بيتك. ابعتلي الاسم والمنطقة والعنوان ورقم الهاتف."],
       ["شو مكونات الجبنة؟", "هي كوكتيل حليب ماعز وغنم وبقر بنسب مدروسة، والحشوة محلب ومستكة وحبة البركة، ونسبة الملح 5% فقط."],
-      ["فيها مواد حافظة؟", "لا يا غالي، الجبنة خالية من المواد الحافظة."],
+      ["فيها مواد حافظة؟", "لا يا غالي، الجبنة خالية من المواد الحافظة نهائياً."],
       ["بدها نقع قبل القلي؟", "بتقدر تقليها مباشرة بدون نقع، وإذا بتحب تنقعها فخمس دقائق كافية."],
       ["بتذوب بالقلي؟", "لا يا غالي، حسب مواصفات المنتج ما بتذوب ولا بتفرط أثناء القلي."],
       ["متى بتصير جاهزة للأكل؟", "بعد 20 دقيقة بتصير جاهزة للتذوق والأكل مباشرة."],
       ["في مجال أعاينها عند الاستلام؟", "أكيد يا غالي، المنتج مكفول وبإمكانك تعاين طلبك عند الاستلام."],
       ["كم مدة الصلاحية؟", "صلاحيتها 3 أشهر."],
-      ["بدي أطلب", "أبشر يا غالي، أقل طلب 2 كيلو. كم كيلو بتحب؟"]
+      ["بدي أطلب", "أبشر يا غالي، أقل طلب 2 كيلو (10 دنانير شامل التوصيل) والـ 4 كيلو بـ 18 دينار شامل التوصيل. كم كيلو نعتمدلك؟"]
     ]
   },
 
   "1488299554357978": {
-    summary: `أجبان الرياض: جبنة واحدة كوكتيل حليب ماعز وغنم وبقر. 4 دنانير للكيلو، الحد الأدنى 2 كيلو، والتوصيل 2 دينار لجميع المحافظات. الملح 5%، الحشوة محلب ومستكة وحبة البركة، خالية من المواد الحافظة. مغلية وتُقلى مباشرة دون نقع، أو تُنقع 5 دقائق عند الرغبة. لا تذوب ولا تفرط بالقلي، جاهزة للتذوق بعد 20 دقيقة، صلاحيتها 3 أشهر، مكفولة مع إمكانية المعاينة عند الاستلام.`,
+    summary: `أجبان الرياض: جبنة واحدة كوكتيل حليب ماعز وغنم وبقر. 4 دنانير للكيلو، الحد الأدنى للطلب 2 كيلو (أقل فاتورة 10 دنانير شامل التوصيل، وممنوع نهائياً بيع 1 كيلو أو إصدار فاتورة بقيمة 6 دنانير)، والـ 4 كيلو بـ 18 دينار شامل التوصيل (16 جبنة + 2 توصيل). الملح 5%، الحشوة محلب ومستكة وحبة البركة، خالية من المواد الحافظة. مغلية وتُقلى مباشرة دون نقع، أو تُنقع 5 دقائق عند الرغبة. لا تذوب ولا تفرط بالقلي، جاهزة للتذوق بعد 20 دقيقة، صلاحيتها 3 أشهر، مكفولة مع إمكانية المعاينة عند الاستلام.`,
     products: {
-      "جبنة الرياض": "4 دنانير للكيلو، الحد الأدنى 2 كيلو. كوكتيل حليب ماعز وغنم وبقر، ملح 5%، محلب ومستكة وحبة البركة، خالية من المواد الحافظة. مغلية ويمكن قليها مباشرة، أو نقعها 5 دقائق عند الحاجة. لا تذوب ولا تفرط بالقلي."
+      "جبنة الرياض": "4 دنانير للكيلو، الحد الأدنى 2 كيلو (10 دنانير شامل التوصيل)، والـ 4 كيلو بـ 18 دينار شامل التوصيل. كوكتيل حليب ماعز وغنم وبقر، ملح 5%، محلب ومستكة وحبة البركة، خالية من المواد الحافظة. مغلية ويمكن قليها مباشرة، أو نقعها 5 دقائق عند الحاجة. لا تذوب ولا تفرط بالقلي."
     },
     faq: [
-      ["الجبنة بكم؟", "الكيلو بـ4 دنانير يا غالي، وأقل طلب 2 كيلو. والتوصيل 2 دينار لجميع محافظات المملكة."],
-      ["أقل كمية كم؟", "أقل كمية للطلب 2 كيلو يا غالي."],
-      ["كم التوصيل؟", "التوصيل دينارين لجميع محافظات المملكة."],
-      ["كم الحساب على 2 كيلو؟", "كيلوين بـ8 دنانير، ومع التوصيل دينارين بصير المجموع 10 دنانير."],
-      ["كم الحساب على 4 كيلو؟", "4 كيلو بـ16 دينار، ومع التوصيل دينارين بصير المجموع 18 دينار."],
+      ["الجبنة بكم؟", "الكيلو بـ4 دنانير يا غالي، وأقل طلب 2 كيلو بـ10 دنانير شامل التوصيل لجميع محافظات المملكة."],
+      ["أقل كمية كم؟", "أقل كمية للطلب 2 كيلو يا غالي، وبتطلع عليك بـ10 دنانير شامل التوصيل."],
+      ["بدي كيلو واحد", "حقك علينا يا غالي، ما بنطلع طلب أقل من 2 كيلو نهائياً؛ أقل كمية 2 كيلو وحسابها 10 دنانير شامل التوصيل لباب بيتك."],
+      ["كم التوصيل؟", "التوصيل دينارين فقط مرة واحدة على الطلب لجميع محافظات المملكة."],
+      ["كم الحساب على 2 كيلو؟", "كيلوين بـ8 دنانير جبنة + دينارين توصيل = 10 دنانير شامل التوصيل."],
+      ["كم الحساب على 3 كيلو؟", "3 كيلو بـ12 دينار جبنة + دينارين توصيل = 14 دينار شامل التوصيل."],
+      ["كم الحساب على 4 كيلو؟", "4 كيلو بـ16 دينار جبنة + دينارين توصيل = 18 دينار شامل التوصيل."],
+      ["بدي 4 كيلو", "أبشر على راسي يا غالي، 4 كيلو جبنة الرياض حسابها 18 دينار شامل التوصيل لباب بيتك. ابعتلي الاسم والمنطقة والعنوان ورقم الهاتف."],
       ["شو مكونات الجبنة؟", "هي كوكتيل حليب ماعز وغنم وبقر بنسب مدروسة، والحشوة محلب ومستكة وحبة البركة، ونسبة الملح 5% فقط."],
-      ["فيها مواد حافظة؟", "لا يا غالي، الجبنة خالية من المواد الحافظة."],
+      ["فيها مواد حافظة؟", "لا يا غالي، الجبنة خالية من المواد الحافظة نهائياً."],
       ["بدها نقع قبل القلي؟", "بتقدر تقليها مباشرة بدون نقع، وإذا بتحب تنقعها فخمس دقائق كافية."],
       ["بتذوب بالقلي؟", "لا يا غالي، حسب مواصفات المنتج ما بتذوب ولا بتفرط أثناء القلي."],
       ["متى بتصير جاهزة للأكل؟", "بعد 20 دقيقة بتصير جاهزة للتذوق والأكل مباشرة."],
       ["في مجال أعاينها عند الاستلام؟", "أكيد يا غالي، المنتج مكفول وبإمكانك تعاين طلبك عند الاستلام."],
       ["كم مدة الصلاحية؟", "صلاحيتها 3 أشهر."],
-      ["بدي أطلب", "أبشر يا غالي، أقل طلب 2 كيلو. كم كيلو بتحب؟"]
+      ["بدي أطلب", "أبشر يا غالي، أقل طلب 2 كيلو (10 دنانير شامل التوصيل) والـ 4 كيلو بـ 18 دينار شامل التوصيل. كم كيلو نعتمدلك؟"]
     ]
   },
 
@@ -1391,7 +1859,8 @@ export const PAGE_EXPERT_KNOWLEDGE = Object.freeze({
 });
 
 export function getPageExpertKnowledge(pageId) {
-  return PAGE_EXPERT_KNOWLEDGE[pageId] || null;
+  const resolvedId = resolvePageId(pageId) || pageId;
+  return PAGE_EXPERT_KNOWLEDGE[resolvedId] || null;
 }
 
 function formatExpertKnowledge(profile) {
@@ -1413,11 +1882,12 @@ function formatExpertKnowledge(profile) {
 }
 
 export function buildExpertResponseContext(pageId, message = "", state = {}) {
-  const profile = getPageExpertKnowledge(pageId);
+  const resolvedId = resolvePageId(pageId) || pageId;
+  const profile = getPageExpertKnowledge(resolvedId);
   const intent = detectIntent(message);
-  const matches = findProductMatches(pageId, message);
+  const matches = findProductMatches(resolvedId, message);
   const facts = profile ? formatExpertKnowledge(profile) : "";
-  const domainBrain = getDomainExpertBrain(pageId);
+  const domainBrain = getDomainExpertBrain(resolvedId);
   return [
     HUMAN_RESPONSE_ENGINE,
     domainBrain,
@@ -1455,8 +1925,16 @@ export function getNextMissingOrderField(pageId, state = {}) {
 }
 
 export function buildNextOrderQuestion(pageId, state = {}) {
-  const field = getNextMissingOrderField(pageId, state);
+  const resolvedId = resolvePageId(pageId) || pageId;
+  const field = getNextMissingOrderField(resolvedId, state);
   if (!field) return null;
+
+  if (field === "quantity" && isRiyadhPage(resolvedId)) {
+    if (state?.rejectedBelowMinimumQuantity) {
+      return "حقك علينا يا غالي، أقل كمية للطلب في أجبان الرياض هي 2 كيلو (10 دنانير شامل التوصيل) والـ 4 كيلو بـ 18 دينار شامل التوصيل. كم كيلو بتحب نعتمدلك؟";
+    }
+    return "كم كيلو بتحب نعتمدلك يا غالي؟ (أقل طلب 2 كيلو بـ 10 دنانير شامل التوصيل، والـ 4 كيلو بـ 18 دينار شامل التوصيل)";
+  }
 
   const questions = {
     name: "شو الاسم الكريم يا غالي؟",
@@ -1472,12 +1950,15 @@ export function buildNextOrderQuestion(pageId, state = {}) {
 }
 
 export function getPageSnapshot(pageId) {
-  const page = getPage(pageId);
+  const resolvedId = resolvePageId(pageId) || pageId;
+  const page = getPage(resolvedId);
   if (!page) return null;
   return Object.freeze({
-    id: pageId,
+    id: resolvedId,
     name: page.name,
     delivery: page.DELIVERY ?? 0,
+    minimumQuantity: page.MINIMUM_QUANTITY ?? 1,
+    minimumInvoiceTotal: page.MINIMUM_INVOICE_TOTAL ?? 0,
     defaultUnit: page.DEFAULT_UNIT || null,
     prices: { ...(page.PRICES || {}) },
     offers: JSON.parse(JSON.stringify(page.OFFERS || {})),
@@ -1516,7 +1997,7 @@ export const CHEESE_MASTER_BRAIN = `[أسرار ومعارف معلّم الأج
 - لا تفترض وجود الفاكيوم أو سعره أو طريقة تخزينه إلا إذا كان المنتج موجوداً في الصفحة الحالية.
 
 7) البيع بالعبوة أو بالكيلو:
-- اتبع وحدة البيع والوزن المعتمدين في الصفحة الحالية فقط.
+- اتبع وحدة البيع والوزن والحد الأدنى المعتمدين في الصفحة الحالية فقط.
 `;
 
 export const CHEESE_PRODUCT_REASONING = Object.freeze({
@@ -1565,18 +2046,20 @@ export const CLEANING_MASTER_BRAIN = `[أسرار ومعارف مواد التن
 `;
 
 export function getDomainExpertBrain(pageId) {
-  const page = getPage(pageId);
+  const resolvedId = resolvePageId(pageId) || pageId;
+  const page = getPage(resolvedId);
   if (!page) return "";
-  if (pageId === RIVAN_OFFER.pageId) return RIVAN_OFFER_BRAIN;
+  if (resolvedId === RIVAN_OFFER.pageId) return RIVAN_OFFER_BRAIN;
   const isCheese = ["أجبان غزة", "اجبان المعتمد", "منتجات أم نزار", "أجبان المهيري", "اجبان الرياض", "أجبان الرياض"].includes(page.name);
   return isCheese ? getCheeseMasterBrain() : CLEANING_MASTER_BRAIN;
 }
 
 export function buildDomainExpertPrompt(pageId, message, state = {}) {
-  const domainBrain = getDomainExpertBrain(pageId);
-  const profile = getPageExpertKnowledge(pageId);
+  const resolvedId = resolvePageId(pageId) || pageId;
+  const domainBrain = getDomainExpertBrain(resolvedId);
+  const profile = getPageExpertKnowledge(resolvedId);
   const profileFacts = profile ? formatExpertKnowledge(profile) : "";
-  const matches = findProductMatches(pageId, message);
+  const matches = findProductMatches(resolvedId, message);
   const intent = detectIntent(message);
   return [
     domainBrain,
@@ -1593,7 +2076,8 @@ export const EXPERT_DOMAIN_MODE = Object.freeze({
   cleaning: true,
   pageIsolation: true,
   humanTone: true,
-  answerFromKnowledgeBeforeFallback: true
+  answerFromKnowledgeBeforeFallback: true,
+  strictInvoiceProtection: true
 });
 
 export const RUNTIME_GUARDRAILS = Object.freeze({
@@ -1602,7 +2086,10 @@ export const RUNTIME_GUARDRAILS = Object.freeze({
   preferHumanJordanianTone: true,
   usePageExpertKnowledge: true,
   singleMessageOnly: true,
-  requireCurrentPage: true
+  requireCurrentPage: true,
+  riyadhMinimumKilos: 2,
+  riyadhMinimumInvoiceJod: 10,
+  riyadhFourKilosTotalJod: 18
 });
 
 export function validateExpertKnowledge() {
@@ -1624,17 +2111,62 @@ export function validateExpertKnowledge() {
   return { ok: errors.length === 0, errors };
 }
 
+/**
+ * اختبار ذاتي صارم يعمل تلقائياً عند تشغيل الملف للتأكد 100% أن الفواتير تعمل بلا أي غلطة:
+ * 1) طلب 1 كيلو في أجبان الرياض -> مرفوض تماماً (total: 0, canIssueInvoice: false, template: null) ومستحيل يطلع 6 د.
+ * 2) طلب 2 كيلو في أجبان الرياض -> 10 دنانير شامل التوصيل.
+ * 3) طلب 4 كيلو في أجبان الرياض -> 18 دينار شامل التوصيل على كلا صفحتي أجبان الرياض.
+ */
+export function runInvoiceSelfTests() {
+  const errors = [];
+
+  for (const riyadhId of RIYADH_PAGE_IDS) {
+    // فحص 1 كيلو (منع الـ 6 دنانير)
+    const oneKilo = calculateOrderTotal(riyadhId, [{ product: "جبنة الرياض", quantity: 1 }]);
+    if (!oneKilo || oneKilo.canIssueInvoice !== false || oneKilo.total !== 0) {
+      errors.push(`${riyadhId}: 1kg order was NOT blocked properly`);
+    }
+    const fakeSixInvoice = PAGES[riyadhId].INVOICE_TEMPLATE("1 كيلو جبنة الرياض", "6 د", "عمان", "0790000000");
+    if (fakeSixInvoice !== null) {
+      errors.push(`${riyadhId}: 6 JOD invoice template was NOT blocked`);
+    }
+
+    // فحص 2 كيلو (أقل فاتورة = 10 دنانير)
+    const twoKilo = calculateOrderTotal(riyadhId, [{ product: "جبنة الرياض", quantity: 2 }]);
+    if (!twoKilo || !twoKilo.canIssueInvoice || twoKilo.subtotal !== 8 || twoKilo.delivery !== 2 || twoKilo.total !== 10) {
+      errors.push(`${riyadhId}: 2kg calculation failed (expected 10, got ${twoKilo?.total})`);
+    }
+
+    // فحص 4 كيلو (18 دينار شامل التوصيل بدون أي خربطة)
+    const fourKilo = calculateOrderTotal(riyadhId, [{ product: "جبنة الرياض", quantity: 4 }]);
+    if (!fourKilo || !fourKilo.canIssueInvoice || fourKilo.subtotal !== 16 || fourKilo.delivery !== 2 || fourKilo.total !== 18) {
+      errors.push(`${riyadhId}: 4kg calculation failed (expected 18, got ${fourKilo?.total})`);
+    }
+
+    // فحص استخراج الكمية من جملة معقدة فيها سعر ورقم هاتف وعنوان
+    const parsedQty = extractQuantity("بدي 4 كيلو ب 18 دينار عنواني عمان بنايه 1 عماره 6 تلفوني 0791234567");
+    if (parsedQty !== 4) {
+      errors.push(`${riyadhId}: extractQuantity misread 4kg complex message (got ${parsedQty})`);
+    }
+  }
+
+  return { ok: errors.length === 0, errors };
+}
+
 export const EXPERT_KNOWLEDGE_VALIDATION = validateExpertKnowledge();
 
 export const PAGE_VALIDATION = validatePages();
 
+export const INVOICE_SELF_TEST = runInvoiceSelfTests();
+
 export function healthCheck() {
   const pageIds = Object.keys(PAGES);
   return {
-    ok: pageIds.length >= 8 && PAGE_VALIDATION.ok && EXPERT_KNOWLEDGE_VALIDATION.ok,
+    ok: pageIds.length >= 8 && PAGE_VALIDATION.ok && EXPERT_KNOWLEDGE_VALIDATION.ok && INVOICE_SELF_TEST.ok,
     version: BOT_VERSION,
     totalPages: pageIds.length,
     validation: PAGE_VALIDATION,
-    expertKnowledgeValidation: EXPERT_KNOWLEDGE_VALIDATION
+    expertKnowledgeValidation: EXPERT_KNOWLEDGE_VALIDATION,
+    invoiceSelfTest: INVOICE_SELF_TEST
   };
 }
