@@ -1,49 +1,35 @@
 // ═══════════════════════════════════════════════════════════
 // موزّع الذكاء: يختار بين Gemini و OpenAI (ChatGPT)
-// - AI_PROVIDER="gemini" أو "openai"، أو فاضي (يختار تلقائياً حسب المفتاح)
-// - OpenAI يدعم الصوت عبر تحويله لنص بـ Whisper
 // ═══════════════════════════════════════════════════════════
 import { CONFIG } from "../config.js";
 import { COMMON_KNOWLEDGE, SALES_PERSONA, SALES_BEHAVIOR } from "./brain.js";
 import { ADDRESS_EXPERT } from "./addressExpert.js";
 import { buildNextTask, askGemini } from "./gemini.js";
+import { extractQty, isKiloModePage } from "./parser.js";
 
-// 🔴 كان هون ثابت مثبّت على بوابة وحدة، فلمّا تغيّر المزوّد من
-//    صفحة /admin/ai كان **البوت يضل ينادي البوابة القديمة**
-//    والمفتاح الجديد بيروح على عنوان غلط. صار بينقرأ لحظياً
-//    من نفس مصدر الطبقة الموحّدة.
 const DEFAULT_BASE = "https://api.openai.com/v1";
 function oaiBase() {
   const b = process.env.OPENAI_BASE_URL || siteSetting("ai_base") || DEFAULT_BASE;
   return String(b).replace(/\/+$/, "");
 }
 
-// 🔑 المفتاح والنموذج: متغيّر بيئة أولاً، وإلا المحفوظ بصفحة /admin/ai.
-//    (نقرأه لحظياً عشان يشتغل فوراً بعد ما تحفظه بالموقع بلا إعادة تشغيل)
 function siteSetting(key) {
   try {
-    // استيراد متزامن كسول عبر ذاكرة الوحدة (database.js محمّلة أصلاً)
     return (globalThis.__aiSettings && globalThis.__aiSettings(key)) || "";
   } catch { return ""; }
 }
 export function oaiKey()   { return process.env.OPENAI_API_KEY || siteSetting("ai_key") || ""; }
 export function oaiModel() { return process.env.OPENAI_MODEL || siteSetting("ai_model") || "gpt-4o-mini"; }
 
-// نماذج التفكير (gpt-5 وأخواتها) بترفض max_tokens و temperature،
-// وبتاكل الرصيد بالتفكير فبترجع فاضي لو الحد ضيّق. الطبقة
-// الموحّدة عندها المنطق — منستوردها بدل ما نكرّره هون.
 async function oaiBody(args) {
   const { buildBody } = await import("./aiCore.js");
   return buildBody(args);
 }
 
-// 🔴 Gemini انشال بالكامل — البوت دايماً على GPT، مهما كان
-//    بالبيئة أو الإعدادات. فما في طريقة يرجع يقع على Gemini.
 function chosenProvider() {
   return "openai";
 }
 
-// نقطة الدخول الموحّدة (نفس توقيع askGemini)
 export async function askAI(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge = "") {
   if (chosenProvider() === "openai") {
     return askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
@@ -51,10 +37,6 @@ export async function askAI(history, userMsg, audioPart, pageConfig, memory, crm
   return askGemini(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
 }
 
-// ═══════════════════════════════════════════════════════════
-// 🧠 استخراج الطلب بالذكاء الاصطناعي (يفهم أي صياغة طبيعية)
-// يرجّع: { is_order, items:[{product, qty}], area, phone }
-// ═══════════════════════════════════════════════════════════
 const PHONE_STRICT = /^(?:07[789]\d{7})$/;
 
 function normalizePhone(raw) {
@@ -72,10 +54,35 @@ export async function extractOrderWithAI(conversationText, pageConfig) {
     return { ok: false, is_order: false, items: [], area: "", phone: "" };
   }
 
+  const kiloMode = isKiloModePage(pageConfig);
+  const minQty = Number(pageConfig.MINIMUM_QUANTITY || 0);
+
   const bundles = Array.isArray(pageConfig.BUNDLE_OFFERS) ? pageConfig.BUNDLE_OFFERS : [];
   const bundleText = bundles.length
-    ? `\nالعروض المتاحة: ${bundles.map(b => `${b.label} = ${b.price} دينار${b.includesDelivery ? " شامل التوصيل" : ""}; مكونات العرض: ${(b.products || []).join(" + ")}`).join("\n")}. إذا قال الزبون «العرض» أو «البكج» أو طلب هذه المكونات كحزمة، أخرج مكونات العرض بالأسماء الحرفية من القائمة.`
+    ? `\nالعروض المتاحة: ${bundles.map(b => {
+        const comps = (b.products || []).map(p => typeof p === "string" ? p : p.name).filter(Boolean).join(" + ");
+        const inc = b.includesDelivery || b.deliveryIncluded;
+        return `${b.label || b.name} = ${b.price} دينار${inc ? " شامل التوصيل" : ""}; مكونات العرض: ${comps}`;
+      }).join("\n")}. إذا قال الزبون «العرض» أو «البكج» أو طلب هذه المكونات كحزمة، أخرج مكونات العرض بالأسماء الحرفية من القائمة.`
     : "";
+
+  // 🔴 قواعد كمية مخصصة حسب نظام بيع الصفحة (بالكيلو مقابل النصية/العبوة) لمنع تحويل "4 كيلو" إلى 1!
+  const quantityRulesPrompt = kiloMode
+    ? `قواعد الكمية لهذه الصفحة (البيع بالكيلو مباشرة — التزم بها حرفياً):
+- 🔴 البيع في هذه الصفحة (${pageConfig.name}) بالكيلو مباشرة وليس بالنصية! الوحدة الواحدة = 1 كيلو.
+- أي ذكر لـ "2 كيلو" أو "كيلوين" ⇒ qty = 2.
+- أي ذكر لـ "3 كيلو" أو "ثلاث كيلو" ⇒ qty = 3.
+- أي ذكر لـ "4 كيلو" أو "اربع كيلو" أو "أربعة كيلو" ⇒ qty = 4 (ممنوع منعاً باتاً إرجاع 1 عندما يطلب 4 كيلو!).
+- أي ذكر لـ "5 كيلو" ⇒ qty = 5، وهكذا (qty تساوي عدد الكيلوات الفعلي الذي طلبه الزبون).
+- ${minQty > 1 ? `أقل كمية مسموحة للطلب في هذه الصفحة هي ${minQty} كيلو. إذا طلب الزبون 1 كيلو اكتب qty: 1 ليرفضه حارس الحد الأدنى، وإذا لم يذكر الزبون عدد الكيلوات بعد فلا تفترض qty: 1 من عندك أبداً بل اجعل items فارغة [] حتى يحدد الكمية.` : `إذا لم يذكر الزبون كمية واضحة اجعل qty = 1.`}
+- لا تحسب أرقام الهاتف أو العنوان أو السعر بالدينار (مثل 10 دنانير أو 18 دينار) كأنها كمية أبداً.`
+    : `قواعد الكمية (دقيقة جداً — التزم بها حرفياً):
+- 🔴 الوزن ليس كمية إطلاقاً في صفحات النصية. النصية الواحدة وزنها 4 كيلو (4200غ). أي ذكر لـ "4 كيلو" أو "4200غ" = كمية 1 (نصية واحدة) وليس 4.
+- التطابق: نصية/حبة/وحدة/عبوة/واحدة/عرض = 1 ، نصيتين/حبتين/عبوتين/عرضين = 2 ، ثلاث = 3 ، أربع = 4.
+- "8 كيلو"=2 ، "12 كيلو"=3 ، "16 كيلو"=4 (كل 4 كيلو = نصية واحدة).
+- لا تحسب أرقام الهاتف أو العنوان أو السعر أو الغرامات كأنها كمية أبداً.
+- إذا الزبون قال "حبة/وحدة/واحدة/نصية" فالكمية = 1 مهما ذُكر من كيلوهات أو غرامات معها.
+- إذا الكمية غير واضحة أو مبهمة، اجعل الكمية 1 (لا تضاعفها من عندك أبداً).`;
 
   const prompt =
 `أنت محلّل طلبات دقيق لمتجر أردني (${pageConfig.name}). استخرج الطلب من محادثة الزبون التالية.
@@ -87,20 +94,13 @@ ${ADDRESS_EXPERT}
 {"is_order": true أو false, "items": [{"product": "<اسم صنف من القائمة أعلاه حرفياً>", "qty": <عدد صحيح>}], "area": "<العنوان كما كتبه الزبون حرفياً بكلماته، أو فراغ>", "phone": "<رقم أردني بصيغة 07xxxxxxxx كتبه الزبون، أو فراغ>"}
 
 🔴🔴 القاعدة الأهم فوق كل شي — ممنوع الاختراع أو الافتراض أو التخمين:
-- لا تكتب في "area" إلا كلمات ذكرها الزبون **حرفياً** في رسائله. ممنوع تستنتج محافظة، ممنوع تكمّل عنوان ناقص، ممنوع تضيف منطقة أو شارع أو معلم ما كتبه الزبون. لو الزبون قال "المفرق" بس، اكتب "المفرق" بس — لا تحوّلها لعنوان كامل من عندك.
-- لا تكتب رقم هاتف إلا إذا كان مكتوباً فعلاً في رسائل الزبون. ممنوع تكمّل رقم ناقص، ممنوع تخترع أرقام.
-- إذا المعلومة غير موجودة بوضوح في كلام الزبون: اترك الحقل فراغاً "". فراغ أفضل ألف مرة من قيمة مخترعة.
-- ممنوع تاخد عنوان أو رقم من أي مصدر غير رسائل هذا الزبون في هذه المحادثة.
+- لا تكتب في "area" إلا كلمات ذكرها الزبون **حرفياً** في رسائله. ممنوع تستنتج محافظة، ممنوع تكمّل عنوان ناقص، ممنوع تضيف منطقة أو شارع أو معلم ما كتبه الزبون.
+- لا تكتب رقم هاتف إلا إذا كان مكتوباً فعلاً في رسائل الزبون.
+- إذا المعلومة غير موجودة بوضوح في كلام الزبون: اترك الحقل فراغاً "".
 
-قواعد الكمية (دقيقة جداً — التزم بها حرفياً):
-- 🔴 الوزن ليس كمية إطلاقاً. النصية الواحدة وزنها 4 كيلو (4200غ). أي ذكر لـ "4 كيلو" أو "4200غ" = كمية 1 (نصية واحدة) وليس 4.
-- التطابق: نصية/حبة/وحدة/عبوة/واحدة = 1 ، نصيتين/حبتين/عبوتين = 2 ، ثلاث = 3 ، أربع = 4.
-- "8 كيلو"=2 ، "12 كيلو"=3 ، "16 كيلو"=4 (كل 4 كيلو = نصية واحدة).
-- لا تحسب أرقام الهاتف أو العنوان أو السعر أو الغرامات كأنها كمية أبداً.
-- إذا الزبون قال "حبة/وحدة/واحدة/نصية" فالكمية = 1 مهما ذُكر من كيلوهات أو غرامات معها.
-- إذا الكمية غير واضحة أو مبهمة، اجعل الكمية 1 (لا تضاعفها من عندك أبداً).
+${quantityRulesPrompt}
 - لو ما في نية طلب واضحة (مجرد سؤال/سلام) اجعل is_order=false و items فارغة.
-- طابق اسم الصنف مع القائمة المتاحة (مثلاً "بلدية"→"غنم" إن لم يوجد "بلدية").
+- طابق اسم الصنف مع القائمة المتاحة.
 
 المحادثة:
 ${conversationText.slice(0, 6000)}`;
@@ -137,18 +137,43 @@ ${conversationText.slice(0, 6000)}`;
       raw = (d?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("");
     }
 
-    // تنظيف وتحليل JSON
     const m = raw.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(m ? m[0] : raw);
 
-    // تحقّق وتصفية الأصناف ضمن المتاح فقط
-    const items = (Array.isArray(parsed.items) ? parsed.items : [])
-      .map(it => ({ product: String(it.product || "").trim(), qty: parseInt(it.qty, 10) || 1 }))
+    // 🛡️ تصحيح حتمي لصفحات الكيلو (أجبان الرياض):
+    // 1) نأخذ آخر كمية صريحة ذكرها الزبون في رسائله (فلو كتب "4 كيلو" ورجّع النموذج 1 بالخطأ، نصححها فوراً إلى 4).
+    // 2) لو كانت الصفحة بحد أدنى > 1 ولم يذكر الزبون أي كمية إطلاقاً، نمنع افتراض qty=1 الذي يولّد طلب 6 دنانير.
+    const lines = String(conversationText).split("\n").map(s => s.trim()).filter(Boolean);
+    let latestExplicitQty = 0;
+    for (const ln of lines) {
+      const q = extractQty(ln, pageConfig);
+      if (q > 0) latestExplicitQty = q;
+    }
+
+    let items = (Array.isArray(parsed.items) ? parsed.items : [])
+      .map(it => ({ product: String(it.product || "").trim(), qty: parseFloat(it.qty) || 1 }))
       .filter(it => allowed.includes(it.product) && it.qty > 0);
+
+    if (kiloMode) {
+      if (latestExplicitQty >= (minQty || 1) && items.length === 1) {
+        items[0].qty = latestExplicitQty;
+      } else if (minQty > 1) {
+        if (latestExplicitQty > 0 && latestExplicitQty < minQty) {
+          // الزبون طلب صراحة أقل من الحد الأدنى (مثلاً 1 كيلو) -> نفرغ السلة حتى لا ينزل طلب 6 دنانير
+          items = [];
+        } else if (latestExplicitQty === 0) {
+          // الزبون لم يذكر أي كمية في المحادثة -> امنع أي كمية مخترعة أقل من الحد الأدنى
+          items = items.filter(it => it.qty >= minQty && latestExplicitQty >= minQty);
+        } else {
+          items = items.filter(it => it.qty >= minQty);
+        }
+      }
+    }
 
     return {
       ok: true,
       is_order: !!parsed.is_order && items.length > 0,
+      below_min_qty: (kiloMode && minQty > 1 && latestExplicitQty > 0 && latestExplicitQty < minQty) ? latestExplicitQty : 0,
       items,
       area: String(parsed.area || "").slice(0, 200).trim(),
       phone: normalizePhone(parsed.phone)
@@ -159,7 +184,6 @@ ${conversationText.slice(0, 6000)}`;
   }
 }
 
-// ── تحويل رسالة صوتية لنص عبر Whisper ──
 async function transcribeOpenAI(audioPart) {
   try {
     const bytes = Buffer.from(audioPart.inlineData.data, "base64");
@@ -185,24 +209,28 @@ async function transcribeOpenAI(audioPart) {
 async function askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge) {
   let crmContext = "";
   if (crmData && crmData.lastOrder) {
-    // 🔴 ممنوع نحقن العنوان السابق. ترحيب وعرض تكرار فقط — العنوان
-    //    والرقم لازم يبعثهم الزبون من جديد بهالمحادثة، ما منفترضهم.
     crmContext = `\nملاحظة هامة: هذا زبون قديم (رحّب به كزبون دائم واعرض عليه تكرار طلبه إن رغب). 🔴 لا تفترض عنوانه أو رقمه من طلب سابق — اطلبهما منه في هذه المحادثة.`;
   }
   const adminKnowledge = extraKnowledge && extraKnowledge.trim()
     ? `\n\n[معلومات إضافية موثوقة من إدارة الصفحة — اعتمدها بأولوية عالية]\n${extraKnowledge.trim()}`
     : "";
 
-  const nextTask = buildNextTask(memory);
-  const catalog = Object.keys(pageConfig.PRICES || {}).map(k => `${k} = ${pageConfig.PRICES[k]} د`).join("، ");
+  const nextTask = buildNextTask(memory, pageConfig);
+  const unitLabel = pageConfig.DEFAULT_UNIT ? ` لكل ${pageConfig.DEFAULT_UNIT}` : "";
+  const catalog = Object.keys(pageConfig.PRICES || {}).map(k => `${k} = ${pageConfig.PRICES[k]} د${unitLabel}`).join("، ");
   const bundleCatalog = (Array.isArray(pageConfig.BUNDLE_OFFERS) ? pageConfig.BUNDLE_OFFERS : [])
-    .map(b => `${b.label || (b.products || []).join(" + ")} = ${b.price} د${b.includesDelivery ? " شامل التوصيل" : ""}`)
+    .map(b => `${b.label || b.name || (b.products || []).map(p => typeof p === "string" ? p : p.name).join(" + ")} = ${b.price} د${(b.includesDelivery || b.deliveryIncluded) ? " شامل التوصيل" : ""}`)
     .join(" | ");
+  const minOrderNote = pageConfig.MINIMUM_QUANTITY
+    ? `\n🔴 الحد الأدنى للطلب في هذه الصفحة: ${pageConfig.MINIMUM_QUANTITY} ${pageConfig.DEFAULT_UNIT || "قطعة"}${pageConfig.MINIMUM_INVOICE_TOTAL ? ` (أقل فاتورة ${pageConfig.MINIMUM_INVOICE_TOTAL} دنانير شامل التوصيل — ممنوع نهائياً قبول كمية أقل أو ذكر فاتورة بـ 6 دنانير)` : ""}.`
+    : "";
+
   const hardCatalog = `\n\n[كتالوج منتجات وأسعار إلزامي — هذه معلومات مؤكدة يجب الاعتماد عليها قبل أي شيء]
 المنتجات: ${catalog || "لا يوجد"}
+التوصيل: ${Number(pageConfig.DELIVERY || 0)} د${minOrderNote}
 ${bundleCatalog ? `العروض: ${bundleCatalog}\n` : ""}
-إذا سأل الزبون عن أي منتج موجود أعلاه، فهو متوفر. ممنوع قول «ما عندي معلومات عنه» أو «غير موجود» لمنتج موجود في هذه القائمة. لا تغيّر الأسعار. إذا قال «كلور» أو «فلاش» بدون حجم وكان للصنف أحجام متعددة، اعتبر الحجم 20 لتر. إذا ذكر 5 لتر أو 10 لتر التزم بالحجم والسعر المذكورين في الكتالوج.`;
-  // سلوك المبيعات طبقة مستقلة عن المنتج: تنطبق على كل الصفحات حتى اللي عندها برومبت خاص.
+إذا سأل الزبون عن أي منتج موجود أعلاه، فهو متوفر. ممنوع قول «ما عندي معلومات عنه» أو «غير موجود» لمنتج موجود في هذه القائمة. لا تغيّر الأسعار.`;
+
   const baseKnowledge = SALES_PERSONA + "\n\n" + (pageConfig.SYSTEM || COMMON_KNOWLEDGE) + "\n\n" + SALES_BEHAVIOR;
   const systemInst = `${baseKnowledge}\n\n${hardCatalog}\n\n${ADDRESS_EXPERT}\n\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
 
@@ -211,7 +239,6 @@ ${bundleCatalog ? `العروض: ${bundleCatalog}\n` : ""}
     messages.push({ role: h.role === "assistant" ? "assistant" : "user", content: h.content || "" });
   });
 
-  // نص المستخدم (+ تحويل الصوت لو موجود)
   let finalUser = (userMsg && userMsg !== "[رسالة صوتية]") ? userMsg : "";
   if (audioPart) {
     const transcript = await transcribeOpenAI(audioPart);
@@ -221,8 +248,6 @@ ${bundleCatalog ? `العروض: ${bundleCatalog}\n` : ""}
   messages.push({ role: "user", content: finalUser || "..." });
 
   try {
-    // مسار الرد على الزبون: نفس معالجة نماذج التفكير، بس هون
-    // المحادثة متعددة الرسائل فمنبني الجسم ومنستبدل الرسائل.
     const model = oaiModel();
     const body = await oaiBody({ model, prompt: "", json: false, temperature: 0.2, maxTokens: 400 });
     body.messages = messages;
@@ -239,31 +264,23 @@ ${bundleCatalog ? `العروض: ${bundleCatalog}\n` : ""}
 
     if (!resp.ok) {
       console.error("OpenAI error:", resp.status, await resp.text());
-      // 🔴 ما منبعت رسالة تعبئة لمّا الذكاء يفشل.
-      //    "أبشر كمّل طلبك" بتوهم الزبون إنّ في حدا فاهمه، فبيكمّل
-      //    كلام ما حدا بيقراه، وبيروح الطلب. السكوت أصدق: الزبون
-      //    بيعيد أو بيتصل، وإنت بتشوف المحادثة بالوارد.
       return null;
     }
     const data = await resp.json();
     let text = (data?.choices?.[0]?.message?.content || "").replace(/\*\*/g, "").trim();
 
-    // حماية أخيرة: لو النموذج تجاهل الكتالوج وقال إن الكلور/الفلاش غير معروف،
-    // نصحح الرد مباشرة من بيانات الصفحة بدل إرسال معلومة خاطئة للزبون.
     if (text && /(?:ما\s*عندي|لا\s*يوجد|غير\s*متوفر|غير\s*معروف).{0,40}(?:كلور|فلاش)/iu.test(text)) {
       const hasChlorine = Object.keys(pageConfig.PRICES || {}).some(k => /كلور/.test(k));
       const hasFlash = Object.keys(pageConfig.PRICES || {}).some(k => /فلاش/.test(k));
       if (/كلور/iu.test(text) && hasChlorine && !/فلاش/iu.test(text)) {
-        text = `نعم، الكلور متوفر 5 لتر بـ2.5 د، 10 لتر بـ5 د، و20 لتر بـ7 د. التوصيل 2 دينار على الطلب الفردي.`;
+        text = `نعم، الكلور متوفر بـ7 دنانير، والتوصيل 2 دينار على الطلب الفردي.`;
       } else if (/فلاش/iu.test(text) && hasFlash && !/كلور/iu.test(text)) {
-        text = `نعم، الفلاش متوفر 5 لتر بـ2.5 د، 10 لتر بـ5 د، و20 لتر بـ7 د. التوصيل 2 دينار على الطلب الفردي.`;
-      } else if (hasChlorine || hasFlash) {
-        text = `نعم، المنتجات متوفرة. الكلور: 5 لتر 2.5 د، 10 لتر 5 د، 20 لتر 7 د. الفلاش: 5 لتر 2.5 د، 10 لتر 5 د، 20 لتر 7 د. التوصيل 2 دينار على الطلب الفردي.`;
+        text = `نعم، الفلاش متوفر بـ7 دنانير، والتوصيل 2 دينار على الطلب الفردي.`;
       }
     }
-    return text || null;   // رد فاضي = سكوت كمان
+    return text || null;
   } catch (e) {
     console.error("OpenAI failed:", e && e.message);
-    return null;   // 🔴 فشل الذكاء = سكوت، مش رسالة تعبئة
+    return null;
   }
 }
