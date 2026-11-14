@@ -415,6 +415,9 @@ async function _handleEvent(event, env, ctx) {
     parseMessage(memory, userMsg, effConfig, srcId);
   }
 
+  // احتفظ بنتيجة محلّل الكمية الحتمي قبل أن يحاول الذكاء إعادة بناء السلة.
+  const parsedCartBeforeAI = { ...(memory.cart || {}) };
+
   // 🧠 استخراج ذكي من كامل المحادثة (يفهم أي صياغة طبيعية ويكمّل النواقص)
   // نتخطّاه لو الزبون طلب إعادة طلبه السابق (حتى لا نمسح السلة المُعادة)
   if (!memory.sent && !memory._repeated) {
@@ -428,7 +431,13 @@ async function _handleEvent(event, env, ctx) {
         // نستبدل السلة فقط لو الذكاء لقى طلباً فعلياً (حتى لا نمسح سلة سابقة برسالة سؤال/سلام)
         if (ai.is_order && ai.items.length) {
           memory.cart = {};
-          ai.items.forEach(it => { memory.cart[it.product] = it.qty; });
+          ai.items.forEach(it => {
+            // في صفحات البيع بالكيلو، الرادار الرقمي (parseMessage) هو المرجع
+            // للكمية الصريحة؛ لا نسمح للنموذج بتحويل 2 كيلو إلى وحدة واحدة.
+            const deterministicQty = Number(parsedCartBeforeAI?.[it.product] || 0);
+            memory.cart[it.product] = pageConfig.QTY_MODE === "kilo" && deterministicQty > 0
+              ? deterministicQty : it.qty;
+          });
           // 🧾 مصدر الطلب: الذكاء استخرجه من رسائل الزبون بهالجلسة. بدون
           //    هالتسجيل كان التحقق النهائي يعتبر الطلب "ناقص" فما تطلع
           //    فاتورة أبداً — والبوت يأكّد بالكلام بس والطلب ما ينزل.
@@ -569,6 +578,9 @@ async function _handleEvent(event, env, ctx) {
   const complete = check.complete && !check.blocked;
   const readyForInvoice = complete && !memory.sent;
   const needsAddressReview = complete && addrCoarse;
+  // حساب واحد مع بوابة الحد الأدنى، ويُستخدم للحفظ والفاتورة معاً.
+  const orderCalculation = computeOrder(effConfig, memory.cart || {}, memory.coupon);
+  const minimumOrderBlocked = !!orderCalculation.invoiceBlocked;
 
   // معه صنف ورقم، بس ما بنعرف وين ⇒ سؤال واحد محدّد، مرة وحدة بس.
   // بعدها بيكمّل مع الذكاء الاصطناعي عادي — ما بنسكت ولا بنعلّق الطلب.
@@ -610,9 +622,9 @@ async function _handleEvent(event, env, ctx) {
 
   // 🟢 وصول فوري للسستم: أي أوردر فيه أصناف + (عنوان أو رقم) ينزل باللوحة مباشرة
   const hasIntent = cartItemsCount > 0 && (memory.area || memory.phone);
-  if (hasIntent) {
+  if (hasIntent && !minimumOrderBlocked) {
     try {
-      const { total, orderString } = computeOrder(effConfig, memory.cart, memory.coupon);
+      const { total, orderString } = orderCalculation;
       const status = complete ? "جديد" : "ناقص";
       // الطلب الجديد/المكرر الصريح لا يعيد استخدام طلب سابق.
       // التعديل فقط يحافظ على orderId لتحديث نفس الطلب.
@@ -651,8 +663,8 @@ async function _handleEvent(event, env, ctx) {
   let justSentInvoice = false;
 
   // 🔴 إصدار الفاتورة للزبون عند اكتمال الطلب (مرة واحدة)
-  if (readyForInvoice) {
-    const { total, orderString, detailedString, priceString } = computeOrder(effConfig, memory.cart, memory.coupon);
+  if (readyForInvoice && !minimumOrderBlocked) {
+    const { total, orderString, detailedString, priceString } = orderCalculation;
     reply = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, memory.area, memory.phone);
     // العنوان خشن: منطلب المعلم **مع** الفاتورة مش بدالها.
     // الطلب بيمشي، والزبون بيقدر يزوّدنا بلا ما يستنى ولا يضيع.
@@ -685,6 +697,10 @@ async function _handleEvent(event, env, ctx) {
       lastOrder: orderString, lastArea: memory.area, phone: memory.phone, page: pageConfig.name
     }), { expirationTtl: CONFIG.CRM_TTL }));
 
+  } else if (minimumOrderBlocked) {
+    reply = orderCalculation.error === "minimum_quantity"
+      ? `أهلاً فيك 🌹 أقل كمية للطلب هي ${orderCalculation.minimumQuantity} كيلو، وما بنقدر نثبت كمية أقل.\n\n${orderCalculation.minimumQuantity} كيلو = ${orderCalculation.minimumInvoiceTotal} دنانير شامل التوصيل.`
+      : `أهلاً فيك 🌹 أقل قيمة للفاتورة هي ${orderCalculation.minimumInvoiceTotal} دينار شامل التوصيل.`;
   } else {
     let extraKnowledge = getKnowledge(recipientId);
     // 🛒 نُعلِم البوت بالأصناف الإضافية المتوفّرة حتى لا ينكر وجودها ويقدر يبيعها
