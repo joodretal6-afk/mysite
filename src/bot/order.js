@@ -67,13 +67,26 @@ export function computeOrder(pageConfig, cart, coupon) {
   }
 
   const deliveryNote = delivery > 0 ? `شامل التوصيل ${delivery}د` : "شامل التوصيل";
+  const totalQuantity = Object.values(cart || {}).reduce((sum, q) => sum + Math.max(0, Number(q) || 0), 0);
+  const minimumQuantity = Number(pageConfig.MINIMUM_QUANTITY || 0);
+  const minimumInvoiceTotal = Number(pageConfig.MINIMUM_INVOICE_TOTAL || 0);
+  const blockedByQuantity = minimumQuantity > 0 && totalQuantity > 0 && totalQuantity < minimumQuantity;
+  const blockedByTotal = minimumInvoiceTotal > 0 && totalQuantity > 0 && total < minimumInvoiceTotal;
+  const invoiceBlocked = blockedByQuantity || blockedByTotal;
   return {
-    total,
+    total: invoiceBlocked ? 0 : total,
+    calculatedTotal: total,
     discount,
+    minimumQuantity: minimumQuantity || null,
+    minimumInvoiceTotal: minimumInvoiceTotal || null,
+    invoiceBlocked,
+    error: blockedByQuantity ? "minimum_quantity" : blockedByTotal ? "below_minimum_invoice" : null,
     orderString: lines.join(" + "),
     detailedString: detailed.join("\n"),
-    priceString: discount > 0
-      ? `${total}د (بعد خصم ${round2(discount)}د، ${deliveryNote})`
-      : `${total}د (${deliveryNote})`
+    priceString: invoiceBlocked
+      ? `الحد الأدنى للطلب ${minimumQuantity || "—"} كيلو، والحد الأدنى للفاتورة ${minimumInvoiceTotal || "—"} دينار`
+      : discount > 0
+        ? `${total}د (بعد خصم ${round2(discount)}د، ${deliveryNote})`
+        : `${total}د (${deliveryNote})`
   };
 }
