@@ -1425,6 +1425,7 @@ ${RIVAN_OFFER.description}
     MINIMUM_QUANTITY: 2,
     MINIMUM_INVOICE_TOTAL: 10,
     DEFAULT_UNIT: "كيلو",
+    QTY_MODE: "kilo", // الكمية هنا بالكيلو مباشرة؛ ممنوع تحويل 4 كيلو إلى وحدة واحدة
 
     PRICES: {
       "جبنة الرياض": 4
@@ -1525,6 +1526,7 @@ ${RIVAN_OFFER.description}
     MINIMUM_QUANTITY: 2,
     MINIMUM_INVOICE_TOTAL: 10,
     DEFAULT_UNIT: "كيلو",
+    QTY_MODE: "kilo", // الكمية هنا بالكيلو مباشرة؛ ممنوع تحويل 4 كيلو إلى وحدة واحدة
 
     PRICES: {
       "جبنة الرياض": 4
