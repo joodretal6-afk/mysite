@@ -1,286 +1,218 @@
 // ═══════════════════════════════════════════════════════════
-// موزّع الذكاء: يختار بين Gemini و OpenAI (ChatGPT)
+// src/bot/gemini.js — بناء المهمة التالية + الاتصال المباشر بـ Gemini
 // ═══════════════════════════════════════════════════════════
 import { CONFIG } from "../config.js";
-import { COMMON_KNOWLEDGE, SALES_PERSONA, SALES_BEHAVIOR } from "./brain.js";
-import { ADDRESS_EXPERT } from "./addressExpert.js";
-import { buildNextTask, askGemini } from "./gemini.js";
-import { extractQty, isKiloModePage } from "./parser.js";
+import { computeOrder } from "./order.js";
 
-const DEFAULT_BASE = "https://api.openai.com/v1";
-function oaiBase() {
-  const b = process.env.OPENAI_BASE_URL || siteSetting("ai_base") || DEFAULT_BASE;
-  return String(b).replace(/\/+$/, "");
-}
-
-function siteSetting(key) {
-  try {
-    return (globalThis.__aiSettings && globalThis.__aiSettings(key)) || "";
-  } catch { return ""; }
-}
-export function oaiKey()   { return process.env.OPENAI_API_KEY || siteSetting("ai_key") || ""; }
-export function oaiModel() { return process.env.OPENAI_MODEL || siteSetting("ai_model") || "gpt-4o-mini"; }
-
-async function oaiBody(args) {
-  const { buildBody } = await import("./aiCore.js");
-  return buildBody(args);
-}
-
-function chosenProvider() {
-  return "openai";
-}
-
-export async function askAI(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge = "") {
-  if (chosenProvider() === "openai") {
-    return askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
-  }
-  return askGemini(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge);
-}
-
-const PHONE_STRICT = /^(?:07[789]\d{7})$/;
-
-function normalizePhone(raw) {
-  if (!raw) return "";
-  let p = String(raw).replace(/[\s\-\.]/g, "");
-  if (p.startsWith("00962")) p = "0" + p.slice(5);
-  else if (p.startsWith("+962")) p = "0" + p.slice(4);
-  else if (p.startsWith("962")) p = "0" + p.slice(3);
-  return PHONE_STRICT.test(p) ? p : "";
-}
-
-export async function extractOrderWithAI(conversationText, pageConfig) {
-  const allowed = Object.keys(pageConfig.PRICES || {});
-  if (!conversationText || !conversationText.trim() || !allowed.length) {
-    return { ok: false, is_order: false, items: [], area: "", phone: "" };
+/**
+ * تحديد المهمة التالية للبوت بناءً على حالة الجلسة الحالية (السلة، العنوان، الرقم، الحد الأدنى)
+ */
+export function buildNextTask(memory = {}, pageConfig = {}, crmData = null) {
+  // 1) فحص حالة تحت الحد الأدنى للطلب (مثل نص كيلو أو 1 كيلو إذا كان الحد الأدنى أعلى)
+  if (memory.belowMinQty) {
+    const minNote = pageConfig.MIN_ORDER_NOTE || "أقل كمية للطلب والتوصيل هي 2 كيلو (أو حسب العرض المتوفر في الصفحة)";
+    return `[توجيه حاسم]: الزبون طلب كمية أقل من الحد الأدنى المسموح (${
+      typeof memory.belowMinQty === "string" ? memory.belowMinQty : "كمية صغيرة"
+    }). اعتذر منه بلطف ووضّح له أن ${minNote}، واعرض عليه رفع الكمية للحد الأدنى حتى نعتمد طلبه فوراً. ممنوع إصدار فاتورة أو تأكيد الطلب قبل رفع الكمية.`;
   }
 
-  const kiloMode = isKiloModePage(pageConfig);
-  const minQty = Number(pageConfig.MINIMUM_QUANTITY || 0);
+  const cart = memory.cart || {};
+  const items = Object.keys(cart).filter(k => Number(cart[k]) > 0);
+  const hasCart = items.length > 0;
 
-  const bundles = Array.isArray(pageConfig.BUNDLE_OFFERS) ? pageConfig.BUNDLE_OFFERS : [];
-  const bundleText = bundles.length
-    ? `\nالعروض المتاحة: ${bundles.map(b => {
-        const comps = (b.products || []).map(p => typeof p === "string" ? p : p.name).filter(Boolean).join(" + ");
-        const inc = b.includesDelivery || b.deliveryIncluded;
-        return `${b.label || b.name} = ${b.price} دينار${inc ? " شامل التوصيل" : ""}; مكونات العرض: ${comps}`;
-      }).join("\n")}. إذا قال الزبون «العرض» أو «البكج» أو طلب هذه المكونات كحزمة، أخرج مكونات العرض بالأسماء الحرفية من القائمة.`
-    : "";
-
-  // 🔴 قواعد كمية مخصصة حسب نظام بيع الصفحة (بالكيلو مقابل النصية/العبوة) لمنع تحويل "4 كيلو" إلى 1!
-  const quantityRulesPrompt = kiloMode
-    ? `قواعد الكمية لهذه الصفحة (البيع بالكيلو مباشرة — التزم بها حرفياً):
-- 🔴 البيع في هذه الصفحة (${pageConfig.name}) بالكيلو مباشرة وليس بالنصية! الوحدة الواحدة = 1 كيلو.
-- أي ذكر لـ "2 كيلو" أو "كيلوين" ⇒ qty = 2.
-- أي ذكر لـ "3 كيلو" أو "ثلاث كيلو" ⇒ qty = 3.
-- أي ذكر لـ "4 كيلو" أو "اربع كيلو" أو "أربعة كيلو" ⇒ qty = 4 (ممنوع منعاً باتاً إرجاع 1 عندما يطلب 4 كيلو!).
-- أي ذكر لـ "5 كيلو" ⇒ qty = 5، وهكذا (qty تساوي عدد الكيلوات الفعلي الذي طلبه الزبون).
-- ${minQty > 1 ? `أقل كمية مسموحة للطلب في هذه الصفحة هي ${minQty} كيلو. إذا طلب الزبون 1 كيلو اكتب qty: 1 ليرفضه حارس الحد الأدنى، وإذا لم يذكر الزبون عدد الكيلوات بعد فلا تفترض qty: 1 من عندك أبداً بل اجعل items فارغة [] حتى يحدد الكمية.` : `إذا لم يذكر الزبون كمية واضحة اجعل qty = 1.`}
-- لا تحسب أرقام الهاتف أو العنوان أو السعر بالدينار (مثل 10 دنانير أو 18 دينار) كأنها كمية أبداً.`
-    : `قواعد الكمية (دقيقة جداً — التزم بها حرفياً):
-- 🔴 الوزن ليس كمية إطلاقاً في صفحات النصية. النصية الواحدة وزنها 4 كيلو (4200غ). أي ذكر لـ "4 كيلو" أو "4200غ" = كمية 1 (نصية واحدة) وليس 4.
-- التطابق: نصية/حبة/وحدة/عبوة/واحدة/عرض = 1 ، نصيتين/حبتين/عبوتين/عرضين = 2 ، ثلاث = 3 ، أربع = 4.
-- "8 كيلو"=2 ، "12 كيلو"=3 ، "16 كيلو"=4 (كل 4 كيلو = نصية واحدة).
-- لا تحسب أرقام الهاتف أو العنوان أو السعر أو الغرامات كأنها كمية أبداً.
-- إذا الزبون قال "حبة/وحدة/واحدة/نصية" فالكمية = 1 مهما ذُكر من كيلوهات أو غرامات معها.
-- إذا الكمية غير واضحة أو مبهمة، اجعل الكمية 1 (لا تضاعفها من عندك أبداً).`;
-
-  const prompt =
-`أنت محلّل طلبات دقيق لمتجر أردني (${pageConfig.name}). استخرج الطلب من محادثة الزبون التالية.
-الأصناف المتاحة في هذه الصفحة فقط (لا تخترع غيرها): ${allowed.join(" ، ")}.${bundleText}
-
-${ADDRESS_EXPERT}
-
-أعد JSON فقط بهذا الشكل بالضبط:
-{"is_order": true أو false, "items": [{"product": "<اسم صنف من القائمة أعلاه حرفياً>", "qty": <عدد صحيح>}], "area": "<العنوان كما كتبه الزبون حرفياً بكلماته، أو فراغ>", "phone": "<رقم أردني بصيغة 07xxxxxxxx كتبه الزبون، أو فراغ>"}
-
-🔴🔴 القاعدة الأهم فوق كل شي — ممنوع الاختراع أو الافتراض أو التخمين:
-- لا تكتب في "area" إلا كلمات ذكرها الزبون **حرفياً** في رسائله. ممنوع تستنتج محافظة، ممنوع تكمّل عنوان ناقص، ممنوع تضيف منطقة أو شارع أو معلم ما كتبه الزبون.
-- لا تكتب رقم هاتف إلا إذا كان مكتوباً فعلاً في رسائل الزبون.
-- إذا المعلومة غير موجودة بوضوح في كلام الزبون: اترك الحقل فراغاً "".
-
-${quantityRulesPrompt}
-- لو ما في نية طلب واضحة (مجرد سؤال/سلام) اجعل is_order=false و items فارغة.
-- طابق اسم الصنف مع القائمة المتاحة.
-
-المحادثة:
-${conversationText.slice(0, 6000)}`;
-
-  let raw = "";
-  try {
-    if (chosenProvider() === "openai") {
-      const resp = await fetch(`${oaiBase()}/chat/completions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${oaiKey()}` },
-        body: JSON.stringify(await oaiBody({
-          model: oaiModel(), prompt, json: true, temperature: 0, maxTokens: 700
-        })),
-        signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
-      });
-      if (!resp.ok) { console.error("AI extract (openai) error:", resp.status, await resp.text()); return { ok: false, is_order: false, items: [], area: "", phone: "" }; }
-      const d = await resp.json();
-      raw = d?.choices?.[0]?.message?.content || "";
-    } else {
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.MODEL_NAME}:generateContent?key=${CONFIG.GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0, responseMimeType: "application/json", maxOutputTokens: 500 }
-          }),
-          signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
-        }
-      );
-      if (!resp.ok) { console.error("AI extract (gemini) error:", resp.status, await resp.text()); return { ok: false, is_order: false, items: [], area: "", phone: "" }; }
-      const d = await resp.json();
-      raw = (d?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("");
-    }
-
-    const m = raw.match(/\{[\s\S]*\}/);
-    const parsed = JSON.parse(m ? m[0] : raw);
-
-    // 🛡️ تصحيح حتمي لصفحات الكيلو (أجبان الرياض):
-    // 1) نأخذ آخر كمية صريحة ذكرها الزبون في رسائله (فلو كتب "4 كيلو" ورجّع النموذج 1 بالخطأ، نصححها فوراً إلى 4).
-    // 2) لو كانت الصفحة بحد أدنى > 1 ولم يذكر الزبون أي كمية إطلاقاً، نمنع افتراض qty=1 الذي يولّد طلب 6 دنانير.
-    const lines = String(conversationText).split("\n").map(s => s.trim()).filter(Boolean);
-    let latestExplicitQty = 0;
-    for (const ln of lines) {
-      const q = extractQty(ln, pageConfig);
-      if (q > 0) latestExplicitQty = q;
-    }
-
-    let items = (Array.isArray(parsed.items) ? parsed.items : [])
-      .map(it => ({ product: String(it.product || "").trim(), qty: parseFloat(it.qty) || 1 }))
-      .filter(it => allowed.includes(it.product) && it.qty > 0);
-
-    if (kiloMode) {
-      if (latestExplicitQty >= (minQty || 1) && items.length === 1) {
-        items[0].qty = latestExplicitQty;
-      } else if (minQty > 1) {
-        if (latestExplicitQty > 0 && latestExplicitQty < minQty) {
-          // الزبون طلب صراحة أقل من الحد الأدنى (مثلاً 1 كيلو) -> نفرغ السلة حتى لا ينزل طلب 6 دنانير
-          items = [];
-        } else if (latestExplicitQty === 0) {
-          // الزبون لم يذكر أي كمية في المحادثة -> امنع أي كمية مخترعة أقل من الحد الأدنى
-          items = items.filter(it => it.qty >= minQty && latestExplicitQty >= minQty);
-        } else {
-          items = items.filter(it => it.qty >= minQty);
-        }
-      }
-    }
-
-    return {
-      ok: true,
-      is_order: !!parsed.is_order && items.length > 0,
-      below_min_qty: (kiloMode && minQty > 1 && latestExplicitQty > 0 && latestExplicitQty < minQty) ? latestExplicitQty : 0,
-      items,
-      area: String(parsed.area || "").slice(0, 200).trim(),
-      phone: normalizePhone(parsed.phone)
-    };
-  } catch (e) {
-    console.error("AI extract failed:", e && e.message);
-    return { ok: false, is_order: false, items: [], area: "", phone: "" };
+  let preview = null;
+  if (hasCart) {
+    try {
+      preview = computeOrder(pageConfig, cart, memory.coupon);
+    } catch {}
   }
+
+  // لو السلة فيها أصناف لكن computeOrder اعتبرها تحت الحد الأدنى
+  if (preview && preview.belowMinimum) {
+    const minMsg = preview.minimumMessage || pageConfig.MIN_ORDER_NOTE || "الكمية المطلوبة أقل من الحد الأدنى المعتمد للتوصيل";
+    return `[توجيه حاسم]: السلة الحالية تحت الحد الأدنى (${minMsg}). اعتذر بلطف واطلب من الزبون زيادة الكمية للحد الأدنى، ولا تعده بإصدار فاتورة على السعر الحالي.`;
+  }
+
+  // 2) الزبون لم يحدد الصنف/الكمية بعد
+  if (!hasCart) {
+    if (crmData?.lastOrder) {
+      return `[المهمة الحالية]: رحّب بالزبون بلطف ووضح له الأصناف والأسعار المتوفرة باختصار، واسأله شو حابب يطلب اليوم (علماً أن آخر طلب له كان: ${crmData.lastOrder}).`;
+    }
+    return `[المهمة الحالية]: أجب على استفسار الزبون بوضوح من معلومات الصفحة فقط، واسأله أي صنف وكم الكمية اللي حابب يطلبها.`;
+  }
+
+  const cartSummary = preview?.orderString || items.map(k => `${k} (${cart[k]})`).join(" + ");
+  const totalStr = preview?.total ? ` — الحساب المبدئي: ${preview.total} دنانير` : "";
+
+  // 3) الزبون أعطى رقم هاتف خاطئ/ناقص في الرسالة الأخيرة
+  if (memory.invalidPhoneProvided) {
+    return `[المهمة الحالية]: الطلب في السلة (${cartSummary}${totalStr}). الرقم الذي أرسله الزبون غير مكتمل أو غير صحيح؛ اطلب منه بلطف رقم موبايل أردني صحيح من 10 خانات يبدأ بـ 07.`;
+  }
+
+  const needArea = !memory.area || memory.addressReady === false;
+  const needPhone = !memory.phone;
+
+  // 4) ينقص العنوان والرقم معاً
+  if (needArea && needPhone) {
+    const addrQ = memory.addressQuestion || "المحافظة والمنطقة وأقرب معلم واضح";
+    return `[المهمة الحالية]: السلة جاهزة (${cartSummary}${totalStr}). اطلب من الزبون شغلتين فقط لتثبيت الطلب: (1) العنوان بالتفصيل (${addrQ})، و(2) رقم الموبايل الأردني (10 أرقام يبدأ بـ 07). لا تطبع فاتورة نهائية من عندك.`;
+  }
+
+  // 5) ينقص العنوان فقط (أو العنوان غير كافٍ للتوصيل)
+  if (needArea) {
+    const addrQ = memory.addressQuestion || "في أي محافظة وأي منطقة/حي وأقرب معلم؟";
+    return `[المهمة الحالية]: السلة جاهزة (${cartSummary}${totalStr}) ورقم الهاتف محفوظ (${memory.phone}). اطلب من الزبون العنوان فقط: ${addrQ}. لا تطبع فاتورة نهائية من عندك.`;
+  }
+
+  // 6) ينقص رقم الهاتف فقط
+  if (needPhone) {
+    return `[المهمة الحالية]: السلة جاهزة (${cartSummary}${totalStr}) والعنوان محفوظ (${memory.area}). اطلب من الزبون رقم موبايله الأردني فقط (10 خانات يبدأ بـ 07) لتثبيت الفاتورة فوراً.`;
+  }
+
+  // 7) الطلب مكتمل أو سبق إرسال الفاتورة
+  if (memory.sent) {
+    return `[المهمة الحالية]: الفاتورة أُرسلت وتثبّت الطلب مسبقاً (${cartSummary} — العنوان: ${memory.area} — الرقم: ${memory.phone}). أجب على استفسار الزبون باختصار واطمئنان، وإذا طلب تعديل الكمية أو الإلغاء تجاوب معه بلطف.`;
+  }
+
+  return `[المهمة الحالية]: البيانات مكتملة (${cartSummary} — ${memory.area} — ${memory.phone}). أكّد له بلطف وبجملة قصيرة استلام البيانات.`;
 }
 
-async function transcribeOpenAI(audioPart) {
-  try {
-    const bytes = Buffer.from(audioPart.inlineData.data, "base64");
-    const blob = new Blob([bytes], { type: audioPart.inlineData.mimeType || "audio/mp4" });
-    const form = new FormData();
-    form.append("file", blob, "audio.m4a");
-    form.append("model", CONFIG.OPENAI_TRANSCRIBE_MODEL);
-    const r = await fetch(`${oaiBase()}/audio/transcriptions`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${oaiKey()}` },
-      body: form,
-      signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
-    });
-    if (!r.ok) { console.error("Whisper error:", r.status, await r.text()); return ""; }
-    const d = await r.json();
-    return d.text || "";
-  } catch (e) {
-    console.error("Whisper failed:", e && e.message);
+/**
+ * جمع مفاتيح Gemini من الإعدادات أو متغيرات البيئة (يدعم مفتاح واحد أو عدة مفاتيح للتناوب)
+ */
+function resolveGeminiKeys() {
+  const keys = [];
+  if (Array.isArray(CONFIG?.GEMINI_KEYS)) keys.push(...CONFIG.GEMINI_KEYS);
+  if (CONFIG?.GEMINI_API_KEY) keys.push(CONFIG.GEMINI_API_KEY);
+  if (process.env.GEMINI_API_KEYS) keys.push(...process.env.GEMINI_API_KEYS.split(","));
+  if (process.env.GEMINI_KEYS) keys.push(...process.env.GEMINI_KEYS.split(","));
+  if (process.env.GEMINI_API_KEY) keys.push(process.env.GEMINI_API_KEY);
+  if (process.env.GOOGLE_API_KEY) keys.push(process.env.GOOGLE_API_KEY);
+  return [...new Set(keys.map(k => String(k || "").trim()).filter(Boolean))];
+}
+
+/**
+ * إرسال المحادثة (نص + صوت اختياري) إلى Google Gemini وإرجاع النص النظيف
+ * متوافقة مع كلا صيغتي الاستدعاء:
+ * 1) askGemini(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge)
+ * 2) askGemini({ systemPrompt, history, userMsg, audioPart, model, temperature })
+ */
+export async function askGemini(arg1, userMsg = "", audioPart = null, pageConfig = {}, memory = {}, crmData = null, extraKnowledge = "") {
+  let systemPrompt = "";
+  let history = [];
+  let text = "";
+  let audio = null;
+  let model = CONFIG?.GEMINI_MODEL || process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  let temperature = 0.35;
+
+  // دعم الاستدعاء ككائن إعدادات جاهز من ai.js أو كمعاملات متتابعة مباشرة
+  if (arg1 && typeof arg1 === "object" && !Array.isArray(arg1)) {
+    systemPrompt = arg1.systemPrompt || arg1.system || arg1.systemInstruction || "";
+    history = Array.isArray(arg1.history) ? arg1.history : [];
+    text = String(arg1.userMsg ?? arg1.prompt ?? arg1.text ?? "");
+    audio = arg1.audioPart || arg1.audio || null;
+    if (arg1.model) model = arg1.model;
+    if (typeof arg1.temperature === "number") temperature = arg1.temperature;
+  } else {
+    history = Array.isArray(arg1) ? arg1 : [];
+    text = String(userMsg || "");
+    audio = audioPart;
+    const baseSystem =
+      pageConfig?.SYSTEM ||
+      pageConfig?.SYSTEM_PROMPT ||
+      `أنت موظف مبيعات أردني لبق ومختصر في صفحة "${pageConfig?.name || "المتجر"}". التزم بأسعار الصفحة فقط ولا تخترع أي سعر أو عرض أو عنوان.`;
+    const pricesBlock = pageConfig?.PRICES
+      ? "\n\n[الأسعار المعتمدة بالدينار الأردني]:\n" +
+        Object.entries(pageConfig.PRICES)
+          .map(([k, v]) => `• ${k}: ${v}د${pageConfig?.UNITS?.[k] ? ` (${pageConfig.UNITS[k]})` : ""}`)
+          .join("\n")
+      : "";
+    const nextTask = buildNextTask(memory, pageConfig, crmData);
+    systemPrompt = [baseSystem, pricesBlock, extraKnowledge, nextTask].filter(Boolean).join("\n\n");
+  }
+
+  const keys = resolveGeminiKeys();
+  if (!keys.length) {
+    console.error("🔴 askGemini: لا يوجد أي مفتاح GEMINI_API_KEY في البيئة أو الإعدادات");
     return "";
   }
-}
 
-async function askOpenAI(history, userMsg, audioPart, pageConfig, memory, crmData, extraKnowledge) {
-  let crmContext = "";
-  if (crmData && crmData.lastOrder) {
-    crmContext = `\nملاحظة هامة: هذا زبون قديم (رحّب به كزبون دائم واعرض عليه تكرار طلبه إن رغب). 🔴 لا تفترض عنوانه أو رقمه من طلب سابق — اطلبهما منه في هذه المحادثة.`;
+  // بناء سجل المحادثة بصيغة Gemini API
+  const contents = [];
+  for (const h of history.slice(-(CONFIG?.MAX_HISTORY || 12))) {
+    if (!h || !h.content) continue;
+    const role = h.role === "assistant" || h.role === "model" ? "model" : "user";
+    const cleanText = String(h.content).trim();
+    if (!cleanText) continue;
+    contents.push({ role, parts: [{ text: cleanText }] });
   }
-  const adminKnowledge = extraKnowledge && extraKnowledge.trim()
-    ? `\n\n[معلومات إضافية موثوقة من إدارة الصفحة — اعتمدها بأولوية عالية]\n${extraKnowledge.trim()}`
-    : "";
 
-  const nextTask = buildNextTask(memory, pageConfig);
-  const unitLabel = pageConfig.DEFAULT_UNIT ? ` لكل ${pageConfig.DEFAULT_UNIT}` : "";
-  const catalog = Object.keys(pageConfig.PRICES || {}).map(k => `${k} = ${pageConfig.PRICES[k]} د${unitLabel}`).join("، ");
-  const bundleCatalog = (Array.isArray(pageConfig.BUNDLE_OFFERS) ? pageConfig.BUNDLE_OFFERS : [])
-    .map(b => `${b.label || b.name || (b.products || []).map(p => typeof p === "string" ? p : p.name).join(" + ")} = ${b.price} د${(b.includesDelivery || b.deliveryIncluded) ? " شامل التوصيل" : ""}`)
-    .join(" | ");
-  const minOrderNote = pageConfig.MINIMUM_QUANTITY
-    ? `\n🔴 الحد الأدنى للطلب في هذه الصفحة: ${pageConfig.MINIMUM_QUANTITY} ${pageConfig.DEFAULT_UNIT || "قطعة"}${pageConfig.MINIMUM_INVOICE_TOTAL ? ` (أقل فاتورة ${pageConfig.MINIMUM_INVOICE_TOTAL} دنانير شامل التوصيل — ممنوع نهائياً قبول كمية أقل أو ذكر فاتورة بـ 6 دنانير)` : ""}.`
-    : "";
-
-  const hardCatalog = `\n\n[كتالوج منتجات وأسعار إلزامي — هذه معلومات مؤكدة يجب الاعتماد عليها قبل أي شيء]
-المنتجات: ${catalog || "لا يوجد"}
-التوصيل: ${Number(pageConfig.DELIVERY || 0)} د${minOrderNote}
-${bundleCatalog ? `العروض: ${bundleCatalog}\n` : ""}
-إذا سأل الزبون عن أي منتج موجود أعلاه، فهو متوفر. ممنوع قول «ما عندي معلومات عنه» أو «غير موجود» لمنتج موجود في هذه القائمة. لا تغيّر الأسعار.`;
-
-  const baseKnowledge = SALES_PERSONA + "\n\n" + (pageConfig.SYSTEM || COMMON_KNOWLEDGE) + "\n\n" + SALES_BEHAVIOR;
-  const systemInst = `${baseKnowledge}\n\n${hardCatalog}\n\n${ADDRESS_EXPERT}\n\nصفحة: ${pageConfig.name}\n${pageConfig.INFO}${adminKnowledge}${crmContext}\n${nextTask}`;
-
-  const messages = [{ role: "system", content: systemInst }];
-  (history || []).forEach(h => {
-    messages.push({ role: h.role === "assistant" ? "assistant" : "user", content: h.content || "" });
-  });
-
-  let finalUser = (userMsg && userMsg !== "[رسالة صوتية]") ? userMsg : "";
-  if (audioPart) {
-    const transcript = await transcribeOpenAI(audioPart);
-    if (transcript) finalUser = (finalUser ? finalUser + "\n" : "") + transcript;
-    else if (!finalUser) finalUser = "الزبون بعت رسالة صوتية غير واضحة، اطلب منه يعيدها كتابةً بلطف.";
-  }
-  messages.push({ role: "user", content: finalUser || "..." });
-
-  try {
-    const model = oaiModel();
-    const body = await oaiBody({ model, prompt: "", json: false, temperature: 0.2, maxTokens: 400 });
-    body.messages = messages;
-
-    const resp = await fetch(`${oaiBase()}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${oaiKey()}`
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(CONFIG.GEMINI_TIMEOUT_MS)
+  // بناء رسالة الزبون الحالية (نص + مرفق صوتي إن وُجد)
+  const userParts = [];
+  if (audio && audio.data) {
+    userParts.push({
+      inlineData: {
+        mimeType: audio.mimeType || audio.mime_type || "audio/ogg",
+        data: audio.data
+      }
     });
+  }
+  if (text && text !== "[رسالة صوتية]") {
+    userParts.push({ text });
+  } else if (userParts.length > 0) {
+    userParts.push({ text: "استمع للرسالة الصوتية من الزبون وأجب عليها باللهجة الأردنية حسب تعليمات الصفحة." });
+  }
 
-    if (!resp.ok) {
-      console.error("OpenAI error:", resp.status, await resp.text());
-      return null;
+  if (!userParts.length) return "";
+  contents.push({ role: "user", parts: userParts });
+
+  const payload = {
+    contents,
+    generationConfig: {
+      temperature,
+      maxOutputTokens: 700
     }
-    const data = await resp.json();
-    let text = (data?.choices?.[0]?.message?.content || "").replace(/\*\*/g, "").trim();
+  };
 
-    if (text && /(?:ما\s*عندي|لا\s*يوجد|غير\s*متوفر|غير\s*معروف).{0,40}(?:كلور|فلاش)/iu.test(text)) {
-      const hasChlorine = Object.keys(pageConfig.PRICES || {}).some(k => /كلور/.test(k));
-      const hasFlash = Object.keys(pageConfig.PRICES || {}).some(k => /فلاش/.test(k));
-      if (/كلور/iu.test(text) && hasChlorine && !/فلاش/iu.test(text)) {
-        text = `نعم، الكلور متوفر بـ7 دنانير، والتوصيل 2 دينار على الطلب الفردي.`;
-      } else if (/فلاش/iu.test(text) && hasFlash && !/كلور/iu.test(text)) {
-        text = `نعم، الفلاش متوفر بـ7 دنانير، والتوصيل 2 دينار على الطلب الفردي.`;
+  if (systemPrompt && String(systemPrompt).trim()) {
+    payload.systemInstruction = { parts: [{ text: String(systemPrompt).trim() }] };
+  }
+
+  // تجربة الموديل الأساسي ثم الاحتياطي في حال ضغط السيرفر أو اختلاف اسم الموديل
+  const modelsToTry = [...new Set([model, "gemini-2.0-flash", "gemini-1.5-flash"].filter(Boolean))];
+
+  for (const m of modelsToTry) {
+    for (const key of keys) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(key)}`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(20000)
+        });
+
+        if (!res.ok) {
+          const errTxt = await res.text().catch(() => "");
+          console.warn(`⚠️ askGemini HTTP ${res.status} (${m}): ${errTxt.slice(0, 180)}`);
+          if (res.status === 404) break; // الموديل غير متاح، انتقل للموديل الاحتياطي فوراً
+          continue;                      // المفتاح عليه ضغط 429/403، جرّب المفتاح التالي
+        }
+
+        const data = await res.json();
+        const reply = (data?.candidates?.[0]?.content?.parts || [])
+          .map(p => p?.text || "")
+          .join("")
+          .trim();
+
+        if (reply) return reply;
+      } catch (err) {
+        console.error(`🔴 askGemini error (${m}):`, err && err.message);
       }
     }
-    return text || null;
-  } catch (e) {
-    console.error("OpenAI failed:", e && e.message);
-    return null;
   }
+
+  return "";
 }
+
+export default { buildNextTask, askGemini };
