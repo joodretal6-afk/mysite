@@ -66,6 +66,20 @@ function normalizePhone(raw) {
   return PHONE_STRICT.test(p) ? p : "";
 }
 
+export function buildQuantityRules(pageConfig = {}) {
+  const unit = String(pageConfig.DEFAULT_UNIT || "قطعة");
+  const isKiloSale = pageConfig.QTY_MODE === "kilo" || /^كيلو(?:غرام)?$/i.test(unit.trim());
+  const packWeightMatch = !isKiloSale && unit.match(/(\d+(?:\.\d+)?)\s*كيلو/);
+  const packWeight = packWeightMatch ? Number(packWeightMatch[1]) : null;
+  if (isKiloSale) {
+    return "- هذه الصفحة تبيع بالكيلو مباشرة. الكمية المطلوبة هي عدد الكيلوهات نفسه: 2 كيلو = qty 2، 3 كيلو = qty 3، 4 كيلو = qty 4. ممنوع قسمة الكيلوهات على 4 أو تحويل 4 كيلو إلى وحدة واحدة. إذا قال 2 كيلو فلا تخرج 1 أبداً.";
+  }
+  if (packWeight) {
+    return `- وحدة البيع: ${unit}. وزن الوحدة الواحدة ${packWeight} كيلو. إذا ذكر الزبون وزناً بالكيلو، حوّله إلى عدد وحدات بقسمة الوزن على ${packWeight} فقط عندما يكون الوزن مضاعفاً واضحاً. لا تطبق هذه القاعدة على صفحات تبيع بالكيلو.`;
+  }
+  return `- وحدة البيع: ${unit}. الكمية هي عدد الوحدات/العبوات المذكورة، ولا تحوّل الوزن إلى كمية إلا إذا كانت وحدة البيع تحدد وزن العبوة صراحةً.`;
+}
+
 export async function extractOrderWithAI(conversationText, pageConfig) {
   const allowed = Object.keys(pageConfig.PRICES || {});
   if (!conversationText || !conversationText.trim() || !allowed.length) {
@@ -76,6 +90,9 @@ export async function extractOrderWithAI(conversationText, pageConfig) {
   const bundleText = bundles.length
     ? `\nالعروض المتاحة: ${bundles.map(b => `${b.label} = ${b.price} دينار${b.includesDelivery ? " شامل التوصيل" : ""}; مكونات العرض: ${(b.products || []).join(" + ")}`).join("\n")}. إذا قال الزبون «العرض» أو «البكج» أو طلب هذه المكونات كحزمة، أخرج مكونات العرض بالأسماء الحرفية من القائمة.`
     : "";
+
+  // قواعد الكمية مرتبطة بوحدة بيع الصفحة نفسها، وليس قاعدة موحدة لكل المتاجر.
+  const quantityRules = buildQuantityRules(pageConfig);
 
   const prompt =
 `أنت محلّل طلبات دقيق لمتجر أردني (${pageConfig.name}). استخرج الطلب من محادثة الزبون التالية.
@@ -93,10 +110,9 @@ ${ADDRESS_EXPERT}
 - ممنوع تاخد عنوان أو رقم من أي مصدر غير رسائل هذا الزبون في هذه المحادثة.
 
 قواعد الكمية (دقيقة جداً — التزم بها حرفياً):
-- 🔴 الوزن ليس كمية إطلاقاً. النصية الواحدة وزنها 4 كيلو (4200غ). أي ذكر لـ "4 كيلو" أو "4200غ" = كمية 1 (نصية واحدة) وليس 4.
+${quantityRules}
 - التطابق: نصية/حبة/وحدة/عبوة/واحدة = 1 ، نصيتين/حبتين/عبوتين = 2 ، ثلاث = 3 ، أربع = 4.
-- "8 كيلو"=2 ، "12 كيلو"=3 ، "16 كيلو"=4 (كل 4 كيلو = نصية واحدة).
-- لا تحسب أرقام الهاتف أو العنوان أو السعر أو الغرامات كأنها كمية أبداً.
+- لا تحسب أرقام الهاتف أو العنوان أو السعر أو الغرامات كأنها كمية.
 - إذا الزبون قال "حبة/وحدة/واحدة/نصية" فالكمية = 1 مهما ذُكر من كيلوهات أو غرامات معها.
 - إذا الكمية غير واضحة أو مبهمة، اجعل الكمية 1 (لا تضاعفها من عندك أبداً).
 - لو ما في نية طلب واضحة (مجرد سؤال/سلام) اجعل is_order=false و items فارغة.
