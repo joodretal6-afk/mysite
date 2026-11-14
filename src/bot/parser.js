@@ -98,7 +98,7 @@ export function extractPhone(memory, text, sourceMid = null) {
 }
 
 export function extractQty(text, pageConfig) {
-  // ⚠️ الوزن ليس كمية: النصية الواحدة وزنها 4 كيلو. لازم نميّز الكمية عن الكيلوهات والأسعار والعناوين.
+  // ⚠️ تفسير الوزن يعتمد على وحدة بيع الصفحة: كيلو مباشر أو عبوة بوزن ثابت.
   // 1) نحسب الكيلوهات من النص الأصلي (قبل أي حذف) لأن الوزن قد يدل على العدد
   if (pageConfig.QTY_MODE === "kilo") {
     const kg = text.match(/(\d+(?:\.\d+)?)\s*(?:كيلو|كغ|كجم|كيلوغرام)/);
@@ -112,11 +112,18 @@ export function extractQty(text, pageConfig) {
     .replace(/\d+(?:\.\d+)?\s*(?:دينار|دنانير|jd)/gi, " ")
     .replace(/\b\d{3,}\b/g, " ");   // أرقام طويلة (هواتف/أوزان بالغرام مثل 4200)
 
-  // كمية من ذكر الكيلوهات صراحةً (النصية = 4 كيلو) — من النص الأصلي
-  if (/(16\s*كيلو|ستة عشر كيلو)/.test(text)) return 4;
-  if (/(12\s*كيلو|اثنا عشر كيلو|اثنعش كيلو)/.test(text)) return 3;
-  if (/(8\s*كيلو|ثمانية كيلو|ثماني كيلو|ثمن كيلو)/.test(text)) return 2;
-  if (/(4\s*كيلو|اربعة كيلو|أربعة كيلو|اربع كيلو|أربع كيلو)/.test(text)) return 1;
+  // تحويل الوزن إلى عدد عبوات فقط عندما تكون وحدة البيع نفسها عبوة ذات وزن معروف.
+  // صفحات البيع بالكيلو تُعالَج أعلاه وتعيد عدد الكيلوهات مباشرة.
+  const unitWeight = String(pageConfig.DEFAULT_UNIT || "").match(/(\d+(?:\.\d+)?)\s*كيلو/);
+  if (unitWeight) {
+    const kgMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:كيلو|كغ|كجم|كيلوغرام)/);
+    if (kgMatch) {
+      const kg = Number(kgMatch[1]);
+      const packKg = Number(unitWeight[1]);
+      if (packKg > 0 && kg > 0 && Math.abs(kg / packKg - Math.round(kg / packKg)) < 0.0001)
+        return Math.round(kg / packKg);
+    }
+  }
 
   // 3) كلمات الكمية الصريحة (تثنية/جمع/مفرد)
   if (/(نصيتين|نصيّتين|ثنتين|تنتين|اثنتين|عبوتين|قصتين|سطليتين|ربعيتين|حبتين|علبتين|كباويتين)/.test(clean)) return 2;
