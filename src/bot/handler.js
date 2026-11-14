@@ -123,7 +123,7 @@ export async function handleEvent(event, env, ctx) {
 }
 
 async function _handleEvent(event, env, ctx) {
-  if (!event || event.optin) return;                       // كبسة الإشعارات OTN
+  if (!event || event.optin) return;                        // كبسة الإشعارات OTN
   if (!event.message || event.message.is_echo) return;
 
   const senderId = event.sender?.id;
@@ -322,6 +322,7 @@ async function _handleEvent(event, env, ctx) {
     } catch (e) { console.error("cancel order:", e && e.message); }
     const cancelledId = memory.orderId;
     memory.cart = {};
+    memory.belowMinQty = null;
     memory.sent = false;
     memory.coupon = null;
     memory.orderId = null;
@@ -343,6 +344,7 @@ async function _handleEvent(event, env, ctx) {
   // 🔴 تغيير الرأي صريحاً = طلب جديد مستقل.
   if (RESET_INTENT.test(userMsg)) {
     memory.cart = {};
+    memory.belowMinQty = null;
     memory.sent = false;
     memory.orderId = null;
     memory._repeated = false;
@@ -355,6 +357,7 @@ async function _handleEvent(event, env, ctx) {
       const last = lastCompletedOrder(senderId, recipientId);
       if (last && last.order_string) {
         memory.cart = parseOrderStringToCart(last.order_string);
+        memory.belowMinQty = null;
         if (!memory.phone) memory.phone = last.phone || "";
         memory.orderId = null;
         memory.sent = false;
@@ -382,6 +385,7 @@ async function _handleEvent(event, env, ctx) {
     memory.sent = false;
     memory.orderId = null;
     memory.cart = {};
+    memory.belowMinQty = null;
     memory._newOrder = true;
     memory._editingExisting = false;
   }
@@ -425,8 +429,12 @@ async function _handleEvent(event, env, ctx) {
       ].filter(Boolean).join("\n");
       const ai = await extractOrderWithAI(convText, effConfig);
       if (ai.ok) {
-        // نستبدل السلة فقط لو الذكاء لقى طلباً فعلياً (حتى لا نمسح سلة سابقة برسالة سؤال/سلام)
-        if (ai.is_order && ai.items.length) {
+        if (ai.below_min_qty) {
+          memory.belowMinQty = ai.below_min_qty;
+          memory.cart = {};
+        } else if (ai.is_order && ai.items.length) {
+          memory.belowMinQty = null;
+          // نستبدل السلة فقط لو الذكاء لقى طلباً فعلياً (حتى لا نمسح سلة سابقة برسالة سؤال/سلام)
           memory.cart = {};
           ai.items.forEach(it => { memory.cart[it.product] = it.qty; });
           // 🧾 مصدر الطلب: الذكاء استخرجه من رسائل الزبون بهالجلسة. بدون
@@ -560,27 +568,30 @@ async function _handleEvent(event, env, ctx) {
   const addrUnknown = !!memory.area && memory.addressReady === false;
 
   // 🔴 الاكتمال يمرّ من التحقق النهائي: كل حقل مطلوب لازم يكون موجود
-  //    **ومصدره رسالة من نفس جلسة العميل** (source_mid). أي حقل بلا
-  //    مصدر (احتمال مفترَض) بيخلّي الطلب "ناقص" ومنسأل عنه — ما منطبع
-  //    فاتورة ببيانات ما قدرنا نثبت مصدرها.
-  const check = validateOrder(memory, { pageId: recipientId, senderId });
+  //    **ومصدره رسالة من نفس جلسة العميل** (source_mid) + فوق الحد الأدنى.
+  const check = validateOrder(memory, { pageId: recipientId, senderId, pageConfig: effConfig });
   if (check.reasons.length)
     console.log(`🧾 تحقق الطلب [${sessionKey}]: ${check.complete ? "مكتمل" : "ناقص → " + check.missing.join(",")} | ${check.reasons.join(" · ")}`);
-  const complete = check.complete && !check.blocked;
+
+  const computedPreview = cartItemsCount > 0 ? computeOrder(effConfig, memory.cart, memory.coupon) : null;
+  const orderValidForSave = Boolean(
+    computedPreview &&
+    !computedPreview.belowMinimum &&
+    (computedPreview.canIssueInvoice !== false) &&
+    computedPreview.total > 0
+  );
+
+  const complete = check.complete && !check.blocked && orderValidForSave;
   const readyForInvoice = complete && !memory.sent;
   const needsAddressReview = complete && addrCoarse;
 
-  // معه صنف ورقم، بس ما بنعرف وين ⇒ سؤال واحد محدّد، مرة وحدة بس.
+  // معه صنف صالح ورقم، بس ما بنعرف وين ⇒ سؤال واحد محدّد، مرة وحدة بس.
   // بعدها بيكمّل مع الذكاء الاصطناعي عادي — ما بنسكت ولا بنعلّق الطلب.
-  if (cartItemsCount > 0 && memory.phone && addrUnknown
+  if (orderValidForSave && memory.phone && addrUnknown
       && memory.addressQuestion && !memory._addrAsked && !memory.sent) {
     const ask = `تمام 👌 ضلّ إشي واحد بس عشان يوصلك الطلب صح:\n${memory.addressQuestion}`;
     // 🔴 ترتيب المعاملات: sendText(pageToken, senderId, text) — لا تعكسه.
-    // عكسه سابقاً كان يمرّر كائن مكان النص فترمي .trim() خطأً وينهار
-    // المعالج كاملاً ⇒ الزبون ما بيوصله ولا رد والطلب بيعلق.
     await sendText(token, senderId, ask);
-    // ما بنعلّم "سألنا" إلا بعد نجاح الإرسال فعلاً — وإلا لو فشل الإرسال
-    // بنكون حرقنا السؤال الوحيد بلا ما يسمعه الزبون.
     memory._addrAsked = true;
     memory.lastReply = memory.addressQuestion;
     logMessage({ page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
@@ -591,13 +602,11 @@ async function _handleEvent(event, env, ctx) {
 
   const messengerUrl = inboxUrl(recipientId, senderId);
 
-  // 🎯 التقاط العميل المحتمل: حدّد صنف بس لسا ما أعطى رقم ولا عنوان.
-  // بدون هاد بيختفي كلياً من النظام. لا يرسل أي شيء — تسجيل فقط.
-  if (cartItemsCount > 0 && !memory.area && !memory.phone) {
+  // 🎯 التقاط العميل المحتمل (فقط إذا كان السعر صالحاً وفوق الحد الأدنى)
+  if (orderValidForSave && !memory.area && !memory.phone) {
     try {
       const names = Object.keys(memory.cart).join("، ");
-      let est = 0;
-      try { est = Number(computeOrder(effConfig, memory.cart, memory.coupon).total) || 0; } catch {}
+      const est = Number(computedPreview.total) || 0;
       const now = Date.now();
       retryDb(() => db.prepare(
         `INSERT INTO leads_prospects (page_id, page_name, sender_id, interest, est_value, first_at, last_at, status)
@@ -608,11 +617,11 @@ async function _handleEvent(event, env, ctx) {
     } catch (e) { console.error("prospect capture:", e && e.message); }
   }
 
-  // 🟢 وصول فوري للسستم: أي أوردر فيه أصناف + (عنوان أو رقم) ينزل باللوحة مباشرة
-  const hasIntent = cartItemsCount > 0 && (memory.area || memory.phone);
+  // 🟢 وصول فوري للسستم: ممنوع نزول أي طلب على الموقع إذا كان تحت الحد الأدنى (مثل 6 دنانير)
+  const hasIntent = orderValidForSave && (memory.area || memory.phone);
   if (hasIntent) {
     try {
-      const { total, orderString } = computeOrder(effConfig, memory.cart, memory.coupon);
+      const { total, orderString } = computedPreview;
       const status = complete ? "جديد" : "ناقص";
       // الطلب الجديد/المكرر الصريح لا يعيد استخدام طلب سابق.
       // التعديل فقط يحافظ على orderId لتحديث نفس الطلب.
@@ -650,42 +659,47 @@ async function _handleEvent(event, env, ctx) {
   let reply = "";
   let justSentInvoice = false;
 
-  // 🔴 إصدار الفاتورة للزبون عند اكتمال الطلب (مرة واحدة)
+  // 🔴 إصدار الفاتورة للزبون عند اكتمال الطلب (مع التحقق أن القالب أرجع نص فاتورة صالح)
   if (readyForInvoice) {
-    const { total, orderString, detailedString, priceString } = computeOrder(effConfig, memory.cart, memory.coupon);
-    reply = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, memory.area, memory.phone);
-    // العنوان خشن: منطلب المعلم **مع** الفاتورة مش بدالها.
-    // الطلب بيمشي، والزبون بيقدر يزوّدنا بلا ما يستنى ولا يضيع.
-    if (needsAddressReview)
-      reply += "\n\n📍 لو بتقدر تبعتلي أقرب معلم بيسهّل على السائق يوصلك أسرع.";
-    memory.sent = true;
-    justSentInvoice = true;
+    const { total, orderString, detailedString, priceString } = computedPreview;
+    const renderedInvoice = pageConfig.INVOICE_TEMPLATE(detailedString || orderString, priceString, memory.area, memory.phone);
+    if (renderedInvoice && String(renderedInvoice).trim()) {
+      reply = renderedInvoice;
+      // العنوان خشن: منطلب المعلم **مع** الفاتورة مش بدالها.
+      // الطلب بيمشي، والزبون بيقدر يزوّدنا بلا ما يستنى ولا يضيع.
+      if (needsAddressReview)
+        reply += "\n\n📍 لو بتقدر تبعتلي أقرب معلم بيسهّل على السائق يوصلك أسرع.";
+      memory.sent = true;
+      justSentInvoice = true;
 
-    if (memory.coupon) { try { incrementCouponUse(memory.coupon.code); } catch {} }
+      if (memory.coupon) { try { incrementCouponUse(memory.coupon.code); } catch {} }
 
-    // 🎁 برنامج الولاء: كل طلب خامس مكتمل → مكافأة
-    try {
-      const loyaltyCount = customerCompletedCount(memory.phone);
-      if (loyaltyCount > 0 && loyaltyCount % 5 === 0) {
-        reply += `\n\n🎁 مبروك! هذا طلبك رقم ${loyaltyCount} معنا — كزبون وفيّ إلك خصم خاص على طلبك الجاي 🌹`;
-      }
-    } catch (e) { console.error("loyalty check:", e && e.message); }
+      // 🎁 برنامج الولاء: كل طلب خامس مكتمل → مكافأة
+      try {
+        const loyaltyCount = customerCompletedCount(memory.phone);
+        if (loyaltyCount > 0 && loyaltyCount % 5 === 0) {
+          reply += `\n\n🎁 مبروك! هذا طلبك رقم ${loyaltyCount} معنا — كزبون وفيّ إلك خصم خاص على طلبك الجاي 🌹`;
+        }
+      } catch (e) { console.error("loyalty check:", e && e.message); }
 
-    ctx.waitUntil(notifyTelegram(
-      `🔔 طلب جديد من (${pageConfig.name})!\n\n🧀 الطلب: ${orderString}\n💰 الحساب: ${total}د\n` +
-      `📍 العنوان: ${memory.area}` +
-      // 🔴 تنبيه صريح: الطلب مشى بس عنوانه ناقص — لازم مكالمة تأكيد
-      (needsAddressReview
-        ? `\n⚠️ العنوان ناقص (${memory.addressLevel || "—"} ${memory.addressScore ?? "—"}%) — اتصل وأكّده قبل التوصيل`
-        : "") +
-      `\n📞 التلفون: ${memory.phone}\n🔗 رابط الماسنجر: ${messengerUrl}`
-    ));
+      ctx.waitUntil(notifyTelegram(
+        `🔔 طلب جديد من (${pageConfig.name})!\n\n🧀 الطلب: ${orderString}\n💰 الحساب: ${total}د\n` +
+        `📍 العنوان: ${memory.area}` +
+        // 🔴 تنبيه صريح: الطلب مشى بس عنوانه ناقص — لازم مكالمة تأكيد
+        (needsAddressReview
+          ? `\n⚠️ العنوان ناقص (${memory.addressLevel || "—"} ${memory.addressScore ?? "—"}%) — اتصل وأكّده قبل التوصيل`
+          : "") +
+        `\n📞 التلفون: ${memory.phone}\n🔗 رابط الماسنجر: ${messengerUrl}`
+      ));
 
-    ctx.waitUntil(env.SESSIONS_KV.put(crmKey, JSON.stringify({
-      lastOrder: orderString, lastArea: memory.area, phone: memory.phone, page: pageConfig.name
-    }), { expirationTtl: CONFIG.CRM_TTL }));
+      ctx.waitUntil(env.SESSIONS_KV.put(crmKey, JSON.stringify({
+        lastOrder: orderString, lastArea: memory.area, phone: memory.phone, page: pageConfig.name
+      }), { expirationTtl: CONFIG.CRM_TTL }));
+    }
+  }
 
-  } else {
+  // إذا لم تصدر فاتورة (أو أرجع القالب نصاً فارغاً)، ننتقل للرد عبر الذكاء الاصطناعي بدون ما يسكت البوت
+  if (!justSentInvoice) {
     let extraKnowledge = getKnowledge(recipientId);
     // 🛒 نُعلِم البوت بالأصناف الإضافية المتوفّرة حتى لا ينكر وجودها ويقدر يبيعها
     if (activeAddons.length) {
