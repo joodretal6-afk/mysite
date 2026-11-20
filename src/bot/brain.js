@@ -30,12 +30,12 @@ export const SALES_PERSONA = `[الدور]
 - أي صنف غير موجود ضمن مكونات العرض: وجّه العميل إلى الرقم 0796210083، ولا تعرض أو تسجل أي صنف آخر.
 - التواصل في صفحة ريفان حصراً على الرقم: 0796210083.
 14) في صفحة أجبان الرياض حصراً:
--اجبان الرياض الأوزان المتوفرة فقط  مضاعفة ل2كيلو يعني 4 كيلو  و6 كيلو 8 كيلو  
--يمنع منع بات بيع في اجبان الرياض 3 كيلو     فقط اما 2 كيلو او 4 كيلو او المضاعفات  لل 2 
+- أوزان أجبان الرياض المتاحة: 2 أو 4 أو 6 أو 8 كيلو وما فوق بمضاعفات 2 فقط.
+- يمنع قبول 3 أو 5 كيلو أو أي وزن فردي؛ الحد الأدنى 2 كيلو.
 - يمنع منعاً باتاً إصدار أو ذكر أي فاتورة أو طلب بقيمة 6 دنانير أو لكمية 1 كيلو تحت أي ظرف نهائياً.
 - أقل كمية للطلب هي 2 كيلو، وأقل فاتورة مسموح بإصدارها هي 10 دنانير شامل التوصيل (8 دنانير جبنة + 2 دينار توصيل).
 - عند طلب 4 كيلو من أجبان الرياض، السعر الثابت والدقيق للفاتورة هو 18 دينار شامل التوصيل (16 دينار جبنة + 2 دينار توصيل).
-- معادلة أجبان الرياض الصارمة لأي كمية مسموحة (2 كيلو فأكثر): (عدد الكيلوات × 4 دنانير) + 2 دينار توصيل مرة واحدة على الطلب.
+- معادلة أجبان الرياض لأي وزن مسموح: (عدد الكيلوات × 4 دنانير) + 2 دينار توصيل مرة واحدة على الطلب.
 -اجبان الرياض المكونات : حليب غنم حليب ماعز حليب بقر كوكتيل بنسب مميزة  معجونة بالمستكة والمحلب وحبة البركة  نكهة جديدة  فقط لدينا المنتج الأصلي احذرو التقليد دراسة اهم صانعين الأجبان في الأردن وفي الشراكة مع 
 [العزل]
 كل صفحة متجر مستقل بالكامل.
@@ -124,7 +124,7 @@ export const SALES_BEHAVIOR = `[محرك النية]
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 const EASTERN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 
-export const BOT_VERSION = "2026-PRO-6.7-INVOICE-SHIELD";
+export const BOT_VERSION = "2026-PRO-6.8-RIYADH-CONVERSATION-ROUTER";
 
 export const RIYADH_PAGE_IDS = Object.freeze([
   "1229773096895942",
@@ -266,48 +266,51 @@ export function detectIntent(text = "") {
   const t = normalizeArabicText(text);
   if (!t) return "unknown";
 
+  // Specific informational intents take precedence over purchase language.
+  // Example: "بدي أعرف شو المكونات" is an information request, not a purchase.
   if (/بوت|رد الي|ذكاء|شات جي بي تي|ai/.test(t)) return "bot_identity";
   if (/موظف|انسان|حدا حقيقي|بشر|تلفون|اتصال|رقمك/.test(t)) return "human_agent";
-  // Ingredient questions must be classified before generic/unknown fallbacks.
-  if (/مكونات|مكوناتها|مكوناته|تركيبه|تركيبتها|شو داخل|مما تتكون|مم تتكون|نسب الحليب|نسبه الحليب|نوع الحليب|انواع الحليب|حليب ماعز|حليب غنم|حليب بقر|حليب بقر|ثلث|اثلاث|المقادير|المواد الداخله/.test(t)) return "ingredients_inquiry";
+  if (/مكونات|مكون|تركيبه|تركيبتها|شو داخل|من شو|مما تتكون|مم تتكون|نسب الحليب|نسبه الحليب|نوع الحليب|انواع الحليب|حليب ماعز|حليب غنم|حليب بقر|ثلث|اثلاث|المقادير|المواد الداخله|مواد حافظه|مواد حافظة/.test(t)) return "ingredients_inquiry";
+  if (/وين|موقع|عنوان|مناطق|محافظات|يوصل|بتوصل|توصل|توصيل|عمان|اربد|الزرقاء|المفرق|مفرق|الخالدية/.test(t)) return "delivery";
   if (/فاكيوم|فكيوم|سحب هواء|مفرغ|بدون مي|بدون مصل/.test(t)) return "vacuum_inquiry";
-  if (/مستك|محلب|حبه البركه|حبة البركة|بهار|نكهه|ريحه/.test(t)) return "flavor_inquiry";
+  if (/مستك|محلب|حبه البركه|بهار|نكهه|ريحه/.test(t)) return "flavor_inquiry";
   if (/زنخ|زنخه|حليب بودره|طبيعي ولا|مغشوش/.test(t)) return "milk_quality_inquiry";
-  if (/خضره ولا|مغليه ولا|مغليه|بدها غلي|جاهزه للاكل|جاهزة للاكل|نقع|تحلاي|تحليه/.test(t)) return "storage_inquiry";
+  if (/خضره ولا|مغليه ولا|مغليه|بدها غلي|جاهزه للاكل|نقع|تحلاي|تحليه|تخزين|مونه|تفريز|حفظ|مرطبان/.test(t)) return "storage_inquiry";
   if (/قلي|بتذوب|بتسيح|بتفرط|شوي|صاج/.test(t)) return "cooking_inquiry";
   if (/كناف|حلو|حلويات|معجنات|مالح كثير|خفيفه الملح/.test(t)) return "sweetening_inquiry";
-  if (/تخزين|مونه|تفريز|حفظ|مرطبان/.test(t)) return "storage_inquiry";
-  if (/بجير|تجيير|رغوه|رغوة|بغبش|بهت|ألوان|غساله|اوتوماتيك|اتوماتيك/.test(t)) return "cleaning_technical";
+  if (/بجير|تجيير|رغوه|رغوة|بغبش|بهت|الوان|غساله|اوتوماتيك|اتوماتيك/.test(t)) return "cleaning_technical";
   if (/الغ(ي|يه)|الغاء/.test(t)) return "cancel";
   if (/غير العنوان|بدل الرقم|غير الرقم|عدل الطلب/.test(t)) return "edit_order";
-  if (/وين|مناطق|محافظات|يوصل|توصيل|عمان|اربد|الزرقاء/.test(t)) return "delivery";
   if (/دفع|كاش|تحويل|بطاقه|فيزا/.test(t)) return "payment";
   if (/وصلني غلط|ناقص|في مشكله|مشكله|شكوى|خربان/.test(t)) return "complaint";
   if (/غالي|سعره عالي|في خصم|راعينا|اخر سعر/.test(t)) return "objection";
   if (/الفرق|احسن|افضل|انسب|شو اختار|اي واحد/.test(t)) return "comparison";
-  // أولوية نية الشراء حتى لا تُصنّف عبارة "بدي عرضين" أو "بدي 4 كيلو" على أنها سؤال سعر.
-  if (/بدي|اعطيني|ابعت|وصلي|اطلب|احجز|هات|باخذ|سجل|اعتمد/.test(t)) return "purchase";
   if (/كم|بكم|السعر|سعرو|تكلفه|دينار|حساب|العرض|عرض/.test(t)) return "price";
   if (/وين طلبي|شو صار بالطلب|تاخر الطلب/.test(t)) return "order_status";
   if (/شو هو|مواصفات|حجم|وزن/.test(t)) return "product_info";
   if (/هلا|مرحبا|السلام|صباح|مساء|اهلين|يا هلا/.test(t)) return "greeting";
-
+  // Purchase is deliberately late so it cannot swallow informational questions.
+  if (/بدي|اعطيني|ابعت|وصلي|اطلب|احجز|هات|باخذ|سجل|اعتمد|جهزلي/.test(t)) return "purchase";
   return "unknown";
 }
 
 
-export function runRiyadhIngredientIntentTests() {
+export function runRiyadhIntentRegressionTests() {
   const cases = [
-    "شو مكونات الجبنة؟",
-    "من شو مصنوعة؟",
-    "شو نوع الحليب؟",
-    "احكيلي نسب الحليب بالتفصيل",
-    "فيها محلب ومستكة؟",
-    "شو داخل فيها؟"
+    ["مرحبا شو المكونات", "ingredients_inquiry"],
+    ["بدي أعرف شو المكونات", "ingredients_inquiry"],
+    ["احكيلي نسب الحليب بالتفصيل", "ingredients_inquiry"],
+    ["فيها محلب ومستكة وحبة البركة؟", "flavor_inquiry"],
+    ["وين مكانكم", "delivery"],
+    ["وين موقع المصنع؟", "delivery"],
+    ["بتوصلوا للمفرق؟", "delivery"],
+    ["بدي 4 كيلو", "purchase"],
+    ["كم سعر الكيلو؟", "price"]
   ];
-  const failures = cases
-    .map(message => ({ message, intent: detectIntent(message) }))
-    .filter(result => !["ingredients_inquiry", "flavor_inquiry"].includes(result.intent));
+  const failures = cases.flatMap(([message, expected]) => {
+    const actual = detectIntent(message);
+    return actual === expected ? [] : [{ message, expected, actual }];
+  });
   return { ok: failures.length === 0, failures };
 }
 
@@ -405,6 +408,23 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
         message: "أقل كمية للطلب في أجبان الرياض هي 2 كيلو (10 دنانير شامل التوصيل). يمنع إصدار فاتورة بقيمة 6 دنانير.",
         minimumQuantity: minQty,
         minimumInvoiceTotal: minInvoiceTotal,
+        requestedQuantity: totalKilos,
+        subtotal: 0,
+        delivery: 0,
+        total: 0,
+        canIssueInvoice: false,
+        invoiceBlocked: true,
+        items: [],
+        offer: null
+      };
+    }
+
+    // أوزان الرياض المعتمدة: 2، 4، 6، 8... كيلو فقط؛ لا تقبل 3 أو 5 أو الكسور.
+    if (!Number.isInteger(totalKilos) || totalKilos % 2 !== 0) {
+      return {
+        error: "invalid_quantity_step",
+        message: "أوزان أجبان الرياض المتاحة 2 كيلو أو 4 كيلو أو 6 كيلو وما فوق بمضاعفات 2 فقط.",
+        minimumQuantity: minQty,
         requestedQuantity: totalKilos,
         subtotal: 0,
         delivery: 0,
@@ -772,12 +792,15 @@ function renderProtectedRiyadhInvoice(orderString, p, a, phone) {
   const passedNumericPrice = passedPriceMatch ? Number(passedPriceMatch[1]) : null;
 
   // منع قاطع 100% لإصدار أي فاتورة بقيمة 6 دنانير أو أقل من 2 كيلو تحت أي ظرف
-  if ((detectedKilos != null && detectedKilos < 2) || (passedNumericPrice != null && passedNumericPrice < 10)) {
-    return null; // يمنع صدور الفاتورة الخاطئة نهائياً
+  if (
+    (detectedKilos != null && (detectedKilos < 2 || !Number.isInteger(detectedKilos) || detectedKilos % 2 !== 0)) ||
+    (passedNumericPrice != null && passedNumericPrice < 10)
+  ) {
+    return null; // يمنع الفاتورة تحت الحد أو بوزن غير مسموح
   }
 
-  // إذا كانت الكيلوات معروفة (مثلاً 2 أو 3 أو 4 كيلو...) احسب السعر الرسمي إجبارياً لمنع أي خربطة:
-  // 2 كيلو = 10 د | 3 كيلو = 14 د | 4 كيلو = 18 د شامل التوصيل
+  // إذا كانت الكيلوات معروفة احسب السعر الرسمي، مع منع الأوزان الفردية:
+  // الأوزان الفردية غير متاحة؛ 2 كيلو = 10 د | 4 كيلو = 18 د شامل التوصيل
   let finalOrderLabel = String(orderString || "").trim();
   let finalPriceLabel = String(p || "").trim();
 
@@ -940,8 +963,13 @@ export function buildPageSystemPrompt(pageId, state = {}) {
   const page = getPage(resolvedId);
   if (!page) throw new Error(`Unknown pageId: ${pageId}`);
   const products = listPageProducts(resolvedId);
-  const missing = getMissingOrderFields(resolvedId, state);
-  const expert = buildExpertResponseContext(resolvedId, state?.lastMessage || "", state);
+  const currentMessage = String(state?.lastMessage || "");
+  const currentIntent = detectIntent(currentMessage);
+  const informationOnly = NON_ORDER_FOLLOWUP_INTENTS.has(currentIntent);
+  const missing = (informationOnly || (currentIntent !== "purchase" && state?.orderInProgress !== true))
+    ? []
+    : getMissingOrderFields(resolvedId, state);
+  const expert = buildExpertResponseContext(resolvedId, currentMessage, { ...state, intent: currentIntent });
 
   const invoiceGuardNote = isRiyadhPage(resolvedId)
     ? `\n[🔒 قفل فواتير أجبان الرياض الإلزامي]
@@ -951,11 +979,12 @@ export function buildPageSystemPrompt(pageId, state = {}) {
 - إذا طلب الزبون 4 كيلو: الفاتورة الصحيحة والحصرية هي 18 دينار شامل التوصيل (16 دينار جبنة + 2 دينار توصيل).
 - جدول الأسعار الثابت لأجبان الرياض (شامل التوصيل 2 د):
   * 2 كيلو = 10 دنانير شامل التوصيل
-  * 3 كيلو = 14 دينار شامل التوصيل
   * 4 كيلو = 18 دينار شامل التوصيل
-  * 5 كيلو = 22 دينار شامل التوصيل
   * 6 كيلو = 26 دينار شامل التوصيل
-- لا تصدر أي فاتورة إلا بعد التأكد من: الاسم + الهاتف + المنطقة/العنوان + كمية (2 كيلو فأكثر) + مطابقة الحساب 100% للمعادلة أعلاه.`
+  * 8 كيلو = 34 دينار شامل التوصيل
+- لا تقبل 3 أو 5 أو أي وزن فردي؛ الأوزان المتاحة مضاعفات 2 فقط.
+- هذه القواعد خاصة بإنشاء الفاتورة فقط، ولا يجوز استخدامها كجواب تلقائي على أسئلة المكونات أو الموقع أو أي سؤال معلوماتي.
+- لا تصدر أي فاتورة إلا بعد التأكد من: الاسم + الهاتف + المنطقة/العنوان + كمية صحيحة من مضاعفات 2 + مطابقة الحساب للمعادلة أعلاه.`
     : `\n[🔒 قفل دقة الفواتير العام]
 - لا تصدر أي فاتورة برقم تقديري أو غير مطابق لمعادلة الصفحة الرسمية في calculateOrderTotal.
 - تأكد من اكتمال البيانات الأساسية وصحة المجموع مع التوصيل 100% قبل كتابة الفاتورة.`;
@@ -971,6 +1000,8 @@ export function buildPageSystemPrompt(pageId, state = {}) {
     invoiceGuardNote,
     `\n[المعرفة الخبيرة الخاصة بهذه الصفحة]\n${expert}`,
     `\n[بيانات المحادثة المحفوظة]\n${JSON.stringify(state || {}, null, 2)}`,
+    `\n[النية الحالية ذات الأولوية]\n${currentIntent}`,
+    `\n[قاطع مسار الطلب]\n${informationOnly ? "هذه رسالة معلوماتية/توصيل وليست طلب شراء. أجب عن السؤال الحالي مباشرة. تجاهل أي حقول طلب ناقصة وأي orderInProgress قديم، ولا تذكر الحد الأدنى للكمية إلا إذا سأل الزبون عن الحد الأدنى أو طلب كمية غير مسموحة." : "اجمع بيانات الطلب فقط إذا كانت نية الشراء واضحة أو كانت الرسالة الحالية جواباً على حقل طلب منتظر."}`,
     `\n[الحقول الناقصة]\n${missing.join("، ") || "لا يوجد"}`,
     `\n[الحاجز النهائي]\nأجب عن نية الزبون الفعلية أولاً. في السؤال المعلوماتي قدّم المعلومة كاملة ولا تطلب بيانات شخصية. في نية الشراء الواضحة اجمع بيانات الطلب الناقصة فقط. لا تحوّل كل محادثة إلى عملية بيع، ولا تكرر جواباً محفوظاً إذا كان السياق يحتاج شرحاً مختلفاً. إذا لم تكن المعلومة موثقة فاطلب التحقق منها ولا تخمّن. حافظ على صحة الفواتير ولا تصدر فاتورة خاطئة نهائياً.`
   ].join("\n");
@@ -1462,14 +1493,15 @@ ${RIVAN_OFFER.description}
     },
 
     INFO: `صفحة أجبان الرياض:
-- المنتج الوحيد: جبنة الرياض، كوكتيل حليب ماعز وغنم وبقر بنسب مدروسة.
+- المنتج الوحيد: جبنة الرياض، ثلاثة أثلاث متساوية من حليب الماعز والغنم والبقر (ثلث لكل نوع).
 - سعر الكيلو: 4 دنانير.
 - أقل كمية للطلب: 2 كيلو (أقل فاتورة 10 دنانير شامل التوصيل — ممنوع نهائياً بيع 1 كيلو أو إصدار فاتورة بقيمة 6 دنانير).
 - التوصيل: 2 دينار مرة واحدة للطلب لجميع محافظات المملكة.
 - 2 كيلو = 8 دنانير جبنة + 2 توصيل = 10 دنانير شامل التوصيل.
-- 3 كيلو = 12 دينار جبنة + 2 توصيل = 14 دينار شامل التوصيل.
+- الأوزان المتاحة: 2 أو 4 أو 6 أو 8 كيلو وما فوق بمضاعفات 2 فقط؛ لا يتوفر 3 أو 5 كيلو.
 - 4 كيلو = 16 دينار جبنة + 2 توصيل = 18 دينار شامل التوصيل.
 - مكونات الحشوة: محلب، مستكة، وحبة البركة.
+- الحفظ: مبردة دائماً. يمكن تفريز المنتج.
 - نسبة الملح: 5% فقط.
 - خالية من المواد الحافظة.
 - المنتج مغلي؛ يمكن قليه مباشرة دون نقع مسبق.
@@ -1488,21 +1520,24 @@ ${RIVAN_OFFER.description}
 
 هوية الصفحة والمنتج:
 - الصفحة تبيع منتجاً واحداً فقط: جبنة الرياض.
-- المنتج كوكتيل حليب ماعز وغنم وبقر بنسب مدروسة.
+- المنتج ثلاثة أثلاث متساوية: ثلث حليب ماعز وثلث حليب غنم وثلث حليب بقر.
 - كل أسماء "جبنة الرياض" و"الجبنة الجديدة" و"الجبنة قليلة الملح" تعني المنتج نفسه، وليست أصنافاً مختلفة.
 - سعر الكيلو 4 دنانير.
 - أقل طلب 2 كيلو (ممنوع نهائياً قبول 1 كيلو أو إصدار فاتورة بقيمة 6 دنانير تحت أي ظرف).
 - أقل فاتورة تصدر هي 10 دنانير شامل التوصيل (لكيلوين).
 - التوصيل 2 دينار مرة واحدة للطلب لجميع محافظات المملكة.
 - 2 كيلو: 8 دنانير جبنة + 2 توصيل = 10 دنانير شامل التوصيل.
-- 3 كيلو: 12 دينار جبنة + 2 توصيل = 14 دينار شامل التوصيل.
-- 4 كيلو: 16 دينار جبنة + 2 توصيل = 18 دينار شامل التوصيل (تأكد من دقتها 100% دون أي خربطة).
-- 5 كيلو: 20 دينار جبنة + 2 توصيل = 22 دينار شامل التوصيل.
+- الأوزان الفردية مثل 3 و5 كيلو غير متاحة؛ الأوزان المتاحة مضاعفات 2 فقط.
+- 4 كيلو: 16 دينار جبنة + 2 توصيل = 18 دينار شامل التوصيل.
+- الأوزان المتاحة حصراً مضاعفات 2 كيلو: 2، 4، 6، 8 وما فوق؛ لا تقبل 3 أو 5 كيلو.
 - لا تقدم خصومات أو أسعار توصيل مختلفة من عندك.
 
 المكونات والمواصفات:
-- خليط حليب ماعز وغنم وبقر بنسب مدروسة.
-- الملح 5% فقط.
+- ثلاثة أثلاث متساوية: ثلث حليب ماعز، وثلث حليب غنم، وثلث حليب بقر (نحو 33.3% لكل نوع).
+- الحشوة: محلب ومستكة وحبة البركة. الملح 5%، والمنتج خالٍ من المواد الحافظة.
+- الحفظ مبرد دائماً، ويمكن تفريزه.
+- عنوان المصنع: المفرق، الخالدية، بجانب البحوث الزراعية. والتوصيل لجميع محافظات المملكة برسوم 2 دينار مرة واحدة على الطلب.
+- إذا سأل الزبون عن المكونات أو الموقع، أجب عن سؤاله مباشرة ولا تعرض الحد الأدنى أو تجمع بيانات طلب إلا إذا طلب الشراء صراحةً.
 - الحشوة: محلب ومستكة وحبة البركة.
 - خالية من المواد الحافظة.
 - الجبنة مغلية ويمكن قليها مباشرة دون نقع مسبق.
@@ -1563,14 +1598,15 @@ ${RIVAN_OFFER.description}
     },
 
     INFO: `صفحة أجبان الرياض:
-- المنتج الوحيد: جبنة الرياض، كوكتيل حليب ماعز وغنم وبقر بنسب مدروسة.
+- المنتج الوحيد: جبنة الرياض، ثلاثة أثلاث متساوية من حليب الماعز والغنم والبقر (ثلث لكل نوع).
 - سعر الكيلو: 4 دنانير.
 - أقل كمية للطلب: 2 كيلو (أقل فاتورة 10 دنانير شامل التوصيل — ممنوع نهائياً بيع 1 كيلو أو إصدار فاتورة بقيمة 6 دنانير).
 - التوصيل: 2 دينار مرة واحدة للطلب لجميع محافظات المملكة.
 - 2 كيلو = 8 دنانير جبنة + 2 توصيل = 10 دنانير شامل التوصيل.
-- 3 كيلو = 12 دينار جبنة + 2 توصيل = 14 دينار شامل التوصيل.
+- الأوزان المتاحة: 2 أو 4 أو 6 أو 8 كيلو وما فوق بمضاعفات 2 فقط؛ لا يتوفر 3 أو 5 كيلو.
 - 4 كيلو = 16 دينار جبنة + 2 توصيل = 18 دينار شامل التوصيل.
 - مكونات الحشوة: محلب، مستكة، وحبة البركة.
+- الحفظ: مبردة دائماً. يمكن تفريز المنتج.
 - نسبة الملح: 5% فقط.
 - خالية من المواد الحافظة.
 - المنتج مغلي؛ يمكن قليه مباشرة دون نقع مسبق.
@@ -1589,21 +1625,24 @@ ${RIVAN_OFFER.description}
 
 هوية الصفحة والمنتج:
 - الصفحة تبيع منتجاً واحداً فقط: جبنة الرياض.
-- المنتج كوكتيل حليب ماعز وغنم وبقر بنسب مدروسة.
+- المنتج ثلاثة أثلاث متساوية: ثلث حليب ماعز وثلث حليب غنم وثلث حليب بقر.
 - كل أسماء "جبنة الرياض" و"الجبنة الجديدة" و"الجبنة قليلة الملح" تعني المنتج نفسه، وليست أصنافاً مختلفة.
 - سعر الكيلو 4 دنانير.
 - أقل طلب 2 كيلو (ممنوع نهائياً قبول 1 كيلو أو إصدار فاتورة بقيمة 6 دنانير تحت أي ظرف).
 - أقل فاتورة تصدر هي 10 دنانير شامل التوصيل (لكيلوين).
 - التوصيل 2 دينار مرة واحدة للطلب لجميع محافظات المملكة.
 - 2 كيلو: 8 دنانير جبنة + 2 توصيل = 10 دنانير شامل التوصيل.
-- 3 كيلو: 12 دينار جبنة + 2 توصيل = 14 دينار شامل التوصيل.
-- 4 كيلو: 16 دينار جبنة + 2 توصيل = 18 دينار شامل التوصيل (تأكد من دقتها 100% دون أي خربطة).
-- 5 كيلو: 20 دينار جبنة + 2 توصيل = 22 دينار شامل التوصيل.
+- الأوزان الفردية مثل 3 و5 كيلو غير متاحة؛ الأوزان المتاحة مضاعفات 2 فقط.
+- 4 كيلو: 16 دينار جبنة + 2 توصيل = 18 دينار شامل التوصيل.
+- الأوزان المتاحة حصراً مضاعفات 2 كيلو: 2، 4، 6، 8 وما فوق؛ لا تقبل 3 أو 5 كيلو.
 - لا تقدم خصومات أو أسعار توصيل مختلفة من عندك.
 
 المكونات والمواصفات:
-- خليط حليب ماعز وغنم وبقر بنسب مدروسة.
-- الملح 5% فقط.
+- ثلاثة أثلاث متساوية: ثلث حليب ماعز، وثلث حليب غنم، وثلث حليب بقر (نحو 33.3% لكل نوع).
+- الحشوة: محلب ومستكة وحبة البركة. الملح 5%، والمنتج خالٍ من المواد الحافظة.
+- الحفظ مبرد دائماً، ويمكن تفريزه.
+- عنوان المصنع: المفرق، الخالدية، بجانب البحوث الزراعية. والتوصيل لجميع محافظات المملكة برسوم 2 دينار مرة واحدة على الطلب.
+- إذا سأل الزبون عن المكونات أو الموقع، أجب عن سؤاله مباشرة ولا تعرض الحد الأدنى أو تجمع بيانات طلب إلا إذا طلب الشراء صراحةً.
 - الحشوة: محلب ومستكة وحبة البركة.
 - خالية من المواد الحافظة.
 - الجبنة مغلية ويمكن قليها مباشرة دون نقع مسبق.
@@ -1693,7 +1732,11 @@ export const HUMAN_RESPONSE_ENGINE = `[شخصية الرد]
 8) نوّع صياغتك بشكل طبيعي. لا تكرر افتتاحية أو خاتمة أو جملة بعينها في كل رد، ولا تعِد معلومة سبق شرحها إلا إذا طلبها الزبون.
 9) كن واضحاً ومفيداً؛ طول الإجابة يتناسب مع السؤال، فالأسئلة الفنية تستحق شرحاً وافياً والأسئلة البسيطة جواباً مباشراً.
 10) لا تخترع حقيقة خاصة بالمنتج. إذا غابت معلومة، قل إنك ستتحقق منها بدلاً من التخمين.
-11) لا تضغط للبيع. يمكن عرض المساعدة بالطلب فقط عندما يكون ذلك مناسباً للسياق.`;
+11) لا تضغط للبيع. يمكن عرض المساعدة بالطلب فقط عندما يكون ذلك مناسباً للسياق.
+12) سؤال المكونات أو الحليب أو الموقع أو التوصيل ليس طلب شراء حتى لو كان هناك طلب سابق مفتوح.
+13) لا تجعل حالة الطلب القديمة تتغلب على آخر رسالة؛ صنّف آخر رسالة أولاً وأجب عنها قبل أي متابعة للطلب.
+14) لا تذكر الحد الأدنى للكمية إلا إذا سأل الزبون عنه أو طلب كمية غير متاحة.
+15) إذا سأل عن موقع المصنع، استخدم العنوان الموثق في صفحة أجبان الرياض: المفرق، الخالدية، بجانب البحوث الزراعية.`;
 
 export const PAGE_EXPERT_KNOWLEDGE = Object.freeze({
   "211000052105556": {
@@ -1835,7 +1878,7 @@ export const PAGE_EXPERT_KNOWLEDGE = Object.freeze({
       ["بدي كيلو واحد", "حقك علينا يا غالي، ما بنطلع طلب أقل من 2 كيلو نهائياً؛ أقل كمية 2 كيلو وحسابها 10 دنانير شامل التوصيل لباب بيتك."],
       ["كم التوصيل؟", "التوصيل دينارين فقط مرة واحدة على الطلب لجميع محافظات المملكة."],
       ["كم الحساب على 2 كيلو؟", "كيلوين بـ8 دنانير جبنة + دينارين توصيل = 10 دنانير شامل التوصيل."],
-      ["كم الحساب على 3 كيلو؟", "3 كيلو بـ12 دينار جبنة + دينارين توصيل = 14 دينار شامل التوصيل."],
+      ["هل يتوفر 3 كيلو؟", "الأوزان المتاحة 2 أو 4 أو 6 أو 8 كيلو وما فوق بمضاعفات 2 فقط."],
       ["كم الحساب على 4 كيلو؟", "4 كيلو بـ16 دينار جبنة + دينارين توصيل = 18 دينار شامل التوصيل."],
       ["بدي 4 كيلو", "أبشر على راسي يا غالي، 4 كيلو جبنة الرياض حسابها 18 دينار شامل التوصيل لباب بيتك. ابعتلي الاسم والمنطقة والعنوان ورقم الهاتف."],
       ["شو مكونات الجبنة؟", "هي ثلاثة أثلاث متساوية من حليب الماعز والغنم والبقر (ثلث لكل نوع)، ونعلن النسب بالتفصيل؛ والحشوة محلب ومستكة وحبة البركة، ونسبة الملح 5% فقط."],
@@ -1860,7 +1903,7 @@ export const PAGE_EXPERT_KNOWLEDGE = Object.freeze({
       ["بدي كيلو واحد", "حقك علينا يا غالي، ما بنطلع طلب أقل من 2 كيلو نهائياً؛ أقل كمية 2 كيلو وحسابها 10 دنانير شامل التوصيل لباب بيتك."],
       ["كم التوصيل؟", "التوصيل دينارين فقط مرة واحدة على الطلب لجميع محافظات المملكة."],
       ["كم الحساب على 2 كيلو؟", "كيلوين بـ8 دنانير جبنة + دينارين توصيل = 10 دنانير شامل التوصيل."],
-      ["كم الحساب على 3 كيلو؟", "3 كيلو بـ12 دينار جبنة + دينارين توصيل = 14 دينار شامل التوصيل."],
+      ["هل يتوفر 3 كيلو؟", "الأوزان المتاحة 2 أو 4 أو 6 أو 8 كيلو وما فوق بمضاعفات 2 فقط."],
       ["كم الحساب على 4 كيلو؟", "4 كيلو بـ16 دينار جبنة + دينارين توصيل = 18 دينار شامل التوصيل."],
       ["بدي 4 كيلو", "أبشر على راسي يا غالي، 4 كيلو جبنة الرياض حسابها 18 دينار شامل التوصيل لباب بيتك. ابعتلي الاسم والمنطقة والعنوان ورقم الهاتف."],
       ["شو مكونات الجبنة؟", "هي ثلاثة أثلاث متساوية من حليب الماعز والغنم والبقر (ثلث لكل نوع)، ونعلن النسب بالتفصيل؛ والحشوة محلب ومستكة وحبة البركة، ونسبة الملح 5% فقط."],
@@ -1955,11 +1998,22 @@ export function getNextMissingOrderField(pageId, state = {}) {
   return missing[0] || null;
 }
 
+const NON_ORDER_FOLLOWUP_INTENTS = new Set([
+  "greeting", "product_info", "price", "comparison", "delivery", "payment",
+  "objection", "complaint", "cancel", "edit_order", "ingredients_inquiry",
+  "flavor_inquiry", "vacuum_inquiry", "cooking_inquiry", "sweetening_inquiry",
+  "storage_inquiry", "milk_quality_inquiry", "cleaning_technical", "human_agent",
+  "bot_identity", "order_status"
+]);
+
 export function buildNextOrderQuestion(pageId, state = {}) {
   const resolvedId = resolvePageId(pageId) || pageId;
-  // لا تطلب حقول الطلب ولا تكرر حد الكمية أثناء الأسئلة المعلوماتية أو أسئلة التوصيل.
-  // يستمر جمع البيانات فقط إذا كانت الرسالة الحالية طلب شراء صريحاً أو أن الطلب قيد الإنشاء.
-  const currentIntent = state?.intent || detectIntent(state?.lastMessage || "");
+  // الأسئلة المعلوماتية والتوصيل لها أولوية مطلقة حتى لو بقي الطلب السابق مفتوحاً.
+  // لا تسمح لعلم orderInProgress بإجبار البوت على إعادة سؤال الكمية.
+  const currentIntent = detectIntent(state?.lastMessage || "") === "unknown"
+    ? (state?.intent || "unknown")
+    : detectIntent(state?.lastMessage || "");
+  if (NON_ORDER_FOLLOWUP_INTENTS.has(currentIntent)) return null;
   if (currentIntent !== "purchase" && state?.orderInProgress !== true) return null;
   const field = getNextMissingOrderField(resolvedId, state);
   if (!field) return null;
@@ -1982,6 +2036,42 @@ export function buildNextOrderQuestion(pageId, state = {}) {
   };
 
   return questions[field] || `ابعتلي ${ORDER_FIELD_LABELS[field] || field} لو سمحت.`;
+}
+
+
+export function runRiyadhOrderFlowRegressionTests() {
+  const pageId = RIYADH_PAGE_IDS[0];
+  const failures = [];
+  const staleOrderState = {
+    orderInProgress: true,
+    name: "أحمد",
+    phone: "0790000000",
+    region: "المفرق",
+    address: "الخالدية",
+    quantity: 4,
+    intent: "purchase"
+  };
+  for (const [message, expectedIntent] of [
+    ["مرحبا شو المكونات", "ingredients_inquiry"],
+    ["وين مكانكم", "delivery"],
+    ["بدي 4 كيلو", "purchase"]
+  ]) {
+    const state = { ...staleOrderState, lastMessage: message, intent: detectIntent(message) };
+    const actualIntent = detectIntent(message);
+    if (actualIntent !== expectedIntent) failures.push(`${message}: expected ${expectedIntent}, got ${actualIntent}`);
+    const followup = buildNextOrderQuestion(pageId, state);
+    if (expectedIntent !== "purchase" && followup !== null) failures.push(`${message}: unexpected order prompt: ${followup}`);
+  }
+  const purchaseState = { lastMessage: "بدي أطلب", intent: "purchase" };
+  if (!buildNextOrderQuestion(pageId, purchaseState)) failures.push("purchase intent did not request missing order fields");
+  for (const message of ["مرحبا شو المكونات", "وين مكانكم"]) {
+    const prompt = buildPageSystemPrompt(pageId, { ...staleOrderState, lastMessage: message, intent: detectIntent(message) });
+    if (!prompt.includes("قاطع مسار الطلب") || !prompt.includes("تجاهل أي حقول طلب ناقصة")) {
+      failures.push(`${message}: system prompt lacks informational override`);
+    }
+    if (prompt.includes("[الحقول الناقصة]\nالكمية")) failures.push(`${message}: missing order fields leaked into informational prompt`);
+  }
+  return { ok: failures.length === 0, failures };
 }
 
 export function getPageSnapshot(pageId) {
@@ -2112,9 +2202,9 @@ export const RIYADH_CHEESE_EXPERT_BRAIN = `[الموسوعة التخصصية �
 - إذا سأل فقط عن مكون واحد، أجب عن ذلك المكون ولا تكرر كامل الوصف إلا إذا كان مفيداً.
 
 [أسئلة الموقع والتوصيل]
-- إذا سأل الزبون «وين مكانكم؟» أو «وين موقعكم؟»، لا ترد بالحد الأدنى للطلب ولا تطلب الكمية.
-- المعلومة المؤكدة: التوصيل متاح لجميع محافظات المملكة. وضّح أن هذه معلومة عن نطاق التوصيل وليست عنوان مقر فعلي.
-- لا تخترع عنوان مصنع أو محل أو مستودع. إذا كان يقصد عنوان المقر تحديداً، قل له بلطف إنك ستتأكد من العنوان الصحيح.
+- إذا سأل الزبون «وين مكانكم؟» أو «وين موقع المصنع؟»، أجب بعنوان المصنع المسجل في بيانات صفحة أجبان الرياض: المفرق، الخالدية، بجانب البحوث الزراعية.
+- التوصيل متاح لجميع محافظات المملكة، ورسومه ديناران مرة واحدة على الطلب.
+- إذا سأل عن الوصول أو التوصيل إلى منطقة بعينها، أجب عن التوصيل ولا تطلب الكمية إلا إذا أعلن نية الشراء.
 
 [ذكاء الحوار والتنوع]
 - لا تعامل كلمات الزبون كمفتاح لاستدعاء جواب محفوظ. افهم لماذا يسأل وما الذي يريد معرفته فعلاً.
@@ -2216,6 +2306,13 @@ export function runInvoiceSelfTests() {
     if (fakeSixInvoice !== null) {
       errors.push(`${riyadhId}: 6 JOD invoice template was NOT blocked`);
     }
+    const oddKiloInvoice = PAGES[riyadhId].INVOICE_TEMPLATE("3 كيلو جبنة الرياض", "14 دينار", "عمان", "0790000000");
+    if (oddKiloInvoice !== null) errors.push(`${riyadhId}: odd-kilo invoice template was NOT blocked`);
+
+    const threeKilo = calculateOrderTotal(riyadhId, [{ product: "جبنة الرياض", quantity: 3 }]);
+    if (!threeKilo || threeKilo.canIssueInvoice !== false || threeKilo.error !== "invalid_quantity_step") {
+      errors.push(`${riyadhId}: 3kg odd quantity was NOT blocked`);
+    }
 
     // فحص 2 كيلو (أقل فاتورة = 10 دنانير)
     const twoKilo = calculateOrderTotal(riyadhId, [{ product: "جبنة الرياض", quantity: 2 }]);
@@ -2247,12 +2344,16 @@ export const INVOICE_SELF_TEST = runInvoiceSelfTests();
 
 export function healthCheck() {
   const pageIds = Object.keys(PAGES);
+  const intentTests = runRiyadhIntentRegressionTests();
+  const orderFlowTests = runRiyadhOrderFlowRegressionTests();
   return {
-    ok: pageIds.length >= 8 && PAGE_VALIDATION.ok && EXPERT_KNOWLEDGE_VALIDATION.ok && INVOICE_SELF_TEST.ok,
+    ok: pageIds.length >= 8 && PAGE_VALIDATION.ok && EXPERT_KNOWLEDGE_VALIDATION.ok && INVOICE_SELF_TEST.ok && intentTests.ok && orderFlowTests.ok,
     version: BOT_VERSION,
     totalPages: pageIds.length,
     validation: PAGE_VALIDATION,
     expertKnowledgeValidation: EXPERT_KNOWLEDGE_VALIDATION,
-    invoiceSelfTest: INVOICE_SELF_TEST
+    invoiceSelfTest: INVOICE_SELF_TEST,
+    intentRegressionTests: runRiyadhIntentRegressionTests(),
+    orderFlowRegressionTests: runRiyadhOrderFlowRegressionTests()
   };
 }
