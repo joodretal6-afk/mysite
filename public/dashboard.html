@@ -105,7 +105,8 @@
     .act{ display:inline-flex; gap:5px; }
     .act button, .act a{ width:32px; height:32px; border-radius:9px; border:1px solid var(--line); background:var(--surface-1); color:var(--txt); cursor:pointer; display:grid; place-items:center; font-size:14px; text-decoration:none; transition:.15s; }
     .act button:hover, .act a:hover{ background:var(--hover); }
-    .act .wa{ color:#25b862; }
+    .act .wa{ width:auto; padding:0 12px; gap:5px; color:#fff; background:#25b862; border-color:transparent; font-weight:700; font-size:12.5px; white-space:nowrap; }
+    .act .wa:hover{ background:#1fa255; filter:brightness(1.03); }
     .rowsub{ font-size:11px; color:var(--mut); }
     .pager{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding-top:14px; margin-top:6px; border-top:1px solid var(--hair); }
     .pginfo{ font-size:12.5px; color:var(--mut); }
@@ -428,7 +429,7 @@
           <td><span class="st ${stClass(o.status)}">${esc(o.status)}</span></td>
           <td><div class="act">
             <a href="/admin/invoice/${o.id}" target="_blank" title="فاتورة">🧾</a>
-            ${o.messenger_url?`<a class="wa" href="${o.messenger_url}" target="_blank" title="محادثة">💬</a>`:''}
+            ${(function(){var L=o.messenger_url||((o.page_id&&o.sender_id)?('https://www.facebook.com/'+encodeURIComponent(o.page_id)+'/inbox/?selected_item_id='+encodeURIComponent(o.sender_id)):'');return L?('<a class="wa" href="'+L+'" target="_blank" rel="noopener" title="افتح محادثة الزبون مباشرة">💬 محادثة</a>'):'<span title="لا يوجد معرّف محادثة لهذا الطلب" style="opacity:.35">💬</span>';})()}
             <button title="تعديل" onclick="editRow(${o.id})">✏️</button>
             <button title="حذف" onclick="del(${o.id})">🗑</button>
           </div></td>`;
