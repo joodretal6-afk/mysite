@@ -92,6 +92,8 @@ adminRouter.get("/inbox", requireAuth, (req, res) => {
 
 // ── صفحات محمية إضافية ──
 adminRouter.get("/pages", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "pages.html")));
+// 👑 THE EMPIRE — مركز القيادة الإمبراطوري (صفحة جديدة، لا تمسّ اللوحة الكلاسيكية)
+adminRouter.get("/empire", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "empire.html")));
 adminRouter.get("/knowledge", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "knowledge.html")));
 adminRouter.get("/chats", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "chats.html")));
 adminRouter.get("/analytics", requireAuth, (req, res) => res.sendFile(path.join(publicDir, "analytics.html")));
