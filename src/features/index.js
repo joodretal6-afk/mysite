@@ -24,7 +24,9 @@ const SLUGS = [
   // لو وحدة فيها خطأ بتُتخطّى بصمت وباقي المنصة بتضل شغّالة.
   "delivery", "cash", "procure", "service", "ops", "alerts", "docs",
   // ── الطبقة العاشرة: فيديوهات المنتجات (يرسلها البوت عند السؤال) ──
-  "videos"
+  "videos",
+  // ── أرقام الهواتف من محادثات الزبائن (لكل صفحة لحال) ──
+  "phones"
 ];
 
 export async function loadFeatures() {
