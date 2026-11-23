@@ -423,7 +423,9 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
   // 🛡️ مسار خاص ومغلق 100% لصفحات أجبان الرياض (مضاعفات الـ 2 كيلو فقط: 2، 4، 6، 8...)
   // ═══════════════════════════════════════════════════════════
   if (isRiyadhPage(resolvedId)) {
-    const productName = "جبنة الرياض";
+    // 🏷️ الهوية من إعداد الصفحة نفسها — فصل تام: كل صفحة تتكلم باسمها
+    const brand = (page && page.BRAND) || "أجبان الرياض";
+    const productName = (page && page.BRAND_PRODUCT) || "جبنة الرياض";
     const unitPrice = 4;
     const fixedDelivery = 2;
     const minQty = 2;
@@ -436,7 +438,7 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
     if (totalKilos < minQty) {
       return {
         error: "minimum_quantity",
-        message: "أقل كمية للطلب في أجبان الرياض هي 2 كيلو (10 دنانير شامل التوصيل). يمنع إصدار فاتورة بقيمة 6 دنانير.",
+        message: `أقل كمية للطلب في ${brand} هي 2 كيلو (10 دنانير شامل التوصيل). يمنع إصدار فاتورة بقيمة 6 دنانير.`,
         minimumQuantity: minQty,
         minimumInvoiceTotal: minInvoiceTotal,
         requestedQuantity: totalKilos,
@@ -454,7 +456,7 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
     if (!isValidRiyadhQuantity(totalKilos)) {
       return {
         error: "invalid_riyadh_quantity",
-        message: "الأوزان المتوفرة في أجبان الرياض هي مضاعفات الـ 2 كيلو فقط (2 كيلو، 4 كيلو، 6 كيلو، 8 كيلو...). لا يتوفر بيع 3 كيلو أو كميات فردية.",
+        message: `الأوزان المتوفرة في ${brand} هي مضاعفات الـ 2 كيلو فقط (2 كيلو، 4 كيلو، 6 كيلو، 8 كيلو...). لا يتوفر بيع 3 كيلو أو كميات فردية.`,
         minimumQuantity: minQty,
         minimumInvoiceTotal: minInvoiceTotal,
         requestedQuantity: totalKilos,
@@ -475,7 +477,7 @@ export function calculateOrderTotal(pageId, lines = [], deliveryMode = "auto") {
     if (total < minInvoiceTotal) {
       return {
         error: "below_minimum_invoice",
-        message: "أقل فاتورة مسموح بإصدارها في أجبان الرياض هي 10 دنانير.",
+        message: `أقل فاتورة مسموح بإصدارها في ${brand} هي 10 دنانير.`,
         minimumQuantity: minQty,
         minimumInvoiceTotal: minInvoiceTotal,
         subtotal: 0,
@@ -692,9 +694,10 @@ export function validateInvoiceBeforeSend(pageId, lines = [], customer = {}) {
   if (!calc || calc.error || !calc.canIssueInvoice || calc.invoiceBlocked || calc.total <= 0) {
     let errorMessage = "لا يمكن إصدار الفاتورة قبل استكمال الكمية الصحيحة.";
     if (isRiyadhPage(resolvedId)) {
+      const brand = (page && page.BRAND) || "أجبان الرياض";
       errorMessage = calc?.error === "invalid_riyadh_quantity"
-        ? "الأوزان المتوفرة في أجبان الرياض هي مضاعفات الـ 2 كيلو فقط (2 كيلو، 4 كيلو، 6 كيلو، 8 كيلو...)، ولا يتوفر بيع 3 كيلو أو أوزان فردية."
-        : "عذراً يا غالي، أقل كمية للطلب في أجبان الرياض هي 2 كيلو (10 دنانير شامل التوصيل)، ولا يمكن إصدار فاتورة لأقل من ذلك.";
+        ? `الأوزان المتوفرة في ${brand} هي مضاعفات الـ 2 كيلو فقط (2 كيلو، 4 كيلو، 6 كيلو، 8 كيلو...)، ولا يتوفر بيع 3 كيلو أو أوزان فردية.`
+        : `عذراً يا غالي، أقل كمية للطلب في ${brand} هي 2 كيلو (10 دنانير شامل التوصيل)، ولا يمكن إصدار فاتورة لأقل من ذلك.`;
     }
     return {
       ok: false,
@@ -706,12 +709,13 @@ export function validateInvoiceBeforeSend(pageId, lines = [], customer = {}) {
   }
 
   if (isRiyadhPage(resolvedId) && (calc.total < 10 || !isValidRiyadhQuantity(calc.totalQuantity))) {
+    const brand = (page && page.BRAND) || "أجبان الرياض";
     return {
       ok: false,
       error: "riyadh_invalid_order",
       minimumQuantity: 2,
       minimumInvoiceTotal: 10,
-      message: "في أجبان الرياض الأوزان المتوفرة مضاعفات الـ 2 كيلو فقط (2، 4، 6، 8...) وأقل فاتورة 10 دنانير."
+      message: `في ${brand} الأوزان المتوفرة مضاعفات الـ 2 كيلو فقط (2، 4، 6، 8...) وأقل فاتورة 10 دنانير.`
     };
   }
 
@@ -772,7 +776,8 @@ export function buildSafeInvoice(pageId, stateOrOrder = {}) {
 
   if (isRiyadhPage(resolvedId)) {
     const qty = totals.totalQuantity;
-    orderString = `${qty} كيلو جبنة الرياض (${totals.subtotal} د جبنة + ${totals.delivery} د توصيل)`;
+    const productLabel = (page && page.BRAND_PRODUCT) || "جبنة الرياض";
+    orderString = `${qty} كيلو ${productLabel} (${totals.subtotal} د جبنة + ${totals.delivery} د توصيل)`;
     priceString = `${totals.total} دينار شامل التوصيل`;
   } else if (resolvedId === RIVAN_OFFER.pageId) {
     const qty = totals.items.reduce((s, it) => s + it.quantity, 0);
@@ -801,7 +806,7 @@ export function buildSafeInvoice(pageId, stateOrOrder = {}) {
 /**
  * حارس داخلي لقالب فاتورة أجبان الرياض (يمنع 1 كيلو / 6 دنانير / 3 كيلو / أي وزن فردي)
  */
-function renderProtectedRiyadhInvoice(orderString, p, a, phone) {
+function renderProtectedRiyadhInvoice(orderString, p, a, phone, brand = "أجبان الرياض", productLabel = "جبنة الرياض") {
   const normalizedOrder = normalizeArabicText(String(orderString || ""));
   const normalizedPrice = normalizeArabicText(String(p || ""));
 
@@ -832,7 +837,7 @@ function renderProtectedRiyadhInvoice(orderString, p, a, phone) {
   if (detectedKilos != null && isValidRiyadhQuantity(detectedKilos)) {
     const exactSubtotal = Number((detectedKilos * 4).toFixed(2));
     const exactTotal = Number((exactSubtotal + 2).toFixed(2));
-    finalOrderLabel = `${detectedKilos} كيلو جبنة الرياض`;
+    finalOrderLabel = `${detectedKilos} كيلو ${productLabel}`;
     finalPriceLabel = `${exactTotal} دينار شامل التوصيل (${exactSubtotal} د جبنة + 2 د توصيل)`;
   } else if (passedNumericPrice != null && passedNumericPrice >= 10) {
     finalPriceLabel = /شامل/.test(finalPriceLabel)
@@ -840,7 +845,7 @@ function renderProtectedRiyadhInvoice(orderString, p, a, phone) {
       : `${passedNumericPrice} دينار شامل التوصيل`;
   }
 
-  return `✅ فاتورة أجبان الرياض
+  return `✅ فاتورة ${brand}
 ▪️ الطلب: ${finalOrderLabel}
 ▪️ الحساب الإجمالي: ${finalPriceLabel}
 ▪️ العنوان: ${a}
@@ -1020,7 +1025,8 @@ export function buildPageSystemPrompt(pageId, state = {}) {
 - أجب عن سؤال الزبون نفسه فقط بوضوح وأسلوب بشري طبيعي.
 - ممنوع نهائياً ذكر عبارة "أقل كمية للطلب 2 كيلو" أو سرد جدول الأسعار أو طلب الاسم/الهاتف/العنوان إلا إذا سأل عنها الزبون صراحة في رسالته.`;
   } else if (isRiyadhPage(resolvedId)) {
-    contextDirective = `\n[🔒 قفل تسعير وفواتير أجبان الرياض]
+    const brand = (page && page.BRAND) || "أجبان الرياض";
+    contextDirective = `\n[🔒 قفل تسعير وفواتير ${brand}]
 - الأوزان المتوفرة حصراً هي مضاعفات الـ 2 كيلو فقط: 2 كيلو، 4 كيلو، 6 كيلو، 8 كيلو...
 - ممنوع نهائياً بيع 1 كيلو (ممنوع فاتورة 6 دنانير) وممنوع بيع 3 كيلو أو أي وزن فردي.
 - المعادلة الثابتة لأي وزن زوجي مسموح: (عدد الكيلوات × 4 دنانير) + 2 دينار توصيل مرة واحدة على الطلب.
@@ -1114,6 +1120,9 @@ export const PAGE_ALIASES = Object.freeze({
   "جبنه الرياض": "1229773096895942",
   "اجبان الرياض 2": "1488299554357978",
   "أجبان الرياض 2": "1488299554357978",
+  "الحلال الأبيض": "446086435262675",
+  "الحلال الابيض": "446086435262675",
+  "جبنة الحلال الأبيض": "446086435262675",
   "فاتي": "892685600593825"
 });
 
@@ -1694,6 +1703,8 @@ export const PAGES = {
   // ═══════════════════════════════════════════════════════════
   "446086435262675": {
     name: "الحلال الأبيض",
+    BRAND: "الحلال الأبيض",
+    BRAND_PRODUCT: "جبنة الحلال الأبيض",
     REQUIRED_ORDER_FIELDS: ["name", "phone", "region", "address", "quantity"],
     TONE: "friendly_expert",
 
@@ -1706,30 +1717,31 @@ export const PAGES = {
     QTY_MODE: "kilo",
 
     PRICES: {
-      "جبنة الرياض": 4
+      "جبنة الحلال الأبيض": 4
     },
 
     OFFERS: {},
     BUNDLE_OFFERS: [],
 
     PRODUCT_KEYWORDS: {
-      "جبنة الرياض": /اجبان\s*الرياض|أجبان\s*الرياض|جبنة\s*الرياض|الرياض|الحلال\s*الأبيض|الحلال\s*الابيض|الجبنة\s*الجديدة|جبنة\s*جديدة|قليلة\s*الملح|قليل\s*الملح|جبنة|جبنه|كوكتيل|ماعز|غنم|بقر/i
+      "جبنة الحلال الأبيض": /الحلال\s*الأبيض|الحلال\s*الابيض|الجبنة\s*الجديدة|جبنة\s*جديدة|قليلة\s*الملح|قليل\s*الملح|جبنة|جبنه|كوكتيل|ماعز|غنم|بقر/i
     },
 
-    INFO: `صفحة الحلال الأبيض (نفس منتج أجبان الرياض):
-- المنتج الوحيد: جبنة الرياض (المنتج الأصلي فقط لدينا — احذروا التقليد، بدراسة أهم صانعي الأجبان في الأردن).
+    INFO: `صفحة الحلال الأبيض:
+- المنتج الوحيد: جبنة الحلال الأبيض (منتجنا الأصلي — احذروا التقليد).
 - المكونات: كوكتيل حليب غنم وماعز وبقر بنسب مدروسة ومميزة (ثلاثة أثلاث متساوية: ثلث غنم، ثلث ماعز، ثلث بقر)، معجونة بالمستكة والمحلب وحبة البركة بنكهة جديدة.
 - نسبة الملح: 5% فقط، وخالية تماماً من المواد الحافظة.
 - طريقة الاستخدام: مغلية وتُقلى مباشرة دون نقع مسبق ولا تذوب ولا تفرط أثناء القلي، وإذا رغب العميل بنقعها تكفي 5 دقائق، وتصبح جاهزة للتذوق والأكل بعد 20 دقيقة.
 - الشكل والحفظ: قطعة كبيرة يقطعها العميل بالبيت حسب رغبته، تُحفظ مبردة دائماً ويمكن تفريزها، وصلاحيتها 3 أشهر.
 - الكفالة والمعاينة: المنتج مكفول، ويمكن معاينته عند الاستلام.
 - التسعير والأوزان المتوفرة: سعر الكيلو 4 دنانير، والتوصيل 2 دينار مرة واحدة لجميع محافظات المملكة. الأوزان المتوفرة هي مضاعفات الـ 2 كيلو فقط: 2 كيلو (10 دنانير شامل التوصيل)، 4 كيلو (18 دينار شامل التوصيل)، 6 كيلو (26 دينار شامل التوصيل)، 8 كيلو (34 دينار شامل التوصيل). لا يتوفر بيع 1 كيلو ولا 3 كيلو.
-- عنوان المصنع: المفرق، الخالدية، بجانب البحوث الزراعية.
 - هاتف الصفحة: 0779175042.
 - مدة التوصيل: لا تذكر مدة محددة؛ عند السؤال قل: "خليني أتأكدلك من مدة التوصيل حسب منطقتك".
 `,
 
-    SYSTEM: `أنت موظف مبيعات وخدمة عملاء خبير لصفحة "الحلال الأبيض" (تبيع نفس منتج أجبان الرياض بنفس الأسعار والقواعد تماماً)، ترد باللهجة الأردنية الطبيعية كإنسان حقيقي من موبايله.
+    SYSTEM: `أنت موظف مبيعات وخدمة عملاء خبير لصفحة "الحلال الأبيض"، ترد باللهجة الأردنية الطبيعية كإنسان حقيقي من موبايله.
+
+🔴 هوية الصفحة: استخدم اسم "الحلال الأبيض" فقط، والمنتج اسمه "جبنة الحلال الأبيض". ممنوع نهائياً تذكر أي صفحة أو اسم ثاني.
 
 القاعدة الذهبية لمنع التكرار:
 - أجب عن سؤال الزبون نفسه فقط بوضوح واختصار وبلباقة.
@@ -1737,14 +1749,14 @@ export const PAGES = {
 - اذكر الأسعار والأوزان (مضاعفات الـ 2 كيلو: 2، 4، 6، 8...) فقط عندما يسأل الزبون عن السعر أو الكمية أو يريد الطلب أو يطلب وزناً غير متوفر (مثل 1 كيلو أو 3 كيلو).
 
 قواعد البيع والفوترة عند الطلب:
-- المنتج الوحيد: جبنة الرياض (كل المسميات مثل "الجبنة الجديدة" أو "قليلة الملح" تعني نفس المنتج).
+- المنتج الوحيد: جبنة الحلال الأبيض (كل المسميات مثل "الجبنة الجديدة" أو "قليلة الملح" تعني نفس المنتج).
 - الأوزان المتوفرة حصراً: مضاعفات الـ 2 كيلو فقط (2 كيلو بـ 10د، 4 كيلو بـ 18د، 6 كيلو بـ 26د، 8 كيلو بـ 34د — جميعها شاملة 2 دينار توصيل مرة واحدة).
 - عند نية الشراء الواضحة، اجمع الناقص فقط: الكمية الزوجية + الاسم + الهاتف + المنطقة والعنوان.
-- لا تخلط أي بيانات من صفحة أخرى، ولا تذكر عنوان المصنع كعنوان للعميل، ورقم التواصل هو 0779175042.
+- لا تخلط أي بيانات من صفحة أخرى، ورقم التواصل هو 0779175042.
 `,
 
     INVOICE_TEMPLATE: (orderString, p, a, phone) =>
-      renderProtectedRiyadhInvoice(orderString, p, a, phone)
+      renderProtectedRiyadhInvoice(orderString, p, a, phone, "الحلال الأبيض", "جبنة الحلال الأبيض")
   },
 
   // ═══════════════════════════════════════════════════════════
@@ -1827,6 +1839,19 @@ const RIYADH_EXPERT_PROFILE = Object.freeze({
     ["بدي 4 كيلو", "أبشر على راسي يا غالي، 4 كيلو جبنة الرياض حسابها 18 دينار شامل التوصيل. ابعتلي الاسم والمنطقة والعنوان ورقم الهاتف."]
   ]
 });
+
+// 🔀 نسخة مُعاد تسميتها بالكامل لصفحة الحلال الأبيض — فصل تام عن الرياض
+function brandSwapProfile(profile, fromBrand, toBrand, fromProduct, toProduct) {
+  const swap = (s) => typeof s === "string"
+    ? s.split(fromBrand).join(toBrand).split(fromProduct).join(toProduct) : s;
+  return Object.freeze({
+    summary: swap(profile.summary),
+    products: Object.fromEntries(Object.entries(profile.products).map(([k, v]) => [swap(k), swap(v)])),
+    faq: profile.faq.map(([q, a]) => [swap(q), swap(a)])
+  });
+}
+const HALAL_EXPERT_PROFILE = brandSwapProfile(
+  RIYADH_EXPERT_PROFILE, "أجبان الرياض", "الحلال الأبيض", "جبنة الرياض", "جبنة الحلال الأبيض");
 
 export const PAGE_EXPERT_KNOWLEDGE = Object.freeze({
   "412000935335295": {
@@ -1972,7 +1997,7 @@ export const PAGE_EXPERT_KNOWLEDGE = Object.freeze({
 
   "1229773096895942": RIYADH_EXPERT_PROFILE,
   "1488299554357978": RIYADH_EXPERT_PROFILE,
-  "446086435262675": RIYADH_EXPERT_PROFILE,
+  "446086435262675": HALAL_EXPERT_PROFILE,
 
   "892685600593825": {
     summary: `فاتي: جل غسيل 20 لتر بـ10 دنانير + 2 دينار توصيل. صناعة تركيا. هاتف: 0796210083.`,
@@ -2204,7 +2229,16 @@ export function getDomainExpertBrain(pageId) {
   const page = getPage(resolvedId);
   if (!page) return "";
   if (resolvedId === RIVAN_OFFER.pageId) return RIVAN_OFFER_BRAIN;
-  if (isRiyadhPage(resolvedId)) return [CHEESE_MASTER_BRAIN, RIYADH_CHEESE_EXPERT_BRAIN].join("\n\n");
+  if (isRiyadhPage(resolvedId)) {
+    let brain = RIYADH_CHEESE_EXPERT_BRAIN;
+    // فصل تام: لو الصفحة إلها هوية خاصة (مثل الحلال الأبيض) نبدّل اسم
+    // الرياض باسمها حتى ما يتسرّب "الرياض" لسياق البوت نهائياً.
+    if (page.BRAND && page.BRAND !== "أجبان الرياض") {
+      brain = brain.split("أجبان الرياض").join(page.BRAND)
+                   .split("جبنة الرياض").join(page.BRAND_PRODUCT || page.BRAND);
+    }
+    return [CHEESE_MASTER_BRAIN, brain].join("\n\n");
+  }
   const isCheese = ["أجبان غزة", "أجبان عكا", "اجبان المعتمد", "منتجات أم نزار", "أجبان المهيري", "اجبان الرياض", "أجبان الرياض"].includes(page.name);
   return isCheese ? getCheeseMasterBrain() : CLEANING_MASTER_BRAIN;
 }
