@@ -246,6 +246,18 @@ export function matchArea(normText, opts = {}) {
   for (const [re, rep] of ALIASES) t = t.replace(re, rep);
   t = applyOrdinals(t);
 
+  // 🔴 كشف المحافظة المذكورة صراحةً من الزبون — إشارة أقوى من أي
+  //    استنتاج من اسم حي. كثير أحياء بتتكرّر بأكثر من محافظة (النصر،
+  //    الحسين، الهاشمية…) والفهرس بيربطها بعمّان فقط. فإذا الزبون كتب
+  //    محافظته، هي الحكم، ومنخلّي اسم الحي كتفصيل داخلها.
+  let explicitGov = null, explicitGovAt = -1;
+  for (const g of GOVERNORATES) {
+    const gn = normalizeAr(g);
+    const re = keyRegex(gn); re.lastIndex = 0;
+    const mm = re.exec(t);
+    if (mm) { const at = mm.index; if (explicitGov === null || at < explicitGovAt) { explicitGov = g; explicitGovAt = at; } }
+  }
+
   const hits = [];
   // 1) مطابقة مباشرة — الأطول أولاً ("ماركا الشماليه" قبل "ماركا")
   for (const key of GAZ_KEYS) {
@@ -261,15 +273,18 @@ export function matchArea(normText, opts = {}) {
     const live = hits.filter(h => !h.negated);
     const pick = (live.length ? live : hits)
       .sort((a, b) => b.area.length - a.area.length)[0];
+    // 🔴 الإصلاح الجذري: إذا الزبون ذكر محافظة صراحةً وهي تخالف محافظة
+    //    الحي بالفهرس — المحافظة المذكورة تفوز، والحي يبقى تفصيلاً داخلها.
+    //    (بس إذا كان النص فعلاً ذكر المحافظة كاسم مستقل، مش جزء من اسم الحي).
+    if (explicitGov && explicitGov !== pick.governorate && normalizeAr(explicitGov) !== pick.area) {
+      return { ...pick, governorate: explicitGov, govOverride: true, areaGov: pick.governorate,
+               negatedOthers: hits.filter(h => h.negated).map(h => h.area) };
+    }
     return { ...pick, negatedOthers: hits.filter(h => h.negated).map(h => h.area) };
   }
 
   // 2) المحافظة لحالها
-  for (const g of GOVERNORATES) {
-    const gn = normalizeAr(g);
-    if (keyRegex(gn).test(t))
-      return { area: null, governorate: g, match: "محافظة فقط", typo: false };
-  }
+  if (explicitGov) return { area: null, governorate: explicitGov, match: "محافظة فقط", typo: false };
 
   // ═══════════════════════════════════════════════════════════
   // 3) مطابقة تقريبية — 🔴 خطر: هون بالضبط اخترع البوت "الضليل" من
