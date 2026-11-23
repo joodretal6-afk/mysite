@@ -442,7 +442,16 @@ export function scoreAddress(c) {
   //
   // ودقّة العنوان بتضل مقاسة بالدرجة، والطلب الخشن بينعلّم للمراجعة.
   // ═══════════════════════════════════════════════════════════
-  const deliverable = !!(c.area || c.gps || c.coords);
+  // 🔴 شرط التوصيل (موسّع بطلب المالك): منعرف وين لما يكون في:
+  //   • منطقة معروفة، أو GPS، أو
+  //   • محافظة مذكورة + تحديد داخلها (معلم/شارع/حي/بناية).
+  // يعني "عمان دوار الواحة" أو "اربد جنب المول" = عنوان يوصل (مع
+  // الرقم)، وما منضل نسأل. بس "عمان" لحالها أو "اربد" لحالها = لأ.
+  const hasPin = !!(c.landmark || c.street || c.district || c.building);
+  // منطقة فعلية = اسم منطقة غير اسم المحافظة نفسها. "اربد" أو "عمان"
+  // لحالها (حتى لو بالفهرس كمركز محافظة) ما بتكفي — لازم تحديد داخلها.
+  const realArea = !!(c.area && normalizeAr(c.area) !== normalizeAr(c.governorate || ""));
+  const deliverable = !!(c.gps || c.coords || realArea || (c.governorate && hasPin));
   return {
     score, level, reasons, missing,
     deliverable,
@@ -494,6 +503,7 @@ export function bestAddressText(original, components) {
 export function formatAddress(c) {
   const parts = [];
   const seen = new Set();
+  const govKey = c.governorate ? normalizeAr(c.governorate) : null;
   // بنمنع تكرار أي مقطع — "حي معصوم" منطقة وحي بنفس الوقت كانت
   // بتطلع مرتين. المطابقة بالنص المطبّع عشان "معصوم" و"حي معصوم"
   // ما ينحسبوا مختلفين.
@@ -502,8 +512,13 @@ export function formatAddress(c) {
     if (!v) return;
     const key = normalizeAr(v).replace(/^(?:حي|شارع|بنايه|طابق|شقه)\s+/, "");
     if (!key || seen.has(key)) return;
-    // إذا مقطع سابق بيحتوي هالمقطع (أو العكس)، منتخطاه
-    for (const s of seen) if (s.includes(key) || key.includes(s)) return;
+    // إذا مقطع سابق بيحتوي هالمقطع (أو العكس)، منتخطاه — بس
+    // 🔴 ما منحذف مقطعاً لمجرد إنه يحتوي اسم المحافظة (مثل "مول اربد"
+    //    يحتوي "اربد")، وإلا بيضيع المعلم اللي فيه معلومة فعلية.
+    for (const s of seen) {
+      if (s === govKey || key === govKey) continue;
+      if (s.includes(key) || key.includes(s)) return;
+    }
     seen.add(key);
     parts.push(v);
   };
