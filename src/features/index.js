@@ -26,7 +26,9 @@ const SLUGS = [
   // ── الطبقة العاشرة: فيديوهات المنتجات (يرسلها البوت عند السؤال) ──
   "videos",
   // ── أرقام الهواتف من محادثات الزبائن (لكل صفحة لحال) ──
-  "phones"
+  "phones",
+  // ── EMPIRE INTELLIGENCE — الذكاء الاستراتيجي ──
+  "empireai"
 ];
 
 export async function loadFeatures() {

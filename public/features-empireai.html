@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EMPIRE INTELLIGENCE — الذكاء الاستراتيجي</title>
+  <script>try{document.documentElement.setAttribute("data-empire-theme",localStorage.getItem("empire-theme")||"obsidian");}catch(e){}</script>
+  <link rel="stylesheet" href="/empire.css">
+</head>
+<body class="e">
+<div class="e-main" style="max-width:1100px;margin:0 auto">
+  <div class="e-top">
+    <div><h1>🧠 الذكاء الاستراتيجي</h1><div class="sub">عقل الإمبراطورية — تحليل مبني على أرقامك الحقيقية</div></div>
+    <a class="e-btn ghost sm" href="/admin/empire" style="margin-inline-start:auto">← مركز القيادة</a>
+  </div>
+
+  <div class="e-card lux">
+    <h3>اسأل عن أعمالك</h3>
+    <div class="muted" style="margin-bottom:12px">أسئلة جاهزة، أو اكتب سؤالك. التحليل يستخدم أرقامك الفعلية فقط ويذكر مصادرها.</div>
+    <div id="presets" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <input id="q" placeholder="مثال: لماذا انخفضت أرباح هذا الشهر؟" style="flex:1 1 320px;background:var(--e-surface);border:1px solid var(--e-line);color:var(--e-text);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:14px;outline:none"
+        onkeydown="if(event.key==='Enter')ask()">
+      <button class="e-btn gold" id="askbtn" onclick="ask()">⚡ حلّل</button>
+    </div>
+  </div>
+
+  <div class="e-card lux" id="answerCard" hidden>
+    <h3>📜 التحليل الاستراتيجي</h3>
+    <div id="answer" style="white-space:pre-wrap;line-height:2;font-size:14px"></div>
+    <div id="sources" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--e-line);font-size:12px;color:var(--e-text-dim)"></div>
+  </div>
+
+  <div class="e-section-h"><h2>🔢 الأرقام الحقيقية (أساس التحليل)</h2><div class="line"></div></div>
+  <div class="e-grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))" id="factcards"></div>
+</div>
+
+<script>
+const API="/admin/f-api/empireai";
+const $=(s)=>document.querySelector(s);
+const esc=(s)=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const nf=(n)=>(Number(n)||0).toLocaleString("en-US",{maximumFractionDigits:2});
+const d0=(n)=>(Number(n)||0).toLocaleString("en-US",{maximumFractionDigits:0});
+async function jget(u){try{const r=await fetch(u,{headers:{Accept:"application/json"}});return await r.json();}catch{return null;}}
+async function jpost(u,b){try{const r=await fetch(u,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(b)});return await r.json();}catch{return null;}}
+
+// أسئلة جاهزة
+jget(API+"/presets").then(j=>{ if(!j||!j.presets)return; $("#presets").innerHTML=j.presets.map(p=>`<button class="e-btn ghost sm" onclick="setQ(this)">${esc(p)}</button>`).join(""); });
+function setQ(el){ $("#q").value=el.textContent; ask(); }
+
+async function ask(){
+  const q=$("#q").value.trim(); if(!q)return;
+  const btn=$("#askbtn"); btn.disabled=true; btn.textContent="جارٍ التحليل…";
+  $("#answerCard").hidden=false;
+  $("#answer").innerHTML=`<div class="e-sk" style="height:90px"></div>`;
+  $("#sources").textContent="";
+  const j=await jpost(API+"/ask",{question:q});
+  btn.disabled=false; btn.textContent="⚡ حلّل";
+  if(!j||!j.ok){ $("#answer").textContent="تعذّر التحليل، حاول مرة ثانية."; return; }
+  if(j.answer){ $("#answer").textContent=j.answer; }
+  else { $("#answer").innerHTML=`<div class="e-badge warn" style="margin-bottom:10px">${esc(j.note||"الذكاء غير مربوط")}</div>\n`+esc(j.facts); }
+  if(j.sources&&j.sources.length) $("#sources").innerHTML="📎 مصادر البيانات: "+j.sources.map(s=>`<span class="e-badge neutral" style="margin:2px">${esc(s)}</span>`).join(" ");
+}
+
+// الأرقام الحقيقية
+jget(API+"/facts").then(j=>{
+  if(!j||!j.ok){ $("#factcards").innerHTML=`<div class="e-empty"><div class="ei">🔢</div>لا بيانات</div>`; return; }
+  const d=j.data||{}; const cards=[];
+  if(d.profit){ const p=d.profit; cards.push(card("💰 الأرباح (هذا الشهر مقابل الماضي)",[
+    ["صافي الربح",nf(p.current.profit)+"د",p.profit_change],
+    ["الإيراد",nf(p.current.revenue)+"د",p.revenue_change],
+    ["تكلفة البضاعة",nf(p.current.cost)+"د",null],
+    ["عدد الطلبات",d0(p.current.orders),null],
+  ])); }
+  if(d.sales){ const s=d.sales; cards.push(card("💵 المبيعات",[
+    ["اليوم",nf(s.today.s)+"د",null],["الأسبوع",nf(s.week.s)+"د",null],
+    ["الشهر",nf(s.month.s)+"د",null],["الإجمالي",nf(s.all.s)+"د",null],
+  ])); }
+  if(d.metrics){ const m=d.metrics; cards.push(card("📊 مؤشرات 30 يوم",[
+    ["نسبة الإكمال",(m.completion??"—")+"%",null],["متوسط الطلب",nf(m.avg_order)+"د",null],
+    ["عملاء عائدون",d0(m.returning),null],["عملاء جدد",d0(m.new_customers),null],
+  ])); }
+  if(d.top_products&&d.top_products.length) cards.push(listCard("🏆 أفضل المنتجات",d.top_products.map(p=>[p.product,d0(p.qty)])));
+  if(d.weak_products&&d.weak_products.length) cards.push(listCard("📉 الأضعف مبيعاً",d.weak_products.map(p=>[p.product,d0(p.qty)])));
+  if(d.pages&&d.pages.length) cards.push(listCard("🏛️ أداء الصفحات",d.pages.map(p=>[p.page_name,nf(p.sum)+"د"])));
+  if(d.cancel_reasons&&d.cancel_reasons.length) cards.push(listCard("🚫 أسباب الإلغاء",d.cancel_reasons.slice(0,6).map(x=>[x.reason||"غير مذكور",d0(x.count)])));
+  $("#factcards").innerHTML=cards.join("")||`<div class="e-empty"><div class="ei">🔢</div>لا بيانات كافية بعد</div>`;
+});
+function deltaBadge(v){ if(v==null)return""; v=Number(v)||0; const c=v>0?"ok":v<0?"bad":"neutral"; const a=v>0?"▲":v<0?"▼":"■"; return `<span class="e-badge ${c}" style="font-size:10px">${a}${Math.abs(v)}%</span>`; }
+function card(title,rows){ return `<div class="e-card"><h3>${esc(title)}</h3>${rows.map(([l,v,dl])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--e-line)"><span class="muted">${esc(l)}</span><span class="num" style="font-weight:700;font-size:15px">${esc(v)} ${deltaBadge(dl)}</span></div>`).join("")}</div>`; }
+function listCard(title,rows){ return `<div class="e-card"><h3>${esc(title)}</h3>${rows.map(([l,v],i)=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--e-line)"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l)}</span><span class="num" style="font-weight:700;color:var(--e-gold-bright)">${esc(v)}</span></div>`).join("")}</div>`; }
+</script>
+</body>
+</html>
