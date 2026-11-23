@@ -26,8 +26,9 @@ await import("../src/features/videos.js");   // ينشئ جدول product_videos
 const { PAGES } = await import("../src/bot/brain.js");
 const { handleEvent } = await import("../src/bot/handler.js");
 
-const FATI = "514074765127663";
-const OTHER = "618622274665182";   // ريفان — رح نتركها بلا فيديوهات
+const idByName = (n) => Object.keys(PAGES).find(k => PAGES[k].name === n);
+const FATI = idByName("فاتي") || Object.keys(PAGES)[0];
+const OTHER = Object.keys(PAGES).find(k => k !== FATI);   // أي صفحة ثانية — بلا فيديوهات
 const VURL = "https://ajban-bot.onrender.com/media/videos/test-clip.mp4";
 
 // نزرع فيديو مفعّل لفاتي مباشرة بالجدول

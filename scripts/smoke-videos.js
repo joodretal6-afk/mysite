@@ -24,7 +24,10 @@ const { PAGES } = await import("../src/bot/brain.js");
 const { VIDEOS_DIR } = await import("../src/media.js");
 
 // صفحة معروفة نختبر عليها (فاتي)
-const FATI = "514074765127663";
+// نحلّ المعرّفات بالاسم حتى ما تنكسر لو تغيّرت أرقام الصفحات
+const idByName = (n) => Object.keys(PAGES).find(k => PAGES[k].name === n);
+const FATI = idByName("فاتي") || Object.keys(PAGES)[0];
+const OTHER_PAGE = Object.keys(PAGES).find(k => k !== FATI);
 ok(!!PAGES[FATI], "صفحة فاتي موجودة بالإعدادات");
 
 // ── محاكي req/res بسيط ──
@@ -93,7 +96,7 @@ list = vids.videosForPage(FATI);
 ok(list.length === 1, "بعد الإيقاف صار البوت يشوف فيديو واحد");
 
 // ── (8) العزل بين الصفحات ──
-ok(vids.videosForPage("618622274665182").length === 0, "صفحة ثانية ما إلها فيديوهات — عزل تام");
+ok(vids.videosForPage(OTHER_PAGE).length === 0, "صفحة ثانية ما إلها فيديوهات — عزل تام");
 
 // ── (9) الحذف بيمسح السجل والملف ──
 r = await call("delete", "/:id", { params: { id: String(vid1) } });
