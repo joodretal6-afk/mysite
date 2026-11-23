@@ -33,7 +33,17 @@
 }
 
 /* ══════════════ الثيمات (ألوان أساسية فقط) ══════════════ */
-:root, [data-theme="aurora"]{
+/* 👑 IMPERIAL OBSIDIAN — الهوية الإمبراطورية الافتراضية (THE EMPIRE) */
+:root, [data-theme="obsidian"]{
+  --txt:#DCE2EC; --mut:#8793A7; --bg:#080B12;
+  --brand:#19B887; --brand-2:#7DE9C4; --gold:#D6B66E; --gold2:#F0D69A; --ai:#6AA0FF;
+  --btn-fg:#04140d;
+  --body-bg:linear-gradient(180deg,#080B12,#0D1526 58%,#080B12);
+  --header-bg:color-mix(in srgb, var(--txt) 3.5%, var(--bg));
+  --ok:#19B887; --bad:#E05A5A; --warn:#E0A33E; --info:#6AA0FF; --new:#D6B66E;
+  color-scheme:dark;
+}
+[data-theme="aurora"]{
   --txt:#e9efec; --mut:#93a69d; --bg:#0a0d0c;
   --brand:#37c98f; --brand-2:#7fe9bd; --gold:#d9b972; --gold2:#ecd49a; --ai:#4bd8cc;
   --btn-fg:#04140d;

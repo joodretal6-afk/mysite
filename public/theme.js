@@ -2,6 +2,7 @@
    بصري بحت، لا يمسّ أي منطق. */
 (function () {
   var THEMES = [
+    { id: "obsidian",  name: "الإمبراطورية 👑", dot: "linear-gradient(135deg,#14233D,#D6B66E)" },
     { id: "aurora",    name: "زمرّد ملكي",   dot: "linear-gradient(135deg,#22c98a,#e2c15f)" },
     { id: "sapphire",  name: "ياقوت الليل",  dot: "linear-gradient(135deg,#5b93ff,#46d5ff)" },
     { id: "champagne", name: "شمبانيا وردية", dot: "linear-gradient(135deg,#d88aa8,#c9a86a)" },
@@ -10,7 +11,7 @@
   ];
   var KEY = "pm-theme";
 
-  function current() { try { return localStorage.getItem(KEY) || "violet"; } catch (e) { return "aurora"; } }
+  function current() { try { return localStorage.getItem(KEY) || "obsidian"; } catch (e) { return "obsidian"; } }
   function apply(id) { document.documentElement.setAttribute("data-theme", id); }
   function save(id) { try { localStorage.setItem(KEY, id); } catch (e) {} }
 
