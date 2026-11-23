@@ -139,7 +139,7 @@
     .modal label{ display:block; font-size:13px; color:var(--mut); margin:12px 0 5px; font-weight:600; }
     .empty{ text-align:center; padding:40px; color:var(--mut); }
   </style>
-  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"violet")}catch(e){}</script>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"obsidian")}catch(e){}</script>
   <link rel="stylesheet" href="/premium.css">
 </head>
 <body>
@@ -348,7 +348,7 @@
     document.addEventListener('click',()=>document.getElementById('usermenu').classList.remove('open'));
     function pmDrawer(o){document.getElementById('pmDrawer').classList.toggle('open',o);document.getElementById('pmScrim').classList.toggle('open',o);document.body.style.overflow=o?'hidden':'';}
     document.addEventListener('keydown',e=>{ if(e.key==='Escape')pmDrawer(false); if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();document.getElementById('gsearch').focus();} });
-    function toggleTheme(){const cur=document.documentElement.getAttribute('data-theme')||'violet';const dark=['aurora','sapphire'];const nx=dark.includes(cur)?'violet':'aurora';document.documentElement.setAttribute('data-theme',nx);try{localStorage.setItem('pm-theme',nx);}catch(e){}}
+    function toggleTheme(){const cur=document.documentElement.getAttribute('data-theme')||'obsidian';const dark=['aurora','sapphire'];const nx=dark.includes(cur)?'obsidian':'aurora';document.documentElement.setAttribute('data-theme',nx);try{localStorage.setItem('pm-theme',nx);}catch(e){}}
 
     // ── SVG رسوم ──
     function spark(vals,color){
