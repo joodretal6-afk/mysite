@@ -2,7 +2,7 @@
 // معالجة حدث واحد (منطق البوت الأصلي + حفظ الأوردر في قاعدة البيانات)
 // ═══════════════════════════════════════════════════════════
 import { CONFIG } from "../config.js";
-import { PAGES } from "./brain.js";
+import { PAGES, extractPhone } from "./brain.js";
 import { sendText, sendTyping, graphSend, sendAttachment, notifyTelegram, fetchAudioAsBase64, openReplyWindow, closeReplyWindow } from "./messenger.js";
 import { parseMessage, RESET_INTENT } from "./parser.js";
 import { computeOrder } from "./order.js";
@@ -350,6 +350,27 @@ async function _handleEvent(event, env, ctx) {
       memory.history = memory.history || [];
       memory.history.push({ role: "user", content: userMsg });
       memory.history = memory.history.slice(-CONFIG.MAX_HISTORY);
+      // 📞 حتى والبوت معلّق (موظف بشري بيتابع): لو ظهر رقم بكلام الزبون
+      //    بنلتقطه ونحفظه «بحاجة متابعة» حتى ما يضيع لو الموظف نسي.
+      try {
+        const ph = extractPhone(userMsg);
+        if (ph && /^07\d{8}$/.test(ph)) {
+          memory.phone = ph;
+          let oid = memory.orderId || getRecentOpenOrderId(recipientId, senderId);
+          if (oid) {
+            updateOrder(oid, { phone: ph });
+          } else {
+            memory.orderId = saveOrder({
+              page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
+              session_key: sessionKey,
+              order_string: `رقم ملتقط (تدخّل بشري) — ${String(userMsg || "").slice(0, 80)}`,
+              total: 0, area: memory.area || "", phone: ph, status: "بحاجة متابعة",
+              address_score: -1, address_level: "", messenger_url: inboxUrl(recipientId, senderId),
+              created_at: Date.now()
+            });
+          }
+        }
+      } catch (e) { console.error("paused phone capture:", e && e.message); }
       await env.SESSIONS_KV.put(sessionKey, JSON.stringify(memory), { expirationTtl: CONFIG.SESSION_TTL });
       return;
     }
@@ -626,7 +647,19 @@ async function _handleEvent(event, env, ctx) {
     }
   } catch (e) { console.error("saved phone:", e && e.message); }
 
-  // 🏢 كشف تاجر الجملة
+  // 📞 التقاط الرقم مباشرة من كلام الزبون — مستقل عن الذكاء الاصطناعي.
+  //    أي رقم أردني (07xxxxxxxx) بيظهر برسالة الزبون بنلتقطه فوراً حتى
+  //    لو الذكاء سكت أو فشل، وحتى لو ما في صنف بالسلة. هيك ما بيضيع
+  //    ولا رقم ولا طلب — بنمسكه ونحطه "بحاجة متابعة" للتاجر لو ناقص.
+  try {
+    const foundPhone = extractPhone(userMsg);
+    if (foundPhone && foundPhone !== memory.phone) {
+      memory.phone = foundPhone;
+      memory.invalidPhoneProvided = false;
+      try { recordSource(memory, "phone", foundPhone, srcId); } catch {}
+    }
+  } catch (e) { console.error("direct phone capture:", e && e.message); }
+
   try {
     const totalQty = memory.cart ? Object.values(memory.cart).reduce((a, b) => a + (Number(b) || 0), 0) : 0;
     if (!memory.wholesaleFlagged && (WHOLESALE_INTENT.test(userMsg) || totalQty >= 6)) {
@@ -713,23 +746,38 @@ async function _handleEvent(event, env, ctx) {
     } catch (e) { console.error("prospect capture:", e && e.message); }
   }
 
-  // 🟢 وصول فوري للسستم
+  // 🟢 وصول فوري للسستم — بنلتقط كل طلب وكل رقم، ما بنضيّع إشي.
+  //    - طلب مكتمل أو ناقص (صنف + رقم/منطقة): بينحفظ عادي.
+  //    - مجرد رقم بلا صنف، أو كمية مرفوضة (أقل من الحد)، أو طلب ما
+  //      صدرت فاتورته: بينحفظ كـ«بحاجة متابعة» حتى التاجر يكمّله يدوياً.
+  const hasValidPhone = !!memory.phone && /^07\d{8}$/.test(String(memory.phone));
   const hasIntent = cartItemsCount > 0 && (memory.area || memory.phone);
-  if (hasIntent && !minimumOrderBlocked) {
+  const shouldCapture = (hasIntent && !minimumOrderBlocked) || hasValidPhone;
+  if (shouldCapture) {
     try {
       const { total, orderString } = orderCalculation;
-      const status = complete ? "جديد" : "ناقص";
+      // الحالة: مكتمل=جديد، صنف ناقص بيانات=ناقص، رقم بلا طلب مكتمل أو
+      //         كمية مرفوضة=بحاجة متابعة (التاجر يتواصل ويكمّل).
+      const fullOrder = hasIntent && !minimumOrderBlocked;
+      const status = (fullOrder && complete) ? "جديد"
+                   : (fullOrder ? "ناقص" : "بحاجة متابعة");
+      // نص الطلب: لو في سلة نعرضها، وإلا نحفظ آخر كلام الزبون حتى ما يضيع السياق.
+      const captureOrderString = (orderString && orderString.trim())
+        ? orderString
+        : (cartItemsCount > 0 ? "طلب بحاجة مراجعة (كمية غير متاحة)"
+                              : `رقم ملتقط — ${String(userMsg || "").slice(0, 80)}`);
+      const captureTotal = fullOrder ? total : 0;
       if (!memory.orderId && !memory._newOrder) memory.orderId = getRecentOpenOrderId(recipientId, senderId);
       if (memory.orderId) {
         updateOrder(memory.orderId, {
-          order_string: orderString, total,
+          order_string: captureOrderString, total: captureTotal,
           area: memory.area || "", phone: memory.phone || "", status
         });
       } else {
         memory.orderId = saveOrder({
           page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
           session_key: sessionKey,
-          order_string: orderString, total,
+          order_string: captureOrderString, total: captureTotal,
           area: memory.area || "", phone: memory.phone || "", status,
           address_score: memory.addressScore ?? -1, address_level: memory.addressLevel || "",
           messenger_url: messengerUrl, created_at: Date.now()
@@ -740,7 +788,7 @@ async function _handleEvent(event, env, ctx) {
           "UPDATE leads_prospects SET status = 'converted' WHERE page_id = ? AND sender_id = ? AND status = 'open'"
         ).run(recipientId, senderId));
       } catch {}
-      try { if (memory.phone) attributeReorder({ page_id: recipientId, phone: memory.phone, order_id: memory.orderId, total }); } catch {}
+      try { if (memory.phone) attributeReorder({ page_id: recipientId, phone: memory.phone, order_id: memory.orderId, total: captureTotal }); } catch {}
       memory._newOrder = false;
       memory._editingExisting = false;
     } catch (e) {
