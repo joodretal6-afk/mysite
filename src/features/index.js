@@ -28,7 +28,9 @@ const SLUGS = [
   // ── أرقام الهواتف من محادثات الزبائن (لكل صفحة لحال) ──
   "phones",
   // ── EMPIRE INTELLIGENCE — الذكاء الاستراتيجي ──
-  "empireai"
+  "empireai",
+  // ── EMPIRE GLOBAL SEARCH — البحث الشامل ──
+  "empiresearch"
 ];
 
 export async function loadFeatures() {
