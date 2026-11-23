@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>📱 أرقام من المحادثات — منصة الأجبان</title>
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("pm-theme")||"violet")}catch(e){}</script>
+  <link rel="stylesheet" href="/premium.css">
+  <style>
+    :root { --green:#2e7d32; --green2:#1b5e20; --bg:#f4f6f8; --card:#fff; --line:#e6e9ec; --mut:#78909c; --red:#c62828; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:var(--bg); color:#263238; }
+    header { background:linear-gradient(120deg,var(--green2),var(--green)); color:#fff; padding:16px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    header h1 { font-size:20px; }
+    header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.2); padding:8px 14px; border-radius:8px; font-size:13px; }
+    .wrap { max-width:1150px; margin:0 auto; padding:18px; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); padding:16px; margin-bottom:14px; }
+    .hint { font-size:12.5px; color:var(--mut); margin-bottom:12px; line-height:1.9; }
+    .tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 2px 12px; }
+    .tab { flex:0 0 auto; padding:9px 15px; border:1.5px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600; white-space:nowrap; color:#37474f; }
+    .tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+    .tab .dot { display:inline-block; min-width:18px; padding:0 6px; margin-inline-start:6px; background:var(--red); color:#fff; border-radius:9px; font-size:11px; }
+    .tab.active .dot { background:rgba(255,255,255,.3); }
+    .bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+    .btn { padding:9px 16px; border:none; border-radius:10px; background:var(--green); color:#fff; font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; text-decoration:none; display:inline-block; }
+    .btn.gray { background:#eceff1; color:#37474f; }
+    .stat { font-size:13px; color:var(--mut); }
+    .stat b { color:var(--green2); font-size:16px; }
+    .tbl-scroll { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13.5px; }
+    th, td { padding:10px 11px; text-align:right; border-bottom:1px solid var(--line); vertical-align:top; }
+    th { background:#f0f4f1; color:var(--green2); font-weight:700; white-space:nowrap; }
+    tr:hover { background:#fafcfa; }
+    .ph { display:inline-block; background:#e8f5e9; color:var(--green2); font-weight:700; border-radius:7px; padding:3px 9px; margin:2px 3px 2px 0; font-family:monospace; font-size:14px; direction:ltr; cursor:pointer; }
+    .ph:hover { background:#c8e6c9; }
+    .sample { color:#546e7a; font-size:12.5px; max-width:360px; }
+    .when { color:var(--mut); font-size:12px; white-space:nowrap; }
+    .empty { text-align:center; padding:40px 14px; color:var(--mut); font-size:14px; }
+    .copied { font-size:12px; color:var(--green); margin-inline-start:8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📱 أرقام من المحادثات</h1>
+    <a href="/admin/features">← رجوع للميزات</a>
+  </header>
+  <div class="wrap">
+    <div class="card">
+      <div class="hint">
+        هون بتلاقي <b>أي محادثة ذكر فيها الزبون رقم هاتف</b> (077 / 078 / 079) بكلامه هو —
+        مش أرقام بوتنا. كل صفحة لحالها. بتقدر تنسخ الرقم بضغطة، أو تفتح المحادثة، أو تصدّر إكسل.
+      </div>
+      <div class="tabs" id="tabs"></div>
+      <div class="bar">
+        <span class="stat"><b id="st-conv">0</b> محادثة</span>
+        <span class="stat"><b id="st-ph">0</b> رقم مختلف</span>
+        <a class="btn gray" id="csv" href="#">⬇️ تصدير إكسل</a>
+      </div>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>الأرقام</th><th>آخر رسالة من الزبون</th><th>رسائل</th><th>آخر ظهور</th><th>المحادثة</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty" hidden>ما في محادثات فيها أرقام لهاي الصفحة بعد.</div>
+    </div>
+  </div>
+
+<script src="/theme.js"></script>
+<script>
+const API = "/admin/f-api/phones";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const when = (ts) => { const d = new Date(Number(ts) + 10800000); return d.toISOString().slice(0,16).replace("T"," "); };
+
+async function api(p) {
+  const r = await fetch(API + p);
+  const j = await r.json().catch(() => ({ ok:false, error:"رد غير مفهوم" }));
+  if (!j.ok) throw new Error(j.error || "خطأ");
+  return j;
+}
+
+let PAGES = [], current = "";
+
+async function boot() {
+  const m = await api("/meta");
+  PAGES = m.pages || [];
+  const tabs = [`<div class="tab" data-id="">الكل ${m.total ? `<span class="dot">${m.total}</span>` : ""}</div>`]
+    .concat(PAGES.map(p => `<div class="tab" data-id="${esc(p.id)}">${esc(p.name)}${p.count ? ` <span class="dot">${p.count}</span>` : ""}</div>`));
+  $("#tabs").innerHTML = tabs.join("");
+  document.querySelectorAll(".tab").forEach(t => t.onclick = () => { current = t.dataset.id; markTab(); load(); });
+  markTab(); load();
+}
+function markTab() {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.id === current));
+}
+
+async function load() {
+  const q = current ? "?page_id=" + encodeURIComponent(current) : "";
+  $("#csv").href = API + "/export.csv" + q;
+  const j = await api("/" + q);
+  const rows = j.rows || [];
+  $("#st-conv").textContent = j.totals.conversations;
+  $("#st-ph").textContent = j.totals.phones;
+  $("#empty").hidden = rows.length > 0;
+  $("#rows").innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.phones.map(p => `<span class="ph" onclick="copyPh('${esc(p)}',this)">${esc(p)}</span>`).join("")}${current ? "" : `<div class="when">${esc(r.page_name)}</div>`}</td>
+      <td class="sample">${esc(r.last_sample)}</td>
+      <td>${r.messages}</td>
+      <td class="when">${esc(when(r.last_at))}</td>
+      <td>${r.link ? `<a class="btn gray" href="${esc(r.link)}" target="_blank" rel="noopener">فتح 💬</a>` : "—"}</td>
+    </tr>`).join("");
+}
+
+window.copyPh = (p, el) => {
+  try { navigator.clipboard.writeText(p); } catch {}
+  const s = document.createElement("span"); s.className = "copied"; s.textContent = "نُسخ ✓";
+  el.after(s); setTimeout(() => s.remove(), 1200);
+};
+
+boot().catch(e => { $("#empty").hidden = false; $("#empty").textContent = e.message; });
+</script>
+</body>
+</html>
