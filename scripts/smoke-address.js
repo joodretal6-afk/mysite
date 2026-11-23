@@ -221,6 +221,24 @@ for (const [txt, gov] of [
      `"${txt}" ⇒ المحافظة ${r.components.governorate || "—"} (المطلوب ${gov})`);
 }
 
+console.log("\n── 🔴 محافظة + معلم = عنوان كامل، والمحافظة لحالها ما تكفي ──");
+// بطلب المالك: "اربد بجانب المول" يُلتقط كامل، و"اربد"/"عمان" لحالها
+// ما تكفي، و"عمان + المنطقة" تؤخذ معاً.
+for (const [txt, want, mustHave] of [
+  ["اربد بجانب المول", true, "المول"],
+  ["عمان دوار الواحة", true, "دوار"],
+  ["اربد جنب مول اربد", true, "مول"],
+  ["عمان بجانب المدينة الرياضية", true, "الرياضيه"],
+  ["اربد", false, null],
+  ["عمان", false, null],
+]) {
+  const r = parseAddress(txt);
+  const okDeliver = r.deliverable === want;
+  const okKeep = !mustHave || new RegExp(mustHave).test(r.formatted);
+  ok(okDeliver && okKeep,
+     `"${txt}" ⇒ ${r.deliverable ? "يوصل" : "ما بيوصل"} "${r.formatted}"`);
+}
+
 console.log(`\n${"═".repeat(52)}`);
 console.log(`   ${fail ? `فشل ${fail}` : "كل الفحوصات نجحت"}${soft ? ` · ${soft} ملاحظة` : ""}`);
 console.log("═".repeat(52));
