@@ -298,6 +298,22 @@ try {
   }
 } catch (e) { console.error("ترحيل روابط الماسنجر:", e.message); }
 
+// 🧹 تنظيف لمرة واحدة: حذف «طلبات» الالتقاط القديمة بقيمة 0 (حالة
+// «بحاجة متابعة») اللي كانت تُصنع من مجرد ذكر رقم بلا طلب فعلي —
+// التاجر ما بدّو يشوف طلبات بقيمة 0. الأرقام محفوظة بصفحة «أرقام من
+// المحادثات» فما بيضيع إشي.
+try {
+  const done = db.prepare("SELECT value FROM kv WHERE key = '__cleanup_zero_leads'").get();
+  if (!done) {
+    const r = db.prepare(
+      "DELETE FROM orders WHERE status = 'بحاجة متابعة' AND (total IS NULL OR total <= 0)"
+    ).run();
+    db.prepare("INSERT INTO kv (key,value,expires_at) VALUES ('__cleanup_zero_leads','1',NULL) ON CONFLICT(key) DO NOTHING").run();
+    const n = Number(r && r.changes) || 0;
+    if (n) console.log(`🧹 حُذف ${n} «طلب» بقيمة 0 (التقاط رقم قديم) — الأرقام محفوظة بصفحة الأرقام`);
+  }
+} catch (e) { console.error("تنظيف طلبات القيمة صفر:", e.message); }
+
 // ── تنظيف دوري للمفاتيح المنتهية ──
 function cleanupExpired() {
   db.prepare("DELETE FROM kv WHERE expires_at IS NOT NULL AND expires_at < ?").run(Date.now());

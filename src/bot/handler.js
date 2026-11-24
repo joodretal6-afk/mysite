@@ -350,25 +350,13 @@ async function _handleEvent(event, env, ctx) {
       memory.history = memory.history || [];
       memory.history.push({ role: "user", content: userMsg });
       memory.history = memory.history.slice(-CONFIG.MAX_HISTORY);
-      // 📞 حتى والبوت معلّق (موظف بشري بيتابع): لو ظهر رقم بكلام الزبون
-      //    بنلتقطه ونحفظه «بحاجة متابعة» حتى ما يضيع لو الموظف نسي.
+      // 📞 حتى والبوت معلّق: لو ظهر رقم بكلام الزبون نثبّته بالذاكرة فقط
+      //    (بلا ما نصنع طلب بقيمة 0) — والرقم محفوظ أصلاً بصفحة الأرقام.
       try {
         const ph = extractPhone(userMsg);
         if (ph && /^07\d{8}$/.test(ph)) {
           memory.phone = ph;
-          let oid = memory.orderId || getRecentOpenOrderId(recipientId, senderId);
-          if (oid) {
-            updateOrder(oid, { phone: ph });
-          } else {
-            memory.orderId = saveOrder({
-              page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
-              session_key: sessionKey,
-              order_string: `رقم ملتقط (تدخّل بشري) — ${String(userMsg || "").slice(0, 80)}`,
-              total: 0, area: memory.area || "", phone: ph, status: "بحاجة متابعة",
-              address_score: -1, address_level: "", messenger_url: inboxUrl(recipientId, senderId),
-              created_at: Date.now()
-            });
-          }
+          if (memory.orderId) updateOrder(memory.orderId, { phone: ph });
         }
       } catch (e) { console.error("paused phone capture:", e && e.message); }
       await env.SESSIONS_KV.put(sessionKey, JSON.stringify(memory), { expirationTtl: CONFIG.SESSION_TTL });
@@ -746,38 +734,26 @@ async function _handleEvent(event, env, ctx) {
     } catch (e) { console.error("prospect capture:", e && e.message); }
   }
 
-  // 🟢 وصول فوري للسستم — بنلتقط كل طلب وكل رقم، ما بنضيّع إشي.
-  //    - طلب مكتمل أو ناقص (صنف + رقم/منطقة): بينحفظ عادي.
-  //    - مجرد رقم بلا صنف، أو كمية مرفوضة (أقل من الحد)، أو طلب ما
-  //      صدرت فاتورته: بينحفظ كـ«بحاجة متابعة» حتى التاجر يكمّله يدوياً.
-  const hasValidPhone = !!memory.phone && /^07\d{8}$/.test(String(memory.phone));
+  // 🟢 وصول فوري للسستم — بنحفظ الطلبات الحقيقية فقط (صنف + رقم/منطقة).
+  //    🔴 ما بنصنع طلبات بقيمة 0: الرقم بلا طلب، أو الكمية المرفوضة
+  //    (أقل من الحد)، ما بينحفظوا كطلب — الرقم محفوظ بصفحة «أرقام من
+  //    المحادثات» وبذاكرة الجلسة، فما بيضيع، وبلا ما يوسّخ جدول الطلبات.
   const hasIntent = cartItemsCount > 0 && (memory.area || memory.phone);
-  const shouldCapture = (hasIntent && !minimumOrderBlocked) || hasValidPhone;
-  if (shouldCapture) {
+  if (hasIntent && !minimumOrderBlocked) {
     try {
       const { total, orderString } = orderCalculation;
-      // الحالة: مكتمل=جديد، صنف ناقص بيانات=ناقص، رقم بلا طلب مكتمل أو
-      //         كمية مرفوضة=بحاجة متابعة (التاجر يتواصل ويكمّل).
-      const fullOrder = hasIntent && !minimumOrderBlocked;
-      const status = (fullOrder && complete) ? "جديد"
-                   : (fullOrder ? "ناقص" : "بحاجة متابعة");
-      // نص الطلب: لو في سلة نعرضها، وإلا نحفظ آخر كلام الزبون حتى ما يضيع السياق.
-      const captureOrderString = (orderString && orderString.trim())
-        ? orderString
-        : (cartItemsCount > 0 ? "طلب بحاجة مراجعة (كمية غير متاحة)"
-                              : `رقم ملتقط — ${String(userMsg || "").slice(0, 80)}`);
-      const captureTotal = fullOrder ? total : 0;
+      const status = complete ? "جديد" : "ناقص";
       if (!memory.orderId && !memory._newOrder) memory.orderId = getRecentOpenOrderId(recipientId, senderId);
       if (memory.orderId) {
         updateOrder(memory.orderId, {
-          order_string: captureOrderString, total: captureTotal,
+          order_string: orderString, total,
           area: memory.area || "", phone: memory.phone || "", status
         });
       } else {
         memory.orderId = saveOrder({
           page_id: recipientId, page_name: pageConfig.name, sender_id: senderId,
           session_key: sessionKey,
-          order_string: captureOrderString, total: captureTotal,
+          order_string: orderString, total,
           area: memory.area || "", phone: memory.phone || "", status,
           address_score: memory.addressScore ?? -1, address_level: memory.addressLevel || "",
           messenger_url: messengerUrl, created_at: Date.now()
@@ -788,7 +764,7 @@ async function _handleEvent(event, env, ctx) {
           "UPDATE leads_prospects SET status = 'converted' WHERE page_id = ? AND sender_id = ? AND status = 'open'"
         ).run(recipientId, senderId));
       } catch {}
-      try { if (memory.phone) attributeReorder({ page_id: recipientId, phone: memory.phone, order_id: memory.orderId, total: captureTotal }); } catch {}
+      try { if (memory.phone) attributeReorder({ page_id: recipientId, phone: memory.phone, order_id: memory.orderId, total }); } catch {}
       memory._newOrder = false;
       memory._editingExisting = false;
     } catch (e) {
