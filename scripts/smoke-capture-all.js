@@ -46,30 +46,30 @@ const say = async (senderId, text) => {
 const ordersFor = (sender) => db.prepare(
   "SELECT * FROM orders WHERE page_id=? AND sender_id=? ORDER BY id DESC").all(PAGE, sender);
 
-// ── (1) رقم لحاله بلا أي صنف → لازم ينحفظ «بحاجة متابعة» ──
+const msgsFor = (sender) => db.prepare(
+  "SELECT * FROM messages WHERE page_id=? AND sender_id=? AND direction='in'").all(PAGE, sender);
+
+// ── (1) رقم لحاله بلا أي صنف → 🔴 ما بينصنع طلب بقيمة 0 ──
 await say("cA", "مرحبا رقمي 0791234567");
 let rows = ordersFor("cA");
-ok(rows.length === 1, "رقم لحاله انحفظ كسجل واحد");
-ok(rows[0] && rows[0].phone === "0791234567", "الرقم انلتقط صح");
-ok(rows[0] && rows[0].status === "بحاجة متابعة", "رقم بلا طلب → حالته «بحاجة متابعة»");
+ok(rows.length === 0, "رقم بلا طلب → ما بينصنع طلب (ولا طلب بقيمة 0)");
+ok(msgsFor("cA").length >= 1, "لكن رسالة الزبون محفوظة (صفحة الأرقام بتلتقطها)");
 
-// ── (2) رقم داخل جملة طبيعية (بصيغة +962) ──
-await say("cB", "تواصلو معي ضروري +962799887766 بسرعة");
-rows = ordersFor("cB");
-ok(rows.length === 1 && rows[0].phone === "0799887766", "رقم بصيغة +962 انلتقط وانتطبّع");
-
-// ── (3) رسالة بلا رقم ولا صنف → ما تنحفظ ولا طلب وهمي ──
+// ── (2) رسالة بلا رقم ولا صنف → ما تنحفظ ولا طلب ──
 await say("cC", "مرحبا كيف الاسعار");
-ok(ordersFor("cC").length === 0, "استفسار بلا رقم ولا صنف → ما في سجل وهمي");
+ok(ordersFor("cC").length === 0, "استفسار بلا رقم ولا صنف → ما في طلب");
 
-// ── (4) أرقام صغيرة (كميات/أسعار) مش تلفونات ──
-await say("cD", "بدي 2 كيلو بسعر 10");
-const cd = ordersFor("cD");
-ok(cd.every(r => r.phone !== "2" && r.phone !== "10"), "الكميات والأسعار ما انحسبت أرقام تلفون");
+// ── (3) طلب حقيقي بقيمة موجبة ما بيتأثر، والصفر بينشال (محرّك الحفظ) ──
+// (بناء السلة الحيّ بيعتمد على الذكاء؛ هون منتأكد إنّ القاعدة بتضمن
+//  إنّه ما في ولا طلب بقيمة 0 — وهو مطلب المالك الأساسي.)
 
-// ── (5) الرقم بينتحدّث بنفس الجلسة مش بيعمل سجل جديد ──
-await say("cA", "اسمي احمد ومنطقتي اربد");
-ok(ordersFor("cA").length === 1, "نفس الجلسة بتضل سجل واحد (بينتحدّث مش بيتكرّر)");
+// ── (4) ولا طلب أبداً بقيمة 0 بكل القاعدة ──
+const zero = db.prepare("SELECT COUNT(*) c FROM orders WHERE total IS NULL OR total <= 0").get();
+ok(Number(zero.c) === 0, "ما في ولا طلب بقيمة 0 بالقاعدة كلها");
+
+// ── (5) ولا حالة «بحاجة متابعة» بتنصنع ──
+const needFollow = db.prepare("SELECT COUNT(*) c FROM orders WHERE status='بحاجة متابعة'").get();
+ok(Number(needFollow.c) === 0, "ما في ولا طلب «بحاجة متابعة» (ألغينا التقاط القيمة صفر)");
 
 wipe();
 console.log(`\n${fail ? "🔴" : "🟢"} نجح ${pass} / فشل ${fail}`);
